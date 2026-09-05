@@ -45,6 +45,7 @@
     display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
     padding: calc(20px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
     overflow-x:hidden;
+    zoom: 1.08; /* Test : légère augmentation globale de la taille pour la lisibilité */
   }
   .bg-halo{
     position:fixed; z-index:0; border-radius:50%; filter:blur(38px);
@@ -174,12 +175,12 @@
     border-radius: 18px; padding: 4px 16px 16px;
   }
   .forbidden-title{
-    display:inline-block; margin: 12px 0 12px;
+    display:block; width:82%; box-sizing:border-box; margin: 12px auto 12px;
     font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
-    font-size:17px; letter-spacing:2px; color:#fff;
+    font-size:21px; letter-spacing:7px; color:#fff; text-align:center;
     background: linear-gradient(180deg, #7a2119, #3a0e0a);
     border: 1px solid rgba(255,140,120,0.35);
-    border-radius:999px; padding:6px 22px;
+    border-radius:999px; padding:6px 14px;
     text-shadow: 0 0 8px rgba(255,150,120,0.7), 0 0 16px rgba(255,80,60,0.5);
   }
   .forbidden-list{
@@ -567,16 +568,6 @@
       <div class="handoff-team" id="handoff-team-name"></div>
       <div class="handoff-role" id="handoff-role"></div>
       <div class="handoff-target" id="handoff-target"></div>
-    </div>
-    <div class="forbidden-banner">
-      <div class="forbidden-title">INTERDITS</div>
-      <ul class="forbidden-list">
-        <li>Pas de mot composé</li>
-        <li>Pas de mot de la même famille</li>
-        <li>Pas de mot commençant par le même son</li>
-        <li>Pas de mime</li>
-      </ul>
-      <p class="forbidden-consequence">⚠️ Un interdit prononcé = mot annulé aussitôt.</p>
     </div>
     <button class="btn btn-gold" id="btn-ready">C'est parti</button>
   </section>
