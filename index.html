@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="Mot de Passe">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#030405">
+<!-- Google Fonts : amélioration progressive, chargée seulement si internet est dispo. -->
+<!-- Hors-ligne (mode avion), le CSS retombe sur Impact/-apple-system : le jeu reste 100% jouable. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -35,7 +37,7 @@
   html,body{
     margin:0; padding:0; height:100%;
     background: var(--bg); color: var(--text);
-    font-family:'Manrope', sans-serif;
+    font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     overscroll-behavior:none; -webkit-tap-highlight-color: transparent;
   }
   #app{
@@ -73,7 +75,7 @@
     color: var(--red);
     border-radius:4px;
     display:flex; align-items:center; justify-content:center;
-    font-family:'Anton'; font-size:21px;
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:21px;
     border: 1px solid rgba(255,59,48,0.35);
     text-shadow: 0 0 6px rgba(255,59,48,0.9), 0 0 14px rgba(255,59,48,0.6);
     box-shadow: inset 0 0 8px rgba(255,59,48,0.25), 0 2px 0 rgba(0,0,0,0.6);
@@ -90,7 +92,7 @@
   input[type="text"]{
     width:100%; background: var(--bg-alt); border: 1px solid var(--card-edge);
     color: var(--text); border-radius: 12px; padding: 11px 13px;
-    font-size: 15px; font-family:'Manrope', sans-serif; font-weight:600;
+    font-size: 15px; font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight:600;
   }
   input[type="text"]:focus{ outline:2px solid var(--red-dim); }
   .field-pair{ display:flex; gap:8px; }
@@ -108,7 +110,7 @@
 
   button.btn{
     border:none; border-radius: 999px; padding: 15px 20px;
-    font-size: 15px; font-weight:800; font-family:'Manrope', sans-serif;
+    font-size: 15px; font-weight:800; font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     cursor:pointer; transition: transform .1s ease, filter .15s ease;
     text-transform:uppercase; letter-spacing:0.5px;
   }
@@ -140,7 +142,7 @@
     border-radius: 14px; font-size: 12px; font-weight:800;
   }
   .score-team{ display:flex; align-items:center; gap:7px; }
-  .score-team .val{ font-family:'Anton'; font-size:19px; letter-spacing:1px; }
+  .score-team .val{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:19px; letter-spacing:1px; }
 
   .word-recap{
     display:flex; flex-direction:column; gap:10px; width:100%;
@@ -176,17 +178,17 @@
     text-align:center; gap:8px; padding: 28px 10px;
   }
   .handoff-label{ color: var(--text-dim); font-size:13px; letter-spacing:1px; text-transform:uppercase; font-weight:700; }
-  .handoff-team{ font-family:'Anton'; font-size:28px; letter-spacing:0.5px; line-height:1.15; }
+  .handoff-team{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:28px; letter-spacing:0.5px; line-height:1.15; }
   .handoff-role{ font-size:14px; color:var(--text-dim); }
   .handoff-role b{ color: var(--text); }
   .handoff-target{ font-size:14px; color: var(--gold); font-weight:800; margin-top:4px; }
 
-  .countdown-num{ font-family:'Anton'; font-size:90px; color: var(--red); text-shadow: 0 0 30px rgba(255,59,48,0.6); }
+  .countdown-num{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:90px; color: var(--red); text-shadow: 0 0 30px rgba(255,59,48,0.6); }
 
   .play-meta{ display:flex; justify-content:space-between; align-items:center; }
   .play-meta .team-name{ font-weight:800; font-size:14px; }
   .timer-badge{
-    font-family:'Anton'; font-size:20px; color:#fff;
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:20px; color:#fff;
     background:#0c0302; border:1px solid #3a1210;
     padding:5px 14px; border-radius:8px; letter-spacing:1px;
     box-shadow: inset 0 0 6px rgba(0,0,0,0.6);
@@ -220,7 +222,7 @@
     50%{ box-shadow: 0 0 34px rgba(255,59,48,0.85), inset 0 0 12px rgba(0,0,0,0.6); }
   }
   .word-text{
-    font-family:'Anton'; font-size: 34px; letter-spacing:1px; text-transform:uppercase;
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size: 34px; letter-spacing:1px; text-transform:uppercase;
     color: #fff; line-height:1.05; word-break: break-word;
   }
   .chevrons{ display:none; flex-shrink:0; flex-direction:row; gap:1px; }
@@ -248,7 +250,7 @@
   .controls-row button{ flex:1; }
 
   .summary-icon{ font-size:40px; text-align:center; }
-  .summary-title{ font-family:'Anton'; font-size:24px; text-align:center; letter-spacing:0.5px; }
+  .summary-title{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:24px; text-align:center; letter-spacing:0.5px; }
   .summary-sub{ text-align:center; color: var(--text-dim); font-size:14px; }
 
   /* Gains ladder */
@@ -262,10 +264,10 @@
   .ladder-step.current{ background: rgba(242,201,76,0.16); border-color: var(--gold); color: var(--gold); }
   .ladder-step.done{ background: rgba(79,191,122,0.12); border-color: var(--correct); color: var(--correct); }
   .ladder-step.safe-marker{ border-left: 4px solid var(--gold); }
-  .ladder-step .amount{ font-family:'Anton'; font-size:16px; letter-spacing:0.5px; }
+  .ladder-step .amount{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:16px; letter-spacing:0.5px; }
 
   .bank-line{ text-align:center; font-size:13px; color:var(--text-dim); font-weight:700; }
-  .bank-line b{ color: var(--gold); font-family:'Anton'; font-size:18px; letter-spacing:0.5px; }
+  .bank-line b{ color: var(--gold); font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:18px; letter-spacing:0.5px; }
 
   .joker-badge{
     align-self:center; font-size:12px; font-weight:800;
@@ -273,7 +275,7 @@
     padding: 5px 12px; border-radius:999px;
   }
   .peek-word{
-    font-family:'Anton'; font-size:34px; text-align:center; color: var(--blue);
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:34px; text-align:center; color: var(--blue);
   }
 
   .trophy{ font-size:56px; text-align:center; }
@@ -283,7 +285,7 @@
     background: var(--card); border: 1px solid var(--card-edge);
   }
   .final-rank .name{ font-weight:800; flex:1; font-size:13px; }
-  .final-rank .pts{ font-family:'Anton'; font-size:18px; }
+  .final-rank .pts{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:18px; }
   .footer-note{ text-align:center; color:var(--text-dim); font-size:11px; margin-top:2px; }
 
   .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -740,17 +742,24 @@
       if(!ctx || ctx.state === 'closed'){
         ctx = new (window.AudioContext || window.webkitAudioContext)();
       }
-      if(ctx.state === 'suspended'){ ctx.resume(); }
+      if(ctx.state !== 'running'){ ctx.resume().catch(()=>{}); }
       return ctx;
     }
-    // iOS coupe/suspend l'audio quand l'écran se verrouille ou que l'app passe en arrière-plan.
-    // On tente de réactiver le contexte dès que la page redevient visible.
-    document.addEventListener('visibilitychange', () => {
-      if(document.visibilityState === 'visible' && ctx){
-        if(ctx.state === 'suspended') ctx.resume();
-      }
+    // iOS coupe/suspend l'audio quand l'écran se verrouille, que l'app passe en
+    // arrière-plan, ou même juste quand on tape à côté (état 'interrupted' sur Safari).
+    // On tente de relancer le contexte sur TOUS les signaux de retour possibles,
+    // et pas seulement au premier son joué, pour ne plus jamais avoir besoin de recharger.
+    function tryResume(){
+      if(ctx && ctx.state !== 'running'){ ctx.resume().catch(()=>{}); }
+    }
+    document.addEventListener('visibilitychange', tryResume);
+    window.addEventListener('pageshow', tryResume);
+    window.addEventListener('focus', tryResume);
+    // Réactivation sur toute interaction tactile/clic : filet de sécurité si le
+    // navigateur a complètement fermé le contexte pendant la mise en veille.
+    ['touchstart','touchend','pointerdown','click'].forEach(evt=>{
+      document.addEventListener(evt, tryResume, { passive:true });
     });
-    window.addEventListener('pageshow', () => { if(ctx && ctx.state === 'suspended') ctx.resume(); });
     function tone(freq, start, dur, type, gainPeak, glideTo){
       const c = getCtx();
       const osc = c.createOscillator();
