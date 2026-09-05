@@ -168,20 +168,31 @@
   .rules-list li b{ color: var(--text); }
 
   .forbidden-banner{
-    font-size:12px; color: var(--wrong); text-align:center;
-    background: rgba(230,97,79,0.10); border: 1px solid rgba(230,97,79,0.35);
-    border-radius: 12px; padding: 10px 12px; font-weight:700; line-height:1.6;
+    text-align:center;
+    background: radial-gradient(ellipse 100% 70% at 50% 0%, #2a120c 0%, #150a07 55%, #0c0402 100%);
+    border: 1px solid rgba(230,97,79,0.25);
+    border-radius: 18px; padding: 4px 16px 16px;
   }
-  .forbidden-banner b{ display:block; margin-bottom:4px; letter-spacing:1px; }
-  .forbidden-chips{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
-  .forbidden-chip{
-    padding:5px 10px; border-radius:999px; white-space:nowrap;
-    background: rgba(230,97,79,0.14); border: 1px solid rgba(230,97,79,0.4);
-    color: var(--wrong); font-size:11.5px; font-weight:700;
+  .forbidden-title{
+    display:inline-block; margin: 12px 0 12px;
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
+    font-size:17px; letter-spacing:2px; color:#fff;
+    background: linear-gradient(180deg, #7a2119, #3a0e0a);
+    border: 1px solid rgba(255,140,120,0.35);
+    border-radius:999px; padding:6px 22px;
+    text-shadow: 0 0 8px rgba(255,150,120,0.7), 0 0 16px rgba(255,80,60,0.5);
+  }
+  .forbidden-list{
+    list-style:none; margin:0; padding:0;
+    display:flex; flex-direction:column; gap:9px;
+  }
+  .forbidden-list li{
+    font-size:13px; font-weight:700; letter-spacing:0.3px;
+    color:#eaf6ff; text-shadow: 0 0 6px rgba(150,220,255,0.35);
   }
   .forbidden-consequence{
     text-align:center; font-size:11px; font-weight:600; color:var(--text-dim);
-    margin-top:8px; letter-spacing:0;
+    margin-top:12px; letter-spacing:0;
   }
 
   .scorebar{
@@ -536,16 +547,13 @@
       </ul>
     </div>
     <div class="forbidden-banner">
-      <b>🚫 LES INTERDITS</b>
-      <div class="forbidden-chips">
-        <span class="forbidden-chip">Mot composé</span>
-        <span class="forbidden-chip">Même famille</span>
-        <span class="forbidden-chip">Même son de départ</span>
-        <span class="forbidden-chip">Mot épelé / découpé</span>
-        <span class="forbidden-chip">Mime ou geste</span>
-        <span class="forbidden-chip">Sigle ou marque</span>
-        <span class="forbidden-chip">Traduction étrangère</span>
-      </div>
+      <div class="forbidden-title">INTERDITS</div>
+      <ul class="forbidden-list">
+        <li>Pas de mot composé</li>
+        <li>Pas de mot de la même famille</li>
+        <li>Pas de mot commençant par le même son</li>
+        <li>Pas de mime</li>
+      </ul>
       <p class="forbidden-consequence">⚠️ Un interdit prononcé = mot annulé aussitôt.</p>
     </div>
   </section>
@@ -561,16 +569,13 @@
       <div class="handoff-target" id="handoff-target"></div>
     </div>
     <div class="forbidden-banner">
-      <b>🚫 LES INTERDITS</b>
-      <div class="forbidden-chips">
-        <span class="forbidden-chip">Mot composé</span>
-        <span class="forbidden-chip">Même famille</span>
-        <span class="forbidden-chip">Même son de départ</span>
-        <span class="forbidden-chip">Mot épelé / découpé</span>
-        <span class="forbidden-chip">Mime ou geste</span>
-        <span class="forbidden-chip">Sigle ou marque</span>
-        <span class="forbidden-chip">Traduction étrangère</span>
-      </div>
+      <div class="forbidden-title">INTERDITS</div>
+      <ul class="forbidden-list">
+        <li>Pas de mot composé</li>
+        <li>Pas de mot de la même famille</li>
+        <li>Pas de mot commençant par le même son</li>
+        <li>Pas de mime</li>
+      </ul>
       <p class="forbidden-consequence">⚠️ Un interdit prononcé = mot annulé aussitôt.</p>
     </div>
     <button class="btn btn-gold" id="btn-ready">C'est parti</button>
@@ -590,12 +595,15 @@
       </div>
       <div class="chevrons right" id="chevrons-right"></div>
     </div>
-    <p class="footer-note" id="play-hint">Tape sur le mot pour lancer le chrono</p>
+    <p class="footer-note" id="play-hint" style="min-height:2.8em; line-height:1.4;">Tape sur le mot pour lancer le chrono</p>
     <div class="controls-row">
       <button class="btn btn-wrong" id="btn-not-found">✗ Passer</button>
       <button class="btn btn-correct" id="btn-correct">✓ Trouvé</button>
     </div>
-    <button class="btn btn-ghost" id="btn-interdit">🔔 Interdit — mot annulé</button>
+    <div class="controls-row" id="final-extra-row">
+      <button class="btn btn-ghost" id="btn-interdit">🔔 Interdit</button>
+      <button class="btn btn-wrong" id="btn-skip-final" style="display:none;">⏭️ Passer</button>
+    </div>
   </section>
 
   <!-- TURN SUMMARY -->
@@ -1409,14 +1417,17 @@
     const notFoundBtn = document.getElementById('btn-not-found');
     const chevronsLeft = document.getElementById('chevrons-left');
     const chevronsRight = document.getElementById('chevrons-right');
+    const skipFinalBtn = document.getElementById('btn-skip-final');
     if(turn.style === 'clues'){
       notFoundBtn.textContent = "✗ Pas trouvé";
       chevronsLeft.classList.add('active'); chevronsRight.classList.add('active');
       buildChevrons(chevronsLeft); buildChevrons(chevronsRight);
+      skipFinalBtn.style.display = '';
     } else {
       notFoundBtn.textContent = "✗ Passer";
       chevronsLeft.classList.remove('active'); chevronsRight.classList.remove('active');
       chevronsLeft.innerHTML = ""; chevronsRight.innerHTML = "";
+      skipFinalBtn.style.display = 'none';
     }
 
     updateTimerUI();
@@ -1431,6 +1442,7 @@
     document.getElementById('btn-correct').disabled = !enabled;
     document.getElementById('btn-not-found').disabled = !enabled;
     document.getElementById('btn-interdit').disabled = !enabled;
+    document.getElementById('btn-skip-final').disabled = !enabled;
   }
 
   document.getElementById('word-pill').addEventListener('click', () => {
@@ -1559,6 +1571,15 @@
     state.pool.shift();
     state.dotsLost += 1;
     if(turn.style === 'clues' && isObjectiveImpossible()){ clearInterval(state.timerHandle); endTurn(); return; }
+    loadNextWord();
+  });
+
+  document.getElementById('btn-skip-final').addEventListener('click', () => {
+    SFX.wrong();
+    state.wordsFailed.push(state.pool[0]);
+    state.pool.shift();
+    state.dotsLost += 1;
+    if(isObjectiveImpossible()){ clearInterval(state.timerHandle); endTurn(); return; }
     loadNextWord();
   });
 
