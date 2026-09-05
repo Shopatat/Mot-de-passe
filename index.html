@@ -712,10 +712,20 @@
   const SFX = (function(){
     let ctx = null;
     function getCtx(){
-      if(!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-      if(ctx.state === 'suspended') ctx.resume();
+      if(!ctx || ctx.state === 'closed'){
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if(ctx.state === 'suspended'){ ctx.resume(); }
       return ctx;
     }
+    // iOS coupe/suspend l'audio quand l'écran se verrouille ou que l'app passe en arrière-plan.
+    // On tente de réactiver le contexte dès que la page redevient visible.
+    document.addEventListener('visibilitychange', () => {
+      if(document.visibilityState === 'visible' && ctx){
+        if(ctx.state === 'suspended') ctx.resume();
+      }
+    });
+    window.addEventListener('pageshow', () => { if(ctx && ctx.state === 'suspended') ctx.resume(); });
     function tone(freq, start, dur, type, gainPeak, glideTo){
       const c = getCtx();
       const osc = c.createOscillator();
