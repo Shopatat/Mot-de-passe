@@ -150,6 +150,16 @@
     border-radius: 12px; padding: 10px 12px; font-weight:700; line-height:1.6;
   }
   .forbidden-banner b{ display:block; margin-bottom:4px; letter-spacing:1px; }
+  .forbidden-chips{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+  .forbidden-chip{
+    padding:5px 10px; border-radius:999px; white-space:nowrap;
+    background: rgba(230,97,79,0.14); border: 1px solid rgba(230,97,79,0.4);
+    color: var(--wrong); font-size:11.5px; font-weight:700;
+  }
+  .forbidden-consequence{
+    text-align:center; font-size:11px; font-weight:600; color:var(--text-dim);
+    margin-top:8px; letter-spacing:0;
+  }
 
   .scorebar{
     display:flex; justify-content:space-between; align-items:center;
@@ -475,16 +485,25 @@
     <div class="card">
       <label class="field-label" style="text-align:center;">Les règles</label>
       <ul class="rules-list" id="rules-list">
-        <li><b>Qualification</b> : des manches de <b>30 secondes</b>, 5 mots à chaque fois. Indices illimités, un mot passé revient dans la rotation. En équipe : chaque équipe joue <b>4 manches</b>, les deux partenaires alternant le rôle de donneur.</li>
-        <li>Le meilleur (équipe ou joueur) va en finale.</li>
-        <li><b>Finale</b> : 5 paliers de <b>1min30</b>, 5 mots à faire deviner à chaque palier, parmi 9 puis 8, 7, 6 et enfin 5.</li>
-        <li>En finale : <b>3 indices maximum</b> par mot, et un mot passé est définitivement perdu. Si l'objectif devient impossible, la manche s'arrête aussitôt.</li>
+        <li><b>Qualification</b> : des manches de <b>30 secondes</b> où il faut faire deviner 5 mots. Indices illimités ; un mot passé peut revenir plus tard dans la même manche. En équipe : chaque équipe joue <b>4 manches</b> (2 chacun), en alternant qui fait deviner.</li>
+        <li>Seul le meilleur total en qualification (équipe ou joueur) se qualifie pour la finale.</li>
+        <li><b>Finale</b> : 5 paliers de <b>1min30</b>. Il faut deviner 5 mots à chaque palier, mais le choix de mots proposés rétrécit à chaque palier : 9, puis 8, 7, 6, et enfin 5 — plus on avance, plus c'est serré.</li>
+        <li>En finale : <b>3 indices maximum</b> par mot, et un mot passé est perdu pour de bon. Si les mots restants ne suffisent plus pour atteindre les 5, la manche s'arrête aussitôt.</li>
         <li>Après chaque palier, on peut s'arrêter et garder ses gains, ou continuer en remettant tout en jeu. Le palier 2 est le <b>palier de sécurité</b> : les gains sont acquis et un <b>joker</b> est débloqué.</li>
       </ul>
     </div>
     <div class="forbidden-banner">
       <b>🚫 LES INTERDITS</b>
-      Pas de mot composé · Pas de mot de la même famille · Pas de mot commençant par le même son · Pas de découpage du mot · Pas de mime, ni de geste · Pas de sigle, ni de marque · Pas de traduction étrangère
+      <div class="forbidden-chips">
+        <span class="forbidden-chip">Mot composé</span>
+        <span class="forbidden-chip">Même famille</span>
+        <span class="forbidden-chip">Même son de départ</span>
+        <span class="forbidden-chip">Mot épelé / découpé</span>
+        <span class="forbidden-chip">Mime ou geste</span>
+        <span class="forbidden-chip">Sigle ou marque</span>
+        <span class="forbidden-chip">Traduction étrangère</span>
+      </div>
+      <p class="forbidden-consequence">⚠️ Un interdit prononcé = mot annulé aussitôt.</p>
     </div>
   </section>
 
@@ -500,7 +519,16 @@
     </div>
     <div class="forbidden-banner">
       <b>🚫 LES INTERDITS</b>
-      Même famille · Même son au début · Mot composé · Découpage du mot · Mime ou geste · Sigle ou marque · Traduction
+      <div class="forbidden-chips">
+        <span class="forbidden-chip">Mot composé</span>
+        <span class="forbidden-chip">Même famille</span>
+        <span class="forbidden-chip">Même son de départ</span>
+        <span class="forbidden-chip">Mot épelé / découpé</span>
+        <span class="forbidden-chip">Mime ou geste</span>
+        <span class="forbidden-chip">Sigle ou marque</span>
+        <span class="forbidden-chip">Traduction étrangère</span>
+      </div>
+      <p class="forbidden-consequence">⚠️ Un interdit prononcé = mot annulé aussitôt.</p>
     </div>
     <button class="btn btn-gold" id="btn-ready">C'est parti</button>
   </section>
