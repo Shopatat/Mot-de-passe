@@ -68,26 +68,41 @@
   .screen.active{ display:flex; flex-direction:column; align-items:stretch; gap:14px; }
   @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
-  .tile-row{ display:flex; justify-content:center; gap:4px; flex-wrap:wrap; margin: 10px 0 2px; }
-  .tile{
-    width:30px; height:38px;
-    background: #0c0302;
-    color: var(--red);
-    border-radius:4px;
-    display:flex; align-items:center; justify-content:center;
-    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:21px;
-    border: 1px solid rgba(255,59,48,0.35);
-    text-shadow: 0 0 6px rgba(255,59,48,0.9), 0 0 14px rgba(255,59,48,0.6);
-    box-shadow: inset 0 0 8px rgba(255,59,48,0.25), 0 2px 0 rgba(0,0,0,0.6);
+  .tile-row{
+    display:flex; justify-content:center; align-items:center; gap:2px; flex-wrap:wrap;
+    margin: 10px 0 2px; padding: 16px 26px; position:relative;
+    background: radial-gradient(ellipse 70% 90% at center, rgba(242,201,76,0.30) 0%, rgba(255,59,48,0.14) 45%, transparent 75%);
   }
-  .tile.space{ background:transparent; box-shadow:none; border:none; width:14px; }
+  .tile-row::before, .tile-row::after{
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
+    font-size:38px; line-height:1; align-self:center;
+    background: linear-gradient(180deg, var(--gold), var(--red-dim));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+  }
+  .tile-row::before{ content:"["; margin-right:8px; }
+  .tile-row::after{ content:"]"; margin-left:8px; }
+  .tile{
+    background:transparent; border:none; box-shadow:none;
+    padding: 0 1px; height:auto;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff;
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:32px;
+    text-shadow:
+      1px 1px 0 var(--red-dim),
+      2px 2px 0 var(--red-dim),
+      3px 3px 0 #6e0f0d,
+      4px 5px 4px rgba(0,0,0,0.55),
+      0 0 20px rgba(255,150,60,0.55);
+  }
+  .tile.space{ background:transparent; box-shadow:none; border:none; width:12px; }
   .marquee-sub{ text-align:center; color: var(--text-dim); font-size:13px; font-style:italic; margin:0 0 8px; }
 
   .card{ background: var(--card); border: 1px solid var(--card-edge); border-radius: var(--radius); padding: 18px; }
 
   label.field-label{
     display:block; font-size:11px; text-transform:uppercase; letter-spacing:1.4px;
-    color: var(--text-dim); margin-bottom:5px; font-weight:700;
+    color: var(--text-dim); margin-bottom:8px; font-weight:700;
   }
   input[type="text"]{
     width:100%; background: var(--bg-alt); border: 1px solid var(--card-edge);
@@ -130,7 +145,7 @@
   .rules-list li b{ color: var(--text); }
 
   .forbidden-banner{
-    font-size:12px; color: var(--wrong);
+    font-size:12px; color: var(--wrong); text-align:center;
     background: rgba(230,97,79,0.10); border: 1px solid rgba(230,97,79,0.35);
     border-radius: 12px; padding: 10px 12px; font-weight:700; line-height:1.6;
   }
@@ -288,7 +303,7 @@
   .final-rank .pts{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:18px; }
   .footer-note{ text-align:center; color:var(--text-dim); font-size:11px; margin-top:2px; }
 
-  .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
   .toggle-btn{
     flex:1; min-width:44px; text-align:center; padding:10px 8px; border-radius:12px;
     background: var(--bg-alt); border:1px solid var(--card-edge); color:var(--text-dim);
@@ -320,7 +335,7 @@
 
   #btn-schedule{
     display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); right:14px; z-index:3;
-    width:32px; height:32px; border-radius:50%;
+    width:32px; height:32px; border-radius:50%; padding:0;
     background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
     color:var(--text-dim); font-size:15px; line-height:1;
     align-items:center; justify-content:center; cursor:pointer;
@@ -343,7 +358,16 @@
 <div id="app">
 
   <button id="btn-quit-game" title="Retour au menu principal">✕</button>
-  <button id="btn-schedule" title="Qui joue avec qui">📋</button>
+  <button id="btn-schedule" title="Qui joue avec qui">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/>
+      <line x1="9" y1="6" x2="21" y2="6"/>
+      <circle cx="4" cy="12" r="1.3" fill="currentColor" stroke="none"/>
+      <line x1="9" y1="12" x2="21" y2="12"/>
+      <circle cx="4" cy="18" r="1.3" fill="currentColor" stroke="none"/>
+      <line x1="9" y1="18" x2="21" y2="18"/>
+    </svg>
+  </button>
 
   <div class="quit-overlay" id="quit-confirm-overlay">
     <div class="card quit-confirm-card">
@@ -366,7 +390,17 @@
 
   <div class="quit-overlay" id="schedule-overlay">
     <div class="card settings-modal">
-      <div class="block-header">📋 Qui joue avec qui</div>
+      <div class="block-header" style="display:flex; align-items:center; gap:8px;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;">
+          <circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/>
+          <line x1="9" y1="6" x2="21" y2="6"/>
+          <circle cx="4" cy="12" r="1.3" fill="currentColor" stroke="none"/>
+          <line x1="9" y1="12" x2="21" y2="12"/>
+          <circle cx="4" cy="18" r="1.3" fill="currentColor" stroke="none"/>
+          <line x1="9" y1="18" x2="21" y2="18"/>
+        </svg>
+        Qui joue avec qui
+      </div>
       <div id="schedule-list" style="display:flex; flex-direction:column; gap:6px;"></div>
       <button class="btn btn-gold" id="btn-close-schedule" style="margin-top:16px; width:100%;">Fermer</button>
     </div>
@@ -378,7 +412,7 @@
     <p class="marquee-sub">Choisis ton mode de jeu.</p>
 
     <div class="card">
-      <label class="field-label">Quel mode ?</label>
+      <label class="field-label" style="text-align:center;">Quel mode ?</label>
       <div class="toggle-row" id="mode-group">
         <div class="toggle-btn selected" data-val="full">Partie complète</div>
         <div class="toggle-btn" data-val="training">Entraînement</div>
@@ -387,7 +421,7 @@
 
     <div id="full-mode-block">
       <div class="card">
-        <label class="field-label">Combien de joueurs ?</label>
+        <label class="field-label" style="text-align:center;">Combien de joueurs ?</label>
         <div class="toggle-row" id="playercount-group">
           <div class="toggle-btn" data-val="2">2</div>
           <div class="toggle-btn" data-val="3">3</div>
@@ -398,7 +432,7 @@
       </div>
 
       <div class="card">
-        <label class="field-label">Jeu en équipe ou chacun pour soi ?</label>
+        <label class="field-label" style="text-align:center;">Jeu en équipe ou chacun pour soi ?</label>
         <div class="toggle-row" id="submode-group">
           <div class="toggle-btn selected" data-val="team">Équipes de 2</div>
           <div class="toggle-btn" data-val="solo">Chacun pour soi</div>
@@ -407,7 +441,7 @@
       </div>
 
       <div class="card" id="team-assignment-card">
-        <label class="field-label">Équipes aléatoires ou définies ?</label>
+        <label class="field-label" style="text-align:center;">Équipes aléatoires ou définies ?</label>
         <div class="toggle-row" id="teamassign-group">
           <div class="toggle-btn selected" data-val="predefined">Prédéfinies</div>
           <div class="toggle-btn" data-val="random">Aléatoires</div>
@@ -415,7 +449,7 @@
       </div>
 
       <div class="card">
-        <label class="field-label">Quels sont les noms des joueurs ?</label>
+        <label class="field-label" style="text-align:center;">Quels sont les noms des joueurs ?</label>
         <div id="player-fields"></div>
       </div>
     </div>
@@ -439,7 +473,7 @@
     <button class="btn btn-gold" id="btn-start-game">Lancer la partie</button>
 
     <div class="card">
-      <label class="field-label" style="margin-bottom:8px;">Les règles</label>
+      <label class="field-label" style="text-align:center;">Les règles</label>
       <ul class="rules-list" id="rules-list">
         <li><b>Qualification</b> : des manches de <b>30 secondes</b>, 5 mots à chaque fois. Indices illimités, un mot passé revient dans la rotation. En équipe : chaque équipe joue <b>4 manches</b>, les deux partenaires alternant le rôle de donneur.</li>
         <li>Le meilleur (équipe ou joueur) va en finale.</li>
@@ -1197,7 +1231,7 @@
       state.teams.forEach((team, i) => {
         const div = document.createElement('div');
         div.className = 'score-team';
-        const label = `${team.giverName} ➜ ${team.guesserName}`;
+        const label = `${team.giverName} et ${team.guesserName}`;
         const color = PLAYER_COLORS[team.colorIdx];
         div.innerHTML = `<span class="dot" style="width:9px;height:9px;background:${color};display:inline-block;"></span>
           <span style="color:${i===highlightColorIdx ? color : 'var(--text-dim)'};">${escapeHtml(label)}</span>
@@ -1248,7 +1282,7 @@
       targetEl.textContent = `${turn.target} mots à faire deviner — chronomètre`;
     } else {
       teamEl.style.display = '';
-      teamEl.textContent = `${turn.giverName} ➜ ${turn.guesserName}`;
+      teamEl.textContent = `${turn.giverName} et ${turn.guesserName}`;
       teamEl.style.color = color;
       roleEl.innerHTML = `<b>${escapeHtml(turn.giverName)}</b> fait deviner à <b>${escapeHtml(turn.guesserName)}</b>`;
       targetEl.textContent = turn.target
@@ -1297,7 +1331,7 @@
     } else if(turn.kind === 'training'){
       nameEl.textContent = "Entraînement";
     } else {
-      nameEl.textContent = `${turn.giverName} ➜ ${turn.guesserName}`;
+      nameEl.textContent = `${turn.giverName} et ${turn.guesserName}`;
     }
     nameEl.style.color = PLAYER_COLORS[turn.colorIdx];
 
@@ -1495,7 +1529,7 @@
     document.getElementById('summary-icon').textContent = reachedTarget ? "🎉" : "🔔";
     document.getElementById('summary-title').textContent = "Manche terminée";
     document.getElementById('summary-text').innerHTML =
-      `<span style="color:${PLAYER_COLORS[turn.colorIdx]}; font-weight:800;">${escapeHtml(turn.giverName)} ➜ ${escapeHtml(turn.guesserName)}</span> — ${text}`;
+      `<span style="color:${PLAYER_COLORS[turn.colorIdx]}; font-weight:800;">${escapeHtml(turn.giverName)} et ${escapeHtml(turn.guesserName)}</span> — ${text}`;
     if(turn.kind === 'qualif' && state.subMode === 'team'){
       renderScorebar('summary-scorebar', turn.colorIdx);
     } else {
@@ -1587,7 +1621,7 @@
     state.finaleGuesserName = team.guesserName;
     state.finaleColorIdx = team.colorIdx;
     document.getElementById('finalist-label').textContent = "Se qualifie pour la finale";
-    document.getElementById('finalist-name').textContent = `${team.giverName} ➜ ${team.guesserName}`;
+    document.getElementById('finalist-name').textContent = `${team.giverName} et ${team.guesserName}`;
     document.getElementById('finalist-name').style.color = PLAYER_COLORS[team.colorIdx];
     document.getElementById('finalist-detail').innerHTML = `${team.score} point${team.score>1?'s':''} en qualification.`;
     renderLadder('finalist-ladder', 1);
@@ -1686,7 +1720,7 @@
     state.finaleGuesserName = guesser.name;
     state.finaleColorIdx = giver.colorIdx;
     document.getElementById('finalist-label').textContent = "Se qualifient pour la finale";
-    document.getElementById('finalist-name').textContent = `${giver.name} ➜ ${guesser.name}`;
+    document.getElementById('finalist-name').textContent = `${giver.name} et ${guesser.name}`;
     document.getElementById('finalist-name').style.color = PLAYER_COLORS[giver.colorIdx];
     document.getElementById('finalist-detail').innerHTML =
       `Meilleur donneur : <b>${escapeHtml(giver.name)}</b> (${giver.giverScore} pts) · Meilleur devineur : <b>${escapeHtml(guesser.name)}</b> (${guesser.guesserScore} pts)`;
@@ -1804,7 +1838,7 @@
     const last = state.finalHistory[state.finalHistory.length - 1];
     const amount = wonAll ? PALIERS[PALIERS.length-1].gain : state.bank;
     const color = PLAYER_COLORS[state.finaleColorIdx];
-    const label = `${state.finaleGiverName} ➜ ${state.finaleGuesserName}`;
+    const label = `${state.finaleGiverName} et ${state.finaleGuesserName}`;
 
     if(wonAll){
       document.getElementById('final-trophy').textContent = "🏆";
