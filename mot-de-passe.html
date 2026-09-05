@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Mot de Passe</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mot de Passe">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#030405">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: dark;
+    --bg: #030405;
+    --bg-alt: #0a0e14;
+    --card: #0a0908;
+    --card-edge: #2a1414;
+    --gold: #f2c94c;
+    --gold-dim: #c79f2e;
+    --blue: #5aa9e6;
+    --red: #ff3b30;
+    --red-dim: #b81f18;
+    --correct: #4fbf7a;
+    --wrong: #e6614f;
+    --wrong-dim: #a8402f;
+    --text: #f5f3ea;
+    --text-dim: #8a92a3;
+    --radius: 18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg); color: var(--text);
+    font-family:'Manrope', sans-serif;
+    overscroll-behavior:none; -webkit-tap-highlight-color: transparent;
+  }
+  #app{
+    position:relative; min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
+    overflow-x:hidden;
+  }
+  .bg-halo{
+    position:fixed; z-index:0; border-radius:50%; filter:blur(38px);
+    pointer-events:none;
+    animation-name: haloDrift; animation-timing-function: ease-in-out; animation-iteration-count: infinite;
+  }
+  @keyframes haloDrift{
+    0%,100%{ transform: translate(0,0); }
+    50%{ transform: translate(var(--dx,30px), var(--dy,24px)); }
+  }
+  .floor-glow{
+    position:fixed; left:0; right:0; bottom:0; height:26%; z-index:0; pointer-events:none;
+    background: linear-gradient(180deg, transparent, rgba(30,60,160,0.14) 55%, rgba(255,59,48,0.10));
+  }
+  #app::after{
+    content:""; position:fixed; top:0; left:0; right:0; height:6px;
+    background: linear-gradient(90deg, #3a3a3a, #cfcfcf 20%, #6b6b6b 40%, #eaeaea 55%, #4a4a4a 75%, #d8d8d8 90%, #333);
+    z-index:2;
+  }
+  .screen{ display:none; width:100%; max-width:480px; position:relative; z-index:1; animation: fadein .35s ease; }
+  .screen.active{ display:flex; flex-direction:column; align-items:stretch; gap:14px; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  .tile-row{ display:flex; justify-content:center; gap:4px; flex-wrap:wrap; margin: 10px 0 2px; }
+  .tile{
+    width:30px; height:38px;
+    background: #0c0302;
+    color: var(--red);
+    border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Anton'; font-size:21px;
+    border: 1px solid rgba(255,59,48,0.35);
+    text-shadow: 0 0 6px rgba(255,59,48,0.9), 0 0 14px rgba(255,59,48,0.6);
+    box-shadow: inset 0 0 8px rgba(255,59,48,0.25), 0 2px 0 rgba(0,0,0,0.6);
+  }
+  .tile.space{ background:transparent; box-shadow:none; border:none; width:14px; }
+  .marquee-sub{ text-align:center; color: var(--text-dim); font-size:13px; font-style:italic; margin:0 0 8px; }
+
+  .card{ background: var(--card); border: 1px solid var(--card-edge); border-radius: var(--radius); padding: 18px; }
+
+  label.field-label{
+    display:block; font-size:11px; text-transform:uppercase; letter-spacing:1.4px;
+    color: var(--text-dim); margin-bottom:5px; font-weight:700;
+  }
+  input[type="text"]{
+    width:100%; background: var(--bg-alt); border: 1px solid var(--card-edge);
+    color: var(--text); border-radius: 12px; padding: 11px 13px;
+    font-size: 15px; font-family:'Manrope', sans-serif; font-weight:600;
+  }
+  input[type="text"]:focus{ outline:2px solid var(--red-dim); }
+  .field-pair{ display:flex; gap:8px; }
+  .field-pair > div{ flex:1; }
+  .block-header{ display:flex; align-items:center; gap:8px; font-weight:800; font-size:14px; margin-bottom:4px; }
+  .dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+
+  .chip-group{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{
+    padding: 8px 13px; border-radius: 999px; background: var(--bg-alt);
+    border: 1px solid var(--card-edge); color: var(--text-dim);
+    font-size: 13px; font-weight:700; cursor:pointer; user-select:none; transition: all .15s ease;
+  }
+  .chip.selected{ background: rgba(255,59,48,0.16); border-color: var(--red-dim); color: var(--red); }
+
+  button.btn{
+    border:none; border-radius: 999px; padding: 15px 20px;
+    font-size: 15px; font-weight:800; font-family:'Manrope', sans-serif;
+    cursor:pointer; transition: transform .1s ease, filter .15s ease;
+    text-transform:uppercase; letter-spacing:0.5px;
+  }
+  button.btn:active{ transform: scale(0.97); }
+  button.btn:disabled{ opacity:0.4; cursor:default; }
+  .btn-gold{
+    background: linear-gradient(180deg, #1c1c1c, #050505);
+    border: 2px solid var(--red);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(255,59,48,0.35), inset 0 0 10px rgba(255,59,48,0.12);
+  }
+  .btn-correct{ background: var(--correct); color: #08210f; border-radius:999px; }
+  .btn-wrong{ background: var(--wrong); color: #2a0a05; border-radius:999px; }
+  .btn-ghost{ background: transparent; border: 1px solid var(--card-edge); color: var(--text-dim); }
+
+  .rules-list{ font-size:13px; color:var(--text-dim); line-height:1.6; margin:0; padding-left:18px; }
+  .rules-list li b{ color: var(--text); }
+
+  .forbidden-banner{
+    font-size:12px; color: var(--wrong);
+    background: rgba(230,97,79,0.10); border: 1px solid rgba(230,97,79,0.35);
+    border-radius: 12px; padding: 10px 12px; font-weight:700; line-height:1.6;
+  }
+  .forbidden-banner b{ display:block; margin-bottom:4px; letter-spacing:1px; }
+
+  .scorebar{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 10px 14px; background: var(--card); border: 1px solid var(--card-edge);
+    border-radius: 14px; font-size: 12px; font-weight:800;
+  }
+  .score-team{ display:flex; align-items:center; gap:7px; }
+  .score-team .val{ font-family:'Anton'; font-size:19px; letter-spacing:1px; }
+
+  .phase-tag{
+    align-self:center; background: rgba(255,59,48,0.14); border: 1px solid var(--red-dim);
+    color: var(--red); font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
+    padding: 5px 12px; border-radius:999px;
+  }
+  .phase-tag.final{ background: rgba(242,201,76,0.14); border-color: var(--gold-dim); color: var(--gold); }
+
+  .handoff-wrap{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:8px; padding: 28px 10px;
+  }
+  .handoff-label{ color: var(--text-dim); font-size:13px; letter-spacing:1px; text-transform:uppercase; font-weight:700; }
+  .handoff-team{ font-family:'Anton'; font-size:28px; letter-spacing:0.5px; line-height:1.15; }
+  .handoff-role{ font-size:14px; color:var(--text-dim); }
+  .handoff-role b{ color: var(--text); }
+  .handoff-target{ font-size:14px; color: var(--gold); font-weight:800; margin-top:4px; }
+
+  .countdown-num{ font-family:'Anton'; font-size:90px; color: var(--red); text-shadow: 0 0 30px rgba(255,59,48,0.6); }
+
+  .play-meta{ display:flex; justify-content:space-between; align-items:center; }
+  .play-meta .team-name{ font-weight:800; font-size:14px; }
+  .timer-badge{
+    font-family:'Anton'; font-size:20px; color:#fff;
+    background:#0c0302; border:1px solid #3a1210;
+    padding:5px 14px; border-radius:8px; letter-spacing:1px;
+    box-shadow: inset 0 0 6px rgba(0,0,0,0.6);
+  }
+  .timer-badge.urgent{ color: var(--red); border-color: var(--red); box-shadow: 0 0 8px rgba(255,59,48,0.6), inset 0 0 6px rgba(0,0,0,0.6); }
+
+  .dot-row{ display:flex; justify-content:center; gap:8px; align-self:center; flex-wrap:wrap; max-width:100%;
+    background:#0c0302; border:1px solid #3a1210; border-radius:999px; padding:8px 16px; }
+  .dot-mark{ width:11px; height:11px; border-radius:50%; background:#3a1210; flex-shrink:0; }
+  .dot-mark.found{
+    background: radial-gradient(circle at 35% 28%, #d4ffe8 0%, #5fe897 32%, #2a9c5c 70%, #166b3c 100%);
+    box-shadow:
+      0 0 4px 1px rgba(120,255,180,0.95),
+      0 0 12px 3px rgba(79,191,122,0.65),
+      0 0 22px 6px rgba(79,191,122,0.3),
+      inset 0 0 2px rgba(255,255,255,0.7);
+  }
+
+  .word-row{ display:flex; align-items:center; gap:6px; }
+  .word-pill{
+    flex:1;
+    background:#0c0302; border:2px solid var(--red); border-radius:999px;
+    padding: 20px 22px; text-align:center;
+    box-shadow: 0 0 16px rgba(255,59,48,0.3), inset 0 0 12px rgba(0,0,0,0.6);
+    margin: 2px 0;
+    cursor: pointer; user-select: none;
+  }
+  .word-pill.waiting{ animation: pulseWait 1.25s ease-in-out infinite; }
+  @keyframes pulseWait{
+    0%,100%{ box-shadow: 0 0 16px rgba(255,59,48,0.3), inset 0 0 12px rgba(0,0,0,0.6); }
+    50%{ box-shadow: 0 0 34px rgba(255,59,48,0.85), inset 0 0 12px rgba(0,0,0,0.6); }
+  }
+  .word-text{
+    font-family:'Anton'; font-size: 34px; letter-spacing:1px; text-transform:uppercase;
+    color: #fff; line-height:1.05; word-break: break-word;
+  }
+  .chevrons{ display:none; flex-shrink:0; flex-direction:row; gap:1px; }
+  .chevrons.active{ display:flex; }
+  .chevrons span{
+    width:0; height:0; opacity:0.1;
+    border-top: 9px solid transparent; border-bottom: 9px solid transparent;
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    transform: scale(0.25);
+  }
+  .chevrons.left span{ border-left: 12px solid var(--red); transform-origin: right center; }
+  .chevrons.right span{ border-right: 12px solid var(--red); transform-origin: left center; }
+  .chevrons span.lit{
+    opacity:1; transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(255,59,48,0.8));
+  }
+  .chevrons span.lit.pulse{
+    animation: chevronPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes chevronPulse{
+    0%,100%{ opacity:1; filter: drop-shadow(0 0 4px rgba(255,59,48,0.8)); }
+    50%{ opacity:0.5; filter: drop-shadow(0 0 11px rgba(255,59,48,1)); }
+  }
+  .controls-row{ display:flex; gap:10px; }
+  .controls-row button{ flex:1; }
+
+  .summary-icon{ font-size:40px; text-align:center; }
+  .summary-title{ font-family:'Anton'; font-size:24px; text-align:center; letter-spacing:0.5px; }
+  .summary-sub{ text-align:center; color: var(--text-dim); font-size:14px; }
+
+  /* Gains ladder */
+  .ladder{ display:flex; flex-direction:column-reverse; gap:5px; }
+  .ladder-step{
+    display:flex; justify-content:space-between; align-items:center;
+    padding: 9px 13px; border-radius: 10px;
+    background: var(--bg-alt); border: 1px solid var(--card-edge);
+    font-size:13px; font-weight:700; color: var(--text-dim);
+  }
+  .ladder-step.current{ background: rgba(242,201,76,0.16); border-color: var(--gold); color: var(--gold); }
+  .ladder-step.done{ background: rgba(79,191,122,0.12); border-color: var(--correct); color: var(--correct); }
+  .ladder-step.safe-marker{ border-left: 4px solid var(--gold); }
+  .ladder-step .amount{ font-family:'Anton'; font-size:16px; letter-spacing:0.5px; }
+
+  .bank-line{ text-align:center; font-size:13px; color:var(--text-dim); font-weight:700; }
+  .bank-line b{ color: var(--gold); font-family:'Anton'; font-size:18px; letter-spacing:0.5px; }
+
+  .joker-badge{
+    align-self:center; font-size:12px; font-weight:800;
+    background: rgba(90,169,230,0.14); border:1px solid var(--blue); color: var(--blue);
+    padding: 5px 12px; border-radius:999px;
+  }
+  .peek-word{
+    font-family:'Anton'; font-size:34px; text-align:center; color: var(--blue);
+  }
+
+  .trophy{ font-size:56px; text-align:center; }
+  .final-rank{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 12px 14px; border-radius: 14px;
+    background: var(--card); border: 1px solid var(--card-edge);
+  }
+  .final-rank .name{ font-weight:800; flex:1; font-size:13px; }
+  .final-rank .pts{ font-family:'Anton'; font-size:18px; }
+  .footer-note{ text-align:center; color:var(--text-dim); font-size:11px; margin-top:2px; }
+
+  .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .toggle-btn{
+    flex:1; min-width:44px; text-align:center; padding:10px 8px; border-radius:12px;
+    background: var(--bg-alt); border:1px solid var(--card-edge); color:var(--text-dim);
+    font-weight:800; font-size:13px; cursor:pointer; user-select:none; transition: all .15s ease;
+  }
+  .toggle-btn.selected{ background: rgba(255,59,48,0.16); border-color:var(--red-dim); color:var(--red); }
+  .toggle-btn.disabled{ opacity:0.3; pointer-events:none; }
+  .team-name-block{ margin-bottom:12px; }
+  .team-name-block:last-child{ margin-bottom:0; }
+  .team-name-block .block-header{ font-size:13px; margin-bottom:8px; }
+
+  #btn-quit-game{
+    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:14px; z-index:3;
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
+    color:var(--text-dim); font-size:15px; line-height:1;
+    align-items:center; justify-content:center; cursor:pointer;
+  }
+  #btn-quit-game.visible{ display:flex; }
+
+  .quit-overlay{
+    display:none; position:fixed; inset:0; z-index:10;
+    background:rgba(0,0,0,0.62);
+    align-items:center; justify-content:center; padding:24px;
+  }
+  .quit-overlay.visible{ display:flex; }
+  .quit-confirm-card{ max-width:320px; width:100%; text-align:center; }
+  .quit-confirm-card p{ color:var(--text); font-size:14px; margin:0 0 16px; line-height:1.5; }
+
+  #btn-schedule{
+    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); right:14px; z-index:3;
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
+    color:var(--text-dim); font-size:15px; line-height:1;
+    align-items:center; justify-content:center; cursor:pointer;
+  }
+  #btn-schedule.visible{ display:flex; }
+  .settings-modal{ max-width:420px; width:100%; text-align:left; max-height:80vh; overflow-y:auto; }
+  .schedule-row{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:9px 12px; border-radius:10px;
+    background:var(--bg-alt); border:1px solid var(--card-edge);
+    font-size:13px;
+  }
+  .schedule-row.current{ border-color:var(--gold); background:rgba(242,201,76,0.14); }
+  .schedule-row.done{ opacity:0.45; }
+  .schedule-label{ color:var(--text-dim); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap; }
+  .schedule-names{ font-weight:800; text-align:right; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <button id="btn-quit-game" title="Retour au menu principal">✕</button>
+  <button id="btn-schedule" title="Qui joue avec qui">📋</button>
+
+  <div class="quit-overlay" id="quit-confirm-overlay">
+    <div class="card quit-confirm-card">
+      <p>Abandonner la partie en cours et revenir au menu principal ?</p>
+      <div class="controls-row">
+        <button class="btn btn-ghost" id="btn-quit-cancel">Annuler</button>
+        <button class="btn btn-gold" id="btn-quit-confirm">Quitter</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="quit-overlay" id="settings-overlay">
+    <div class="card settings-modal">
+      <div class="block-header">⚙️ Réglages</div>
+      <label class="field-label">Catégories de mots</label>
+      <div class="chip-group" id="category-group"></div>
+      <button class="btn btn-gold" id="btn-close-settings" style="margin-top:16px; width:100%;">OK</button>
+    </div>
+  </div>
+
+  <div class="quit-overlay" id="schedule-overlay">
+    <div class="card settings-modal">
+      <div class="block-header">📋 Qui joue avec qui</div>
+      <div id="schedule-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+      <button class="btn btn-gold" id="btn-close-schedule" style="margin-top:16px; width:100%;">Fermer</button>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <section class="screen active" id="screen-setup">
+    <div class="tile-row" id="title-tiles"></div>
+    <p class="marquee-sub">Choisis ton mode de jeu.</p>
+
+    <div class="card">
+      <label class="field-label">Quel mode ?</label>
+      <div class="toggle-row" id="mode-group">
+        <div class="toggle-btn selected" data-val="full">Partie complète</div>
+        <div class="toggle-btn" data-val="training">Entraînement</div>
+      </div>
+    </div>
+
+    <div id="full-mode-block">
+      <div class="card">
+        <label class="field-label">Combien de joueurs ?</label>
+        <div class="toggle-row" id="playercount-group">
+          <div class="toggle-btn" data-val="2">2</div>
+          <div class="toggle-btn" data-val="3">3</div>
+          <div class="toggle-btn selected" data-val="4">4</div>
+          <div class="toggle-btn" data-val="5">5</div>
+          <div class="toggle-btn" data-val="6">6</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <label class="field-label">Jeu en équipe ou chacun pour soi ?</label>
+        <div class="toggle-row" id="submode-group">
+          <div class="toggle-btn selected" data-val="team">Équipes de 2</div>
+          <div class="toggle-btn" data-val="solo">Chacun pour soi</div>
+        </div>
+        <p class="footer-note" id="submode-note" style="display:none; margin-top:8px;">Il faut au moins 4 joueurs, en nombre pair, pour jouer en équipes.</p>
+      </div>
+
+      <div class="card" id="team-assignment-card">
+        <label class="field-label">Équipes aléatoires ou définies ?</label>
+        <div class="toggle-row" id="teamassign-group">
+          <div class="toggle-btn selected" data-val="predefined">Prédéfinies</div>
+          <div class="toggle-btn" data-val="random">Aléatoires</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <label class="field-label">Quels sont les noms des joueurs ?</label>
+        <div id="player-fields"></div>
+      </div>
+    </div>
+
+    <div id="training-mode-block" style="display:none;">
+      <div class="card">
+        <p style="margin:0; font-size:13px; color:var(--text-dim); line-height:1.6;">
+          Mode libre : des manches à la suite (30 secondes, 5 mots, indices illimités, les mots passés reviennent). Pas de classement, pas de progression — on s'échauffe autant qu'on veut.
+        </p>
+      </div>
+    </div>
+
+    <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div>
+        <label class="field-label" style="margin-bottom:2px;">Réglages</label>
+        <div id="settings-summary" style="font-size:13px; color:var(--text-dim); font-weight:700;"></div>
+      </div>
+      <button class="btn btn-ghost" id="btn-open-settings" style="padding:10px 16px; flex-shrink:0;">⚙️ Modifier</button>
+    </div>
+
+    <button class="btn btn-gold" id="btn-start-game">Lancer la partie</button>
+
+    <div class="card">
+      <label class="field-label" style="margin-bottom:8px;">Les règles</label>
+      <ul class="rules-list" id="rules-list">
+        <li><b>Qualification</b> : des manches de <b>30 secondes</b>, 5 mots à chaque fois. Indices illimités, un mot passé revient dans la rotation. En équipe : chaque équipe joue <b>4 manches</b>, les deux partenaires alternant le rôle de donneur.</li>
+        <li>Le meilleur (équipe ou joueur) va en finale.</li>
+        <li><b>Finale</b> : 5 paliers de <b>1min30</b>, 5 mots à faire deviner à chaque palier, parmi 9 puis 8, 7, 6 et enfin 5.</li>
+        <li>En finale : <b>3 indices maximum</b> par mot, et un mot passé est définitivement perdu. Si l'objectif devient impossible, la manche s'arrête aussitôt.</li>
+        <li>Après chaque palier, on peut s'arrêter et garder ses gains, ou continuer en remettant tout en jeu. Le palier 2 est le <b>palier de sécurité</b> : les gains sont acquis et un <b>joker</b> est débloqué.</li>
+      </ul>
+    </div>
+    <div class="forbidden-banner">
+      <b>🚫 LES INTERDITS</b>
+      Pas de mot composé · Pas de mot de la même famille · Pas de mot commençant par le même son · Pas de découpage du mot · Pas de mime, ni de geste · Pas de sigle, ni de marque · Pas de traduction étrangère
+    </div>
+  </section>
+
+  <!-- HANDOFF -->
+  <section class="screen" id="screen-handoff">
+    <div class="phase-tag" id="handoff-phase-tag"></div>
+    <div class="scorebar" id="handoff-scorebar"></div>
+    <div class="card handoff-wrap">
+      <div class="handoff-label" id="handoff-manche-label"></div>
+      <div class="handoff-team" id="handoff-team-name"></div>
+      <div class="handoff-role" id="handoff-role"></div>
+      <div class="handoff-target" id="handoff-target"></div>
+    </div>
+    <div class="forbidden-banner">
+      <b>🚫 LES INTERDITS</b>
+      Même famille · Même son au début · Mot composé · Découpage du mot · Mime ou geste · Sigle ou marque · Traduction
+    </div>
+    <button class="btn btn-gold" id="btn-ready">C'est parti</button>
+  </section>
+
+  <!-- PLAY -->
+  <section class="screen" id="screen-play">
+    <div class="play-meta">
+      <div class="team-name" id="play-team-name"></div>
+      <div class="timer-badge" id="play-timer-num">:30</div>
+    </div>
+    <div class="dot-row" id="play-dots"></div>
+    <div class="word-row">
+      <div class="chevrons left" id="chevrons-left"></div>
+      <div class="word-pill" id="word-pill">
+        <div class="word-text" id="play-word">MOT</div>
+      </div>
+      <div class="chevrons right" id="chevrons-right"></div>
+    </div>
+    <p class="footer-note" id="play-hint">Tape sur le mot pour lancer le chrono</p>
+    <div class="controls-row">
+      <button class="btn btn-wrong" id="btn-not-found">✗ Passer</button>
+      <button class="btn btn-correct" id="btn-correct">✓ Trouvé</button>
+    </div>
+    <button class="btn btn-ghost" id="btn-interdit">🔔 Interdit — mot annulé</button>
+  </section>
+
+  <!-- TURN SUMMARY -->
+  <section class="screen" id="screen-summary">
+    <div class="card" style="display:flex; flex-direction:column; gap:10px; align-items:center; padding:28px 20px;">
+      <div class="summary-icon" id="summary-icon">🔔</div>
+      <div class="summary-title" id="summary-title">Manche terminée</div>
+      <div class="summary-sub" id="summary-text"></div>
+    </div>
+    <div class="scorebar" id="summary-scorebar"></div>
+    <button class="btn btn-gold" id="btn-next-turn">Continuer</button>
+  </section>
+
+  <!-- TRAINING SUMMARY -->
+  <section class="screen" id="screen-training-summary">
+    <div class="card" style="display:flex; flex-direction:column; gap:10px; align-items:center; padding:28px 20px;">
+      <div class="summary-icon">🔔</div>
+      <div class="summary-title">Manche terminée</div>
+      <div class="summary-sub" id="training-summary-text"></div>
+    </div>
+    <div class="controls-row">
+      <button class="btn btn-ghost" id="btn-training-stop">Terminer</button>
+      <button class="btn btn-gold" id="btn-training-next">Manche suivante</button>
+    </div>
+  </section>
+
+  <!-- ROLE CHOICE (chacun pour soi, double champion) -->
+  <section class="screen" id="screen-role-choice">
+    <div class="phase-tag final">La finale</div>
+    <div class="card handoff-wrap">
+      <div class="summary-icon">🌟</div>
+      <div class="handoff-label">Meilleur partout !</div>
+      <div class="handoff-team" id="role-choice-name" style="color:var(--gold);"></div>
+      <div class="handoff-role">Cette personne termine à la fois meilleur donneur d'indices et meilleur devineur. Elle choisit son rôle pour la finale.</div>
+    </div>
+    <div class="controls-row">
+      <button class="btn btn-gold" id="btn-choice-giver">Je fais deviner</button>
+      <button class="btn btn-gold" id="btn-choice-guesser">Je devine</button>
+    </div>
+  </section>
+
+  <!-- FINALIST ANNOUNCE -->
+  <section class="screen" id="screen-finalist">
+    <div class="phase-tag final">La finale</div>
+    <div class="card handoff-wrap">
+      <div class="summary-icon">⭐</div>
+      <div class="handoff-label" id="finalist-label">Se qualifient pour la finale</div>
+      <div class="handoff-team" id="finalist-name" style="color:var(--gold);"></div>
+      <div class="handoff-role" id="finalist-detail"></div>
+    </div>
+    <div class="ladder" id="finalist-ladder"></div>
+    <button class="btn btn-gold" id="btn-start-final">Jouer le palier 1</button>
+  </section>
+
+  <!-- PALIER DECISION -->
+  <section class="screen" id="screen-decision">
+    <div class="phase-tag final" id="decision-tag"></div>
+    <div class="card" style="display:flex; flex-direction:column; gap:8px; align-items:center; padding:26px 20px;">
+      <div class="summary-icon" id="decision-icon">🎉</div>
+      <div class="summary-title" id="decision-title"></div>
+      <div class="summary-sub" id="decision-sub"></div>
+    </div>
+    <div class="bank-line" id="decision-bank"></div>
+    <div class="ladder" id="decision-ladder"></div>
+    <div id="decision-joker-zone"></div>
+    <div class="controls-row">
+      <button class="btn btn-ghost" id="btn-stop-final">S'arrêter</button>
+      <button class="btn btn-gold" id="btn-continue-final">Continuer</button>
+    </div>
+  </section>
+
+  <!-- JOKER PEEK -->
+  <section class="screen" id="screen-peek">
+    <div class="joker-badge">🃏 Joker — aperçu des mots</div>
+    <div class="card handoff-wrap">
+      <div class="handoff-label" id="peek-label">Mot 1 / 5</div>
+      <div class="peek-word" id="peek-word">—</div>
+    </div>
+    <p class="footer-note">Chaque mot s'affiche 3 secondes.</p>
+  </section>
+
+  <!-- FINAL RESULT -->
+  <section class="screen" id="screen-final">
+    <div class="tile-row" id="final-tiles"></div>
+    <div class="trophy" id="final-trophy">🏆</div>
+    <div class="summary-title" id="final-title"></div>
+    <div class="summary-sub" id="final-sub"></div>
+    <div class="bank-line" id="final-bank" style="margin-top:6px;"></div>
+    <div id="final-ranking" style="display:flex; flex-direction:column; gap:8px; margin-top:6px;"></div>
+    <button class="btn btn-gold" id="btn-replay" style="margin-top:6px;">Rejouer</button>
+    <p class="footer-note">Nouvelle partie, mêmes joueurs ou nouvelle config.</p>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  // ---------- WORD BANK ----------
+  // d: 1 = facile, 2 = moyen, 3 = difficile
+  const WORD_BANK = {
+    "Général": [
+      {w:"Soleil",d:1},{w:"Voiture",d:1},{w:"Téléphone",d:1},{w:"Musique",d:1},{w:"Jardin",d:1},
+      {w:"Nuage",d:1},{w:"Miroir",d:1},{w:"Parapluie",d:1},{w:"Chaussure",d:1},{w:"Fenêtre",d:1},
+      {w:"Bougie",d:1},{w:"Ballon",d:1},{w:"Clavier",d:1},{w:"Piscine",d:1},{w:"Table",d:1},
+      {w:"Chaise",d:1},{w:"Lit",d:1},{w:"Porte",d:1},{w:"Rue",d:1},{w:"Ville",d:1},{w:"École",d:1},
+      {w:"Papier",d:1},{w:"Crayon",d:1},{w:"Livre",d:1},{w:"Sac",d:1},{w:"Clé",d:1},{w:"Lampe",d:1},
+      {w:"Radio",d:1},{w:"Journal",d:1},{w:"Photo",d:1},{w:"Robe",d:1},{w:"Chapeau",d:1},{w:"Gant",d:1},
+      {w:"Ceinture",d:1},{w:"Montre",d:1},{w:"Bijou",d:1},{w:"Pont",d:1},{w:"Train",d:1},{w:"Bateau",d:1},
+      {w:"Avion",d:1},{w:"Vélo",d:1},{w:"Camion",d:1},{w:"Route",d:1},{w:"Trottoir",d:1},
+      {w:"Montagne",d:2},{w:"Rivière",d:2},{w:"Bibliothèque",d:2},{w:"Horloge",d:2},{w:"Valise",d:2},
+      {w:"Escalier",d:2},{w:"Volcan",d:2},{w:"Tempête",d:2},{w:"Fusée",d:2},{w:"Trésor",d:2},{w:"Ombre",d:2},
+      {w:"Cascade",d:2},{w:"Falaise",d:2},{w:"Vallée",d:2},{w:"Colline",d:2},{w:"Plaine",d:2},{w:"Désert",d:2},
+      {w:"Glacier",d:2},{w:"Marée",d:2},{w:"Tourbillon",d:2},{w:"Avalanche",d:2},{w:"Inondation",d:2},
+      {w:"Éclair",d:2},{w:"Tonnerre",d:2},{w:"Brouillard",d:2},{w:"Rosée",d:2},{w:"Aurore",d:2},
+      {w:"Crépuscule",d:2},{w:"Horizon",d:2},{w:"Sentier",d:2},{w:"Carrefour",d:2},{w:"Impasse",d:2},
+      {w:"Ruelle",d:2},{w:"Quartier",d:2},{w:"Banlieue",d:2},{w:"Frontière",d:2},{w:"Récolte",d:2},
+      {w:"Moisson",d:2},{w:"Vendange",d:2},
+      {w:"Labyrinthe",d:3},{w:"Silence",d:3},{w:"Fantôme",d:3},{w:"Racine",d:3},{w:"Naufrage",d:3},
+      {w:"Mirage",d:3},{w:"Éclipse",d:3},{w:"Écho",d:3},{w:"Vertige",d:3},{w:"Silhouette",d:3},
+      {w:"Mélancolie",d:3},{w:"Nostalgie",d:3},{w:"Étreinte",d:3},{w:"Incertitude",d:3},{w:"Résilience",d:3},
+      {w:"Sérénité",d:3},{w:"Turbulence",d:3},{w:"Ambivalence",d:3},{w:"Pénombre",d:3},{w:"Effluve",d:3},
+      {w:"Réminiscence",d:3},{w:"Équinoxe",d:3},{w:"Solstice",d:3},{w:"Méandre",d:3},{w:"Vestige",d:3},
+      {w:"Anachronisme",d:3},{w:"Paradoxe",d:3},{w:"Apogée",d:3},{w:"Déclin",d:3},{w:"Ferveur",d:3}
+    ],
+    "Animaux": [
+      {w:"Éléphant",d:1},{w:"Girafe",d:1},{w:"Kangourou",d:1},{w:"Pingouin",d:1},{w:"Dauphin",d:1},
+      {w:"Tortue",d:1},{w:"Panda",d:1},{w:"Zèbre",d:1},{w:"Renard",d:1},{w:"Grenouille",d:1},
+      {w:"Chat",d:1},{w:"Chien",d:1},{w:"Cheval",d:1},{w:"Vache",d:1},{w:"Cochon",d:1},{w:"Mouton",d:1},
+      {w:"Poule",d:1},{w:"Canard",d:1},{w:"Lapin",d:1},{w:"Souris",d:1},{w:"Ours",d:1},{w:"Loup",d:1},
+      {w:"Singe",d:1},{w:"Poisson",d:1},{w:"Oiseau",d:1},{w:"Serpent",d:1},{w:"Abeille",d:1},
+      {w:"Papillon",d:1},{w:"Araignée",d:1},{w:"Mouche",d:1},
+      {w:"Hérisson",d:2},{w:"Perroquet",d:2},{w:"Crocodile",d:2},{w:"Écureuil",d:2},{w:"Flamant",d:2},
+      {w:"Requin",d:2},{w:"Hibou",d:2},{w:"Loutre",d:2},{w:"Poulpe",d:2},{w:"Paresseux",d:2},
+      {w:"Lynx",d:2},{w:"Chameau",d:2},{w:"Antilope",d:2},{w:"Bison",d:2},{w:"Chèvre",d:2},{w:"Phoque",d:2},
+      {w:"Morse",d:2},{w:"Hippopotame",d:2},{w:"Rhinocéros",d:2},{w:"Guépard",d:2},{w:"Léopard",d:2},
+      {w:"Vautour",d:2},{w:"Corbeau",d:2},{w:"Cigogne",d:2},{w:"Pélican",d:2},{w:"Toucan",d:2},
+      {w:"Colibri",d:2},{w:"Libellule",d:2},{w:"Sauterelle",d:2},{w:"Fourmi",d:2},
+      {w:"Scorpion",d:3},{w:"Coccinelle",d:3},{w:"Marmotte",d:3},{w:"Belette",d:3},
+      {w:"Ornithorynque",d:3},{w:"Iguane",d:3},{w:"Salamandre",d:3},{w:"Mangouste",d:3},{w:"Chacal",d:3},
+      {w:"Tatou",d:3},{w:"Pangolin",d:3},{w:"Okapi",d:3},{w:"Narval",d:3},{w:"Axolotl",d:3},
+      {w:"Caméléon",d:3},{w:"Wombat",d:3},{w:"Suricate",d:3},{w:"Capybara",d:3},{w:"Gecko",d:3},
+      {w:"Furet",d:3},{w:"Putois",d:3},{w:"Hyène",d:3},{w:"Vipère",d:3},{w:"Anaconda",d:3}
+    ],
+    "Cinéma & Séries": [
+      {w:"Titanic",d:1},{w:"Batman",d:1},{w:"Netflix",d:1},{w:"Popcorn",d:1},{w:"Zombie",d:1},
+      {w:"Cinéma",d:1},{w:"Écran",d:1},{w:"Film",d:1},{w:"Acteur",d:1},{w:"Actrice",d:1},
+      {w:"Comédie",d:1},{w:"Drame",d:1},{w:"Aventure",d:1},{w:"Héros",d:1},{w:"Épisode",d:1},
+      {w:"Saison",d:1},{w:"Série",d:1},{w:"Public",d:1},{w:"Salle",d:1},{w:"Billet",d:1},
+      {w:"Matrix",d:2},{w:"Avatar",d:2},{w:"Shrek",d:2},{w:"Pixar",d:2},{w:"Oscar",d:2},
+      {w:"Tournage",d:2},{w:"Casting",d:2},{w:"Suspense",d:2},{w:"Décor",d:2},{w:"Scène",d:2},
+      {w:"Dialogue",d:2},{w:"Intrigue",d:2},{w:"Personnage",d:2},{w:"Costume",d:2},{w:"Maquillage",d:2},
+      {w:"Effet",d:2},{w:"Studio",d:2},{w:"Réalisation",d:2},{w:"Adaptation",d:2},{w:"Remake",d:2},
+      {w:"Trilogie",d:2},{w:"Panoramique",d:2},{w:"Travelling",d:2},{w:"Fondu",d:2},
+      {w:"Scénario",d:3},{w:"Cascadeur",d:3},{w:"Générique",d:3},{w:"Franchise",d:3},{w:"Réplique",d:3},
+      {w:"Doublure",d:3},{w:"Scénariste",d:3},{w:"Montage",d:3},{w:"Storyboard",d:3},{w:"Narration",d:3},
+      {w:"Symbolisme",d:3},{w:"Dénouement",d:3},{w:"Prologue",d:3},{w:"Épilogue",d:3},{w:"Métaphore",d:3}
+    ],
+    "Nourriture": [
+      {w:"Croissant",d:1},{w:"Fromage",d:1},{w:"Chocolat",d:1},{w:"Sushi",d:1},{w:"Baguette",d:1},
+      {w:"Crêpe",d:1},{w:"Tarte",d:1},{w:"Biscuit",d:1},{w:"Miel",d:1},{w:"Pain",d:1},{w:"Beurre",d:1},
+      {w:"Lait",d:1},{w:"Œuf",d:1},{w:"Sel",d:1},{w:"Sucre",d:1},{w:"Riz",d:1},{w:"Pâtes",d:1},
+      {w:"Pizza",d:1},{w:"Salade",d:1},{w:"Soupe",d:1},{w:"Gâteau",d:1},{w:"Bonbon",d:1},{w:"Glace",d:1},
+      {w:"Yaourt",d:1},{w:"Jambon",d:1},{w:"Poulet",d:1},{w:"Bœuf",d:1},{w:"Poisson",d:1},{w:"Fruit",d:1},
+      {w:"Légume",d:1},{w:"Pomme",d:1},{w:"Banane",d:1},{w:"Orange",d:1},{w:"Fraise",d:1},{w:"Cerise",d:1},
+      {w:"Raisin",d:1},{w:"Citron",d:1},
+      {w:"Spaghetti",d:2},{w:"Fondue",d:2},{w:"Escargot",d:2},{w:"Macaron",d:2},{w:"Camembert",d:2},
+      {w:"Champagne",d:2},{w:"Barbecue",d:2},{w:"Gaufre",d:2},{w:"Confiture",d:2},{w:"Ratatouille",d:2},
+      {w:"Bouillabaisse",d:2},{w:"Cassoulet",d:2},{w:"Quiche",d:2},{w:"Omelette",d:2},{w:"Bouillon",d:2},
+      {w:"Compote",d:2},{w:"Nougat",d:2},{w:"Caramel",d:2},{w:"Praline",d:2},{w:"Meringue",d:2},
+      {w:"Sorbet",d:2},{w:"Cidre",d:2},{w:"Pastis",d:2},{w:"Moutarde",d:2},{w:"Mayonnaise",d:2},
+      {w:"Vinaigrette",d:2},{w:"Bisque",d:2},
+      {w:"Caviar",d:3},{w:"Nouille",d:3},{w:"Poivre",d:3},{w:"Vinaigre",d:3},{w:"Marinade",d:3},
+      {w:"Assaisonnement",d:3},{w:"Fermentation",d:3},{w:"Émulsion",d:3},{w:"Réduction",d:3},
+      {w:"Braisage",d:3},{w:"Clarification",d:3},{w:"Déglaçage",d:3},{w:"Macération",d:3},
+      {w:"Infusion",d:3},{w:"Consommé",d:3},{w:"Velouté",d:3},{w:"Feuilletage",d:3},{w:"Panure",d:3}
+    ],
+    "Métiers": [
+      {w:"Boulanger",d:1},{w:"Pompier",d:1},{w:"Avocat",d:1},{w:"Facteur",d:1},{w:"Peintre",d:1},
+      {w:"Boucher",d:1},{w:"Coiffeur",d:1},{w:"Pilote",d:1},{w:"Médecin",d:1},{w:"Infirmier",d:1},
+      {w:"Professeur",d:1},{w:"Policier",d:1},{w:"Cuisinier",d:1},{w:"Serveur",d:1},{w:"Vendeur",d:1},
+      {w:"Chauffeur",d:1},{w:"Agriculteur",d:1},{w:"Mécanicien",d:1},{w:"Caissier",d:1},{w:"Livreur",d:1},
+      {w:"Chirurgien",d:2},{w:"Astronaute",d:2},{w:"Jardinier",d:2},{w:"Menuisier",d:2},{w:"Journaliste",d:2},
+      {w:"Plombier",d:2},{w:"Architecte",d:2},{w:"Photographe",d:2},{w:"Berger",d:2},{w:"Dentiste",d:2},
+      {w:"Pharmacien",d:2},{w:"Psychologue",d:2},{w:"Ingénieur",d:2},{w:"Informaticien",d:2},
+      {w:"Bibliothécaire",d:2},{w:"Bijoutier",d:2},{w:"Tapissier",d:2},{w:"Horticulteur",d:2},
+      {w:"Apiculteur",d:2},{w:"Éleveur",d:2},{w:"Vigneron",d:2},{w:"Meunier",d:2},
+      {w:"Vétérinaire",d:3},{w:"Traducteur",d:3},{w:"Comptable",d:3},{w:"Notaire",d:3},{w:"Serrurier",d:3},
+      {w:"Ébéniste",d:3},{w:"Cartographe",d:3},{w:"Géomètre",d:3},{w:"Ostréiculteur",d:3},{w:"Tonnelier",d:3},
+      {w:"Vannier",d:3},{w:"Chaudronnier",d:3},{w:"Ferronnier",d:3},{w:"Taxidermiste",d:3},
+      {w:"Sommelier",d:3},{w:"Archiviste",d:3},{w:"Paléontologue",d:3},{w:"Astrophysicien",d:3}
+    ],
+    "Objets": [
+      {w:"Ciseaux",d:1},{w:"Marteau",d:1},{w:"Réveil",d:1},{w:"Éponge",d:1},{w:"Balai",d:1},
+      {w:"Ampoule",d:1},{w:"Robinet",d:1},{w:"Tapis",d:1},{w:"Stylo",d:1},{w:"Cahier",d:1},
+      {w:"Fourchette",d:1},{w:"Couteau",d:1},{w:"Cuillère",d:1},{w:"Assiette",d:1},{w:"Verre",d:1},
+      {w:"Tasse",d:1},{w:"Peigne",d:1},{w:"Brosse",d:1},{w:"Savon",d:1},{w:"Serviette",d:1},
+      {w:"Aspirateur",d:2},{w:"Trombone",d:2},{w:"Cintre",d:2},{w:"Cadenas",d:2},{w:"Boussole",d:2},
+      {w:"Lanterne",d:2},{w:"Tabouret",d:2},{w:"Coussin",d:2},{w:"Sifflet",d:2},{w:"Pince",d:2},
+      {w:"Perceuse",d:2},{w:"Scie",d:2},{w:"Râteau",d:2},{w:"Pelle",d:2},{w:"Arrosoir",d:2},
+      {w:"Brouette",d:2},{w:"Échelle",d:2},{w:"Cadre",d:2},{w:"Vase",d:2},{w:"Bougeoir",d:2},{w:"Chandelier",d:2},
+      {w:"Thermomètre",d:3},{w:"Entonnoir",d:3},{w:"Bouchon",d:3},{w:"Ficelle",d:3},
+      {w:"Tournevis",d:3},{w:"Poulie",d:3},{w:"Charnière",d:3},{w:"Étau",d:3},{w:"Rivet",d:3},
+      {w:"Écrou",d:3},{w:"Boulon",d:3},{w:"Cliquet",d:3},{w:"Étrier",d:3},{w:"Maillet",d:3},{w:"Vilebrequin",d:3}
+    ],
+    "Noms propres": [
+      {w:"Napoléon",d:1},{w:"Mozart",d:1},{w:"Sahara",d:1},{w:"Everest",d:1},{w:"Paris",d:1},
+      {w:"France",d:1},{w:"Europe",d:1},{w:"Afrique",d:1},{w:"Chine",d:1},{w:"Japon",d:1},
+      {w:"Londres",d:1},{w:"Rome",d:1},{w:"Égypte",d:1},{w:"Amérique",d:1},
+      {w:"Vénus",d:2},{w:"Cléopâtre",d:2},{w:"Amazone",d:2},{w:"Picasso",d:2},{w:"Islande",d:2},
+      {w:"Bretagne",d:2},{w:"Corse",d:2},{w:"Normandie",d:2},{w:"Provence",d:2},{w:"Alsace",d:2},
+      {w:"Bourgogne",d:2},{w:"Andorre",d:2},{w:"Monaco",d:2},{w:"Tahiti",d:2},{w:"Bali",d:2},
+      {w:"Venise",d:2},{w:"Florence",d:2},
+      {w:"Roosevelt",d:3},{w:"Gutenberg",d:3},{w:"Sibérie",d:3},{w:"Molière",d:3},{w:"Vésuve",d:3},
+      {w:"Copernic",d:3},{w:"Atacama",d:3},{w:"Néfertiti",d:3},{w:"Machiavel",d:3},{w:"Nostradamus",d:3},
+      {w:"Mésopotamie",d:3},{w:"Atlantide",d:3},{w:"Pompéi",d:3},{w:"Kilimandjaro",d:3},
+      {w:"Patagonie",d:3},{w:"Groenland",d:3}
+    ]
+  };
+
+  // Quali/entraînement : mots faciles + moyens. Finale : la difficulté grimpe avec le palier.
+  const QUALIF_TIERS = [1,2];
+  const FINAL_LEVEL_TIERS = { 1:[1,2], 2:[2], 3:[2,3], 4:[3], 5:[3] };
+
+  function drawTieredWords(n, tiers){
+    let pool = [];
+    state.selectedCategories.forEach(cat => {
+      WORD_BANK[cat].forEach(item => { if(tiers.includes(item.d)) pool.push(item.w); });
+    });
+    pool = shuffle(pool);
+    if(pool.length === 0){
+      // catégories sélectionnées trop restreintes pour ce niveau : on élargit à tous les niveaux
+      state.selectedCategories.forEach(cat => WORD_BANK[cat].forEach(item => pool.push(item.w)));
+      pool = shuffle(pool);
+    }
+    const result = [];
+    for(let i=0;i<n;i++) result.push(pool[i % pool.length]);
+    return result;
+  }
+
+
+  // ---------- SOUND ENGINE ----------
+  // Sons courts générés à la volée (Web Audio API), aucun fichier audio à héberger.
+  const SFX = (function(){
+    let ctx = null;
+    function getCtx(){
+      if(!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if(ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+    function tone(freq, start, dur, type, gainPeak, glideTo){
+      const c = getCtx();
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, c.currentTime + start);
+      if(glideTo) osc.frequency.linearRampToValueAtTime(glideTo, c.currentTime + start + dur);
+      gain.gain.setValueAtTime(0.0001, c.currentTime + start);
+      gain.gain.linearRampToValueAtTime(gainPeak || 0.18, c.currentTime + start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
+      osc.connect(gain); gain.connect(c.destination);
+      osc.start(c.currentTime + start);
+      osc.stop(c.currentTime + start + dur + 0.02);
+    }
+    function bell(freq, start, dur, gainPeak){
+      const c = getCtx();
+      [[1,1],[2.4,0.35]].forEach(([mult,weight])=>{
+        const osc = c.createOscillator();
+        const gain = c.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq*mult, c.currentTime + start);
+        gain.gain.setValueAtTime(0.0001, c.currentTime + start);
+        gain.gain.linearRampToValueAtTime(gainPeak*weight, c.currentTime + start + 0.006);
+        gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
+        osc.connect(gain); gain.connect(c.destination);
+        osc.start(c.currentTime + start);
+        osc.stop(c.currentTime + start + dur + 0.02);
+      });
+    }
+    return {
+      correct(){ tone(740, 0, 0.10, 'sine', 0.18); tone(1108, 0.09, 0.16, 'sine', 0.18); },
+      wrong(){ tone(360, 0, 0.18, 'sine', 0.15, 240); },
+      forbidden(){ bell(520, 0, 0.32, 0.20); bell(520, 0.16, 0.45, 0.20); },
+      timeUp(){ tone(520, 0, 0.14, 'triangle', 0.17); tone(300, 0.13, 0.32, 'triangle', 0.17); },
+      palier(){ tone(523,0,0.10,'sine',0.15); tone(659,0.09,0.10,'sine',0.15); tone(784,0.18,0.10,'sine',0.15); tone(1047,0.27,0.22,'sine',0.17); },
+    };
+  })();
+
+  const PLAYER_COLORS = ["#f2c94c", "#5aa9e6", "#4fbf7a", "#e6614f", "#b98fff", "#ffa552"];
+
+  const QUALIF_TIME = 30;
+  const QUALIF_WORDS = 5;
+  const TIE_POOL = 3;
+  const TIE_TIME = 20;
+
+  const FINAL_TIME = 90;
+  const FINAL_TARGET = 5;
+  const MAX_CLUES = 3;
+  // Palier : nombre de mots disponibles + gain (barème de la version 50 000 €)
+  const PALIERS = [
+    { level:1, pool:9, gain:1000 },
+    { level:2, pool:8, gain:2500 },
+    { level:3, pool:7, gain:5000 },
+    { level:4, pool:6, gain:10000 },
+    { level:5, pool:5, gain:50000 },
+  ];
+  const SAFE_LEVEL = 2; // palier de sécurité : gains acquis + joker débloqué
+
+  function renderTiles(containerId){
+    const el = document.getElementById(containerId);
+    el.innerHTML = "";
+    "MOT DE PASSE".split("").forEach(ch => {
+      const div = document.createElement('div');
+      if(ch === " "){ div.className = "tile space"; }
+      else { div.className = "tile"; div.textContent = ch; }
+      el.appendChild(div);
+    });
+  }
+  renderTiles('title-tiles');
+
+  // ---- Fond animé : halos flous en mouvement lent, différents à chaque lancement ----
+  function initBackgroundHalos(){
+    const colors = [
+      'rgba(70,120,255,0.22)',
+      'rgba(90,140,255,0.18)',
+      'rgba(60,100,220,0.16)',
+      'rgba(50,90,200,0.16)',
+      'rgba(255,59,48,0.10)'
+    ];
+    const count = 4 + Math.floor(Math.random()*3); // 4 à 6 halos
+    const frag = document.createDocumentFragment();
+    for(let i=0;i<count;i++){
+      const el = document.createElement('div');
+      el.className = 'bg-halo';
+      const size = 130 + Math.random()*140;
+      const top = Math.random()*95;
+      const left = Math.random()*95;
+      const color = colors[Math.floor(Math.random()*colors.length)];
+      const dx = (Math.random()*50 + 15) * (Math.random() < 0.5 ? -1 : 1);
+      const dy = (Math.random()*50 + 15) * (Math.random() < 0.5 ? -1 : 1);
+      const duration = 14 + Math.random()*14; // 14-28s : un peu plus rapide que l'aperçu
+      const delay = -Math.random()*duration; // démarrage désynchronisé, jamais deux halos en phase
+      el.style.cssText = `width:${size}px;height:${size}px;top:${top}%;left:${left}%;background:${color};--dx:${dx}px;--dy:${dy}px;animation-duration:${duration}s;animation-delay:${delay}s;`;
+      frag.appendChild(el);
+    }
+    const floor = document.createElement('div');
+    floor.className = 'floor-glow';
+    frag.appendChild(floor);
+    document.body.insertBefore(frag, document.body.firstChild);
+  }
+  initBackgroundHalos();
+
+  function euro(n){ return n.toLocaleString('fr-FR') + " €"; }
+
+  // ---------- STATE ----------
+  const state = {
+    mode: 'full',        // 'full' | 'training'
+    subMode: 'team',      // 'team' | 'solo'
+    teamAssignment: 'predefined', // 'predefined' | 'random'
+    playerCount: 4,
+
+    teams: [],            // [{giverName, guesserName, giverIdx, guesserIdx, score, colorIdx}]
+    soloStats: [],         // [{name, giverScore, guesserScore, giverTime, guesserTime, colorIdx}]
+
+    selectedCategories: new Set(Object.keys(WORD_BANK)),
+    turnQueue: [], currentTurnIndex: 0,
+    currentTurn: null,
+    pool: [], foundCount: 0, target: null, clueCount: 1,
+    timeLeft: 0, timerHandle: null, turnStartTime: 0,
+    dotsTotal: 0, dotsFound: 0, dotsLost: 0,
+
+    tieGroup: [], tieScores: {}, tieKind: null, // 'team' | 'giver' | 'guesser'
+
+    finaleGiverName: '', finaleGuesserName: '', finaleColorIdx: 0,
+    currentLevel: 0,
+    bank: 0, safeBank: 0,
+    jokerAvailable: false, jokerUsed: false,
+    finalHistory: [],
+    endedByStop: false,
+    peekedPool: null, peekedLevel: null,
+    gameOver: false,
+  };
+
+  const screens = {
+    setup: document.getElementById('screen-setup'),
+    handoff: document.getElementById('screen-handoff'),
+    play: document.getElementById('screen-play'),
+    summary: document.getElementById('screen-summary'),
+    trainingSummary: document.getElementById('screen-training-summary'),
+    roleChoice: document.getElementById('screen-role-choice'),
+    finalist: document.getElementById('screen-finalist'),
+    decision: document.getElementById('screen-decision'),
+    peek: document.getElementById('screen-peek'),
+    final: document.getElementById('screen-final'),
+  };
+  function showScreen(name){
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+    document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
+    const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
+      state.currentTurn && ['qualif','team_tiebreak','solo_tiebreak'].includes(state.currentTurn.kind);
+    document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
+  }
+  function renderScheduleOverlay(){
+    const el = document.getElementById('schedule-list');
+    el.innerHTML = "";
+    state.turnQueue.forEach((t, i) => {
+      if(t.kind === 'training') return;
+      const div = document.createElement('div');
+      div.className = 'schedule-row' + (i === state.currentTurnIndex ? ' current' : (i < state.currentTurnIndex ? ' done' : ''));
+      const label = t.progressLabel || `Manche ${i+1}`;
+      const color = PLAYER_COLORS[t.colorIdx];
+      div.innerHTML = `<span class="schedule-label">${escapeHtml(label)}</span><span class="schedule-names" style="color:${color};">${escapeHtml(t.giverName)} ➜ ${escapeHtml(t.guesserName)}</span>`;
+      el.appendChild(div);
+    });
+  }
+  document.getElementById('btn-schedule').addEventListener('click', () => {
+    renderScheduleOverlay();
+    document.getElementById('schedule-overlay').classList.add('visible');
+  });
+  document.getElementById('btn-close-schedule').addEventListener('click', () => {
+    document.getElementById('schedule-overlay').classList.remove('visible');
+  });
+  document.getElementById('btn-quit-game').addEventListener('click', () => {
+    document.getElementById('quit-confirm-overlay').classList.add('visible');
+  });
+  document.getElementById('btn-quit-cancel').addEventListener('click', () => {
+    document.getElementById('quit-confirm-overlay').classList.remove('visible');
+  });
+  document.getElementById('btn-quit-confirm').addEventListener('click', () => {
+    document.getElementById('quit-confirm-overlay').classList.remove('visible');
+    clearInterval(state.timerHandle);
+    showScreen('setup');
+  });
+  function escapeHtml(str){
+    const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
+  }
+
+  // ---- Category chips ----
+  const categoryGroup = document.getElementById('category-group');
+  function updateSettingsSummary(){
+    const n = state.selectedCategories.size;
+    document.getElementById('settings-summary').textContent = `${n} catégorie${n>1?'s':''} sélectionnée${n>1?'s':''}`;
+  }
+  Object.keys(WORD_BANK).forEach(cat => {
+    const chip = document.createElement('div');
+    chip.className = 'chip selected';
+    chip.textContent = cat;
+    chip.addEventListener('click', () => {
+      if(state.selectedCategories.has(cat)){
+        if(state.selectedCategories.size === 1) return;
+        state.selectedCategories.delete(cat);
+        chip.classList.remove('selected');
+      } else {
+        state.selectedCategories.add(cat);
+        chip.classList.add('selected');
+      }
+      updateSettingsSummary();
+    });
+    categoryGroup.appendChild(chip);
+  });
+  updateSettingsSummary();
+
+  document.getElementById('btn-open-settings').addEventListener('click', () => {
+    document.getElementById('settings-overlay').classList.add('visible');
+  });
+  document.getElementById('btn-close-settings').addEventListener('click', () => {
+    document.getElementById('settings-overlay').classList.remove('visible');
+  });
+
+  function shuffle(arr){
+    for(let i = arr.length -1; i>0; i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  // ================= SETUP SCREEN =================
+  function wireToggleGroup(id, onPick){
+    const group = document.getElementById(id);
+    group.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if(btn.classList.contains('disabled')) return;
+        group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        onPick(btn.dataset.val);
+      });
+    });
+  }
+  function selectToggle(groupId, val){
+    const group = document.getElementById(groupId);
+    group.querySelectorAll('.toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.val === val));
+  }
+
+  wireToggleGroup('mode-group', val => {
+    state.mode = val;
+    document.getElementById('full-mode-block').style.display = (val === 'full') ? '' : 'none';
+    document.getElementById('training-mode-block').style.display = (val === 'training') ? '' : 'none';
+    document.getElementById('btn-start-game').textContent = (val === 'training') ? "Commencer l'entraînement" : "Lancer la partie";
+  });
+
+  wireToggleGroup('playercount-group', val => {
+    state.playerCount = parseInt(val, 10);
+    const teamImpossible = state.playerCount % 2 === 1 || state.playerCount < 4;
+    const teamBtn = document.querySelector('#submode-group .toggle-btn[data-val="team"]');
+    teamBtn.classList.toggle('disabled', teamImpossible);
+    document.getElementById('submode-note').style.display = teamImpossible ? '' : 'none';
+    if(teamImpossible && state.subMode === 'team'){
+      state.subMode = 'solo';
+      selectToggle('submode-group', 'solo');
+    }
+    document.getElementById('team-assignment-card').style.display = (state.subMode === 'team') ? '' : 'none';
+    renderPlayerFields();
+  });
+
+  wireToggleGroup('submode-group', val => {
+    state.subMode = val;
+    document.getElementById('team-assignment-card').style.display = (val === 'team') ? '' : 'none';
+    renderPlayerFields();
+  });
+
+  wireToggleGroup('teamassign-group', val => {
+    state.teamAssignment = val;
+    renderPlayerFields();
+  });
+
+  function renderPlayerFields(){
+    const container = document.getElementById('player-fields');
+    container.innerHTML = "";
+    const N = state.playerCount;
+
+    if(state.subMode === 'team' && state.teamAssignment === 'predefined'){
+      for(let t=0; t<N/2; t++){
+        const block = document.createElement('div');
+        block.className = 'team-name-block';
+        block.innerHTML = `
+          <div class="block-header"><span class="dot" style="background:${PLAYER_COLORS[t]};"></span> Équipe ${t+1}</div>
+          <div class="field-pair">
+            <div>
+              <label class="field-label">Fait deviner</label>
+              <input type="text" id="team${t}-giver" placeholder="Prénom" maxlength="14">
+            </div>
+            <div>
+              <label class="field-label">Devine</label>
+              <input type="text" id="team${t}-guesser" placeholder="Prénom" maxlength="14">
+            </div>
+          </div>`;
+        container.appendChild(block);
+      }
+    } else {
+      // équipes aléatoires, ou chacun pour soi : liste à plat de N noms
+      const wrap = document.createElement('div');
+      wrap.style.display = 'grid';
+      wrap.style.gridTemplateColumns = '1fr 1fr';
+      wrap.style.gap = '8px';
+      for(let i=0; i<N; i++){
+        const div = document.createElement('div');
+        div.innerHTML = `<label class="field-label">Joueur ${i+1}</label>
+          <input type="text" id="player${i}" placeholder="Prénom" maxlength="14">`;
+        wrap.appendChild(div);
+      }
+      container.appendChild(wrap);
+    }
+  }
+  renderPlayerFields();
+
+  // ---- Game start ----
+  document.getElementById('btn-start-game').addEventListener('click', startGame);
+
+  function startGame(){
+    state.finalHistory = [];
+    state.bank = 0; state.safeBank = 0;
+    state.jokerAvailable = false; state.jokerUsed = false;
+    state.endedByStop = false;
+    state.gameOver = false;
+
+    if(state.mode === 'training'){
+      startTraining();
+      return;
+    }
+
+    if(state.subMode === 'team'){
+      buildTeams();
+      state.turnQueue = [];
+      const ROUNDS_PER_TEAM = 4;
+      for(let r=1; r<=ROUNDS_PER_TEAM; r++){
+        state.teams.forEach((team, idx) => {
+          const swap = (r % 2 === 0); // manches paires : les partenaires inversent leur rôle
+          state.turnQueue.push({
+            kind: 'qualif', style: 'cycle',
+            teamIdx: idx, manche: r,
+            giverName: swap ? team.guesserName : team.giverName,
+            guesserName: swap ? team.giverName : team.guesserName,
+            colorIdx: team.colorIdx,
+            poolSize: QUALIF_WORDS, target: QUALIF_WORDS, time: QUALIF_TIME,
+            progressLabel: `Manche ${r} / ${ROUNDS_PER_TEAM} — Équipe ${idx+1}`
+          });
+        });
+      }
+    } else {
+      buildSoloStats();
+      const schedule = buildSoloSchedule(state.playerCount);
+      state.turnQueue = schedule.map((pair, idx) => ({
+        kind: 'qualif', style: 'cycle',
+        giverIdx: pair.giver, guesserIdx: pair.guesser,
+        giverName: state.soloStats[pair.giver].name, guesserName: state.soloStats[pair.guesser].name,
+        colorIdx: state.soloStats[pair.giver].colorIdx,
+        poolSize: QUALIF_WORDS, target: QUALIF_WORDS, time: QUALIF_TIME,
+        progressLabel: `Duo ${idx+1} / ${schedule.length}`
+      }));
+    }
+    state.currentTurnIndex = 0;
+    goToHandoff();
+  }
+
+  function buildTeams(){
+    const N = state.playerCount;
+    state.teams = [];
+    if(state.teamAssignment === 'predefined'){
+      for(let t=0; t<N/2; t++){
+        const giverName = document.getElementById(`team${t}-giver`).value.trim() || `Joueur ${2*t+1}`;
+        const guesserName = document.getElementById(`team${t}-guesser`).value.trim() || `Joueur ${2*t+2}`;
+        state.teams.push({ giverName, guesserName, score:0, colorIdx: t });
+      }
+    } else {
+      const names = [];
+      for(let i=0;i<N;i++) names.push(document.getElementById(`player${i}`).value.trim() || `Joueur ${i+1}`);
+      const order = shuffle(names.map((_, i) => i));
+      for(let t=0; t<N/2; t++){
+        const a = names[order[2*t]], b = names[order[2*t+1]];
+        // rôles distribués au hasard au sein de l'équipe
+        const swap = Math.random() < 0.5;
+        state.teams.push({
+          giverName: swap ? b : a, guesserName: swap ? a : b,
+          score:0, colorIdx: t
+        });
+      }
+    }
+  }
+
+  function buildSoloStats(){
+    const N = state.playerCount;
+    state.soloStats = [];
+    for(let i=0;i<N;i++){
+      const name = document.getElementById(`player${i}`).value.trim() || `Joueur ${i+1}`;
+      state.soloStats.push({ name, giverScore:0, guesserScore:0, giverTime:0, guesserTime:0, colorIdx: i % PLAYER_COLORS.length });
+    }
+  }
+
+  function buildSoloSchedule(N){
+    const pairs = [];
+    for(let i=0;i<N;i++){
+      for(let j=i+1;j<N;j++){
+        pairs.push({giver:i, guesser:j});
+        pairs.push({giver:j, guesser:i});
+      }
+    }
+    return shuffle(pairs);
+  }
+
+  function renderScorebar(targetId, highlightColorIdx){
+    const el = document.getElementById(targetId);
+    el.innerHTML = "";
+    if(state.subMode === 'team'){
+      state.teams.forEach((team, i) => {
+        const div = document.createElement('div');
+        div.className = 'score-team';
+        const label = `${team.giverName} ➜ ${team.guesserName}`;
+        const color = PLAYER_COLORS[team.colorIdx];
+        div.innerHTML = `<span class="dot" style="width:9px;height:9px;background:${color};display:inline-block;"></span>
+          <span style="color:${i===highlightColorIdx ? color : 'var(--text-dim)'};">${escapeHtml(label)}</span>
+          <span class="val" style="color:${color};">${team.score}</span>`;
+        el.appendChild(div);
+      });
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  // ---- Handoff ----
+  function goToHandoff(){
+    const turn = state.turnQueue[state.currentTurnIndex];
+    state.currentTurn = turn;
+    const tag = document.getElementById('handoff-phase-tag');
+    const label = document.getElementById('handoff-manche-label');
+    const teamEl = document.getElementById('handoff-team-name');
+    const roleEl = document.getElementById('handoff-role');
+    const targetEl = document.getElementById('handoff-target');
+    const color = PLAYER_COLORS[turn.colorIdx];
+
+    if(turn.kind === 'final'){
+      tag.textContent = `Finale — Palier ${turn.level} / 5`;
+      tag.classList.add('final');
+      label.textContent = `Palier à ${euro(PALIERS[turn.level-1].gain)}`;
+    } else if(turn.kind === 'team_tiebreak'){
+      tag.textContent = "Égalité — manche décisive";
+      tag.classList.remove('final');
+      label.textContent = "Qui trouvera le plus sur 3 ?";
+    } else if(turn.kind === 'solo_tiebreak'){
+      tag.textContent = turn.role === 'giver' ? "Égalité — meilleur donneur" : "Égalité — meilleur devineur";
+      tag.classList.remove('final');
+      label.textContent = "Qui trouvera le plus sur 3 ?";
+    } else if(turn.kind === 'training'){
+      tag.textContent = "Entraînement";
+      tag.classList.remove('final');
+      label.textContent = "Prêt ?";
+    } else {
+      tag.textContent = turn.progressLabel || "Qualification";
+      tag.classList.remove('final');
+      label.textContent = "Au tour de :";
+    }
+
+    if(turn.kind === 'training'){
+      teamEl.style.display = 'none';
+      roleEl.textContent = "Indices illimités, les mots passés reviennent dans la rotation.";
+      targetEl.textContent = `${turn.target} mots à faire deviner — chronomètre`;
+    } else {
+      teamEl.style.display = '';
+      teamEl.textContent = `${turn.giverName} ➜ ${turn.guesserName}`;
+      teamEl.style.color = color;
+      roleEl.innerHTML = `<b>${escapeHtml(turn.giverName)}</b> fait deviner à <b>${escapeHtml(turn.guesserName)}</b>`;
+      targetEl.textContent = turn.target
+        ? `${turn.target} mots à trouver parmi ${turn.poolSize} — ${turn.time>=60 ? '1min30' : turn.time+'s'}`
+        : `Qui trouvera le plus de mots sur ${turn.poolSize} ? — ${turn.time}s`;
+    }
+
+    if(turn.kind === 'final' || turn.kind === 'training'){
+      document.getElementById('handoff-scorebar').style.display = 'none';
+    } else {
+      document.getElementById('handoff-scorebar').style.display = '';
+      renderScorebar('handoff-scorebar', turn.colorIdx);
+    }
+    showScreen('handoff');
+  }
+
+  document.getElementById('btn-ready').addEventListener('click', goToPlay);
+
+  // ---- Play ----
+  function goToPlay(){
+    const turn = state.currentTurn;
+    if(turn.fixedWord){
+      state.pool = [turn.fixedWord];
+    } else if(turn.kind === 'final' && state.peekedPool && state.peekedLevel === turn.level){
+      state.pool = state.peekedPool;
+      state.peekedPool = null;
+    } else if(turn.kind === 'final'){
+      state.pool = drawTieredWords(turn.poolSize, FINAL_LEVEL_TIERS[turn.level]);
+    } else {
+      state.pool = drawTieredWords(turn.poolSize, QUALIF_TIERS);
+    }
+    state.foundCount = 0;
+    state.target = turn.target;
+    state.timeLeft = turn.chrono ? 0 : turn.time;
+    state.turnStartTime = turn.time;
+    state.dotsTotal = turn.poolSize;
+    state.dotsFound = 0;
+    state.dotsLost = 0;
+    state.running = false;
+
+    const nameEl = document.getElementById('play-team-name');
+    if(turn.kind === 'final'){
+      nameEl.textContent = `Palier ${turn.level} — ${euro(PALIERS[turn.level-1].gain)}`;
+    } else if(turn.kind === 'training'){
+      nameEl.textContent = "Entraînement";
+    } else {
+      nameEl.textContent = `${turn.giverName} ➜ ${turn.guesserName}`;
+    }
+    nameEl.style.color = PLAYER_COLORS[turn.colorIdx];
+
+    const notFoundBtn = document.getElementById('btn-not-found');
+    const chevronsLeft = document.getElementById('chevrons-left');
+    const chevronsRight = document.getElementById('chevrons-right');
+    if(turn.style === 'clues'){
+      notFoundBtn.textContent = "✗ Pas trouvé";
+      chevronsLeft.classList.add('active'); chevronsRight.classList.add('active');
+      buildChevrons(chevronsLeft); buildChevrons(chevronsRight);
+    } else {
+      notFoundBtn.textContent = "✗ Passer";
+      chevronsLeft.classList.remove('active'); chevronsRight.classList.remove('active');
+      chevronsLeft.innerHTML = ""; chevronsRight.innerHTML = "";
+    }
+
+    updateTimerUI();
+    loadNextWord();
+    setPlayControlsEnabled(false);
+    document.getElementById('word-pill').classList.add('waiting');
+    document.getElementById('play-hint').textContent = "Tape sur le mot pour lancer le chrono";
+    showScreen('play');
+  }
+
+  function setPlayControlsEnabled(enabled){
+    document.getElementById('btn-correct').disabled = !enabled;
+    document.getElementById('btn-not-found').disabled = !enabled;
+    document.getElementById('btn-interdit').disabled = !enabled;
+  }
+
+  document.getElementById('word-pill').addEventListener('click', () => {
+    if(state.running){
+      // pause
+      state.running = false;
+      clearInterval(state.timerHandle);
+      document.getElementById('word-pill').classList.add('waiting');
+      document.getElementById('play-hint').textContent = "En pause — tape sur le mot pour reprendre";
+      setPlayControlsEnabled(false);
+    } else {
+      // démarrage ou reprise
+      state.running = true;
+      document.getElementById('word-pill').classList.remove('waiting');
+      document.getElementById('play-hint').textContent = "";
+      setPlayControlsEnabled(true);
+      state.timerHandle = setInterval(tick, 1000);
+    }
+  });
+
+  function buildChevrons(container){
+    container.innerHTML = "";
+    for(let i=0;i<MAX_CLUES;i++) container.appendChild(document.createElement('span'));
+  }
+  function renderChevrons(){
+    if(state.currentTurn.style !== 'clues') return;
+    const lit = MAX_CLUES - (state.clueCount - 1);
+    // Gauche : la flèche adjacente au mot est la dernière (index le plus élevé).
+    const leftSpans = document.getElementById('chevrons-left').querySelectorAll('span');
+    leftSpans.forEach((s, i) => {
+      const isLit = i >= (MAX_CLUES - lit);
+      s.classList.toggle('lit', isLit);
+      s.classList.toggle('pulse', isLit && i === MAX_CLUES - 1);
+    });
+    // Droite : la flèche adjacente au mot est la première (index 0).
+    const rightSpans = document.getElementById('chevrons-right').querySelectorAll('span');
+    rightSpans.forEach((s, i) => {
+      const isLit = i < lit;
+      s.classList.toggle('lit', isLit);
+      s.classList.toggle('pulse', isLit && i === 0);
+    });
+  }
+
+  function renderDots(){
+    const el = document.getElementById('play-dots');
+    el.innerHTML = "";
+    const visible = state.dotsTotal - state.dotsLost;
+    for(let i=0;i<visible;i++){
+      const d = document.createElement('div');
+      d.className = 'dot-mark' + (i < state.dotsFound ? ' found' : '');
+      el.appendChild(d);
+    }
+  }
+  function formatTime(t){
+    const m = Math.floor(t/60);
+    const s = t % 60;
+    return m + ":" + (s < 10 ? "0"+s : s);
+  }
+  function updateTimerUI(){
+    const turn = state.currentTurn;
+    const t = state.timeLeft;
+    document.getElementById('play-timer-num').textContent = formatTime(t);
+    if(turn.chrono){
+      document.getElementById('play-timer-num').classList.remove('urgent');
+    } else {
+      document.getElementById('play-timer-num').classList.toggle('urgent', t <= Math.ceil(turn.time*0.25));
+    }
+  }
+  function tick(){
+    const turn = state.currentTurn;
+    if(turn.chrono){
+      state.timeLeft += 1;
+      updateTimerUI();
+    } else {
+      state.timeLeft -= 1;
+      updateTimerUI();
+      if(state.timeLeft <= 0){ clearInterval(state.timerHandle); SFX.timeUp(); endTurn(); }
+    }
+  }
+  function loadNextWord(){
+    if(state.pool.length === 0){ clearInterval(state.timerHandle); endTurn(); return; }
+    state.clueCount = 1;
+    document.getElementById('play-word').textContent = state.pool[0].toUpperCase();
+    renderChevrons();
+    renderDots();
+  }
+
+  function isObjectiveImpossible(){
+    return state.target && (state.foundCount + state.pool.length) < state.target;
+  }
+
+  document.getElementById('btn-correct').addEventListener('click', () => {
+    SFX.correct();
+    state.pool.shift();
+    state.foundCount += 1;
+    state.dotsFound += 1;
+    if(state.target && state.foundCount >= state.target){
+      clearInterval(state.timerHandle); endTurn(); return;
+    }
+    loadNextWord();
+  });
+
+  document.getElementById('btn-not-found').addEventListener('click', () => {
+    SFX.wrong();
+    const turn = state.currentTurn;
+    if(turn.style === 'cycle'){
+      const w = state.pool.shift(); state.pool.push(w); loadNextWord(); return;
+    }
+    if(state.clueCount < MAX_CLUES){
+      state.clueCount += 1;
+      renderChevrons();
+    } else {
+      state.pool.shift();
+      state.dotsLost += 1;
+      if(isObjectiveImpossible()){ clearInterval(state.timerHandle); endTurn(); return; }
+      loadNextWord();
+    }
+  });
+
+  document.getElementById('btn-interdit').addEventListener('click', () => {
+    SFX.forbidden();
+    const turn = state.currentTurn;
+    state.pool.shift();
+    state.dotsLost += 1;
+    if(turn.style === 'clues' && isObjectiveImpossible()){ clearInterval(state.timerHandle); endTurn(); return; }
+    loadNextWord();
+  });
+
+  // ---- End of turn ----
+  function endTurn(){
+    const turn = state.currentTurn;
+    const elapsed = turn.chrono ? state.timeLeft : (state.turnStartTime - state.timeLeft);
+
+    if(turn.kind === 'qualif'){
+      if(state.subMode === 'team'){
+        state.teams[turn.teamIdx].score += state.foundCount;
+      } else {
+        state.soloStats[turn.giverIdx].giverScore += state.foundCount;
+        state.soloStats[turn.giverIdx].giverTime += elapsed;
+        state.soloStats[turn.guesserIdx].guesserScore += state.foundCount;
+        state.soloStats[turn.guesserIdx].guesserTime += elapsed;
+      }
+      showTurnSummary(turn, `${state.foundCount} mot${state.foundCount>1?'s':''} sur ${QUALIF_WORDS}`);
+    } else if(turn.kind === 'team_tiebreak'){
+      state.tieScores[turn.teamIdx] = (state.tieScores[turn.teamIdx]||0) + state.foundCount;
+      showTurnSummary(turn, `${state.foundCount} mot${state.foundCount>1?'s':''} sur ${turn.poolSize}`);
+    } else if(turn.kind === 'solo_tiebreak'){
+      state.tieScores[turn.playerIdx] = (state.tieScores[turn.playerIdx]||0) + state.foundCount;
+      showTurnSummary(turn, `${state.foundCount} mot${state.foundCount>1?'s':''} sur ${turn.poolSize}`);
+    } else if(turn.kind === 'training'){
+      showTrainingSummary(state.foundCount, elapsed);
+      return;
+    } else if(turn.kind === 'final'){
+      const success = state.foundCount >= turn.target;
+      state.finalHistory.push({ level: turn.level, pool: turn.poolSize, found: state.foundCount, target: turn.target, success });
+      goToDecision(turn, success);
+      return;
+    }
+  }
+
+  function showTurnSummary(turn, text){
+    const reachedTarget = turn.target && state.foundCount >= turn.target;
+    document.getElementById('summary-icon').textContent = reachedTarget ? "🎉" : "🔔";
+    document.getElementById('summary-title').textContent = "Manche terminée";
+    document.getElementById('summary-text').innerHTML =
+      `<span style="color:${PLAYER_COLORS[turn.colorIdx]}; font-weight:800;">${escapeHtml(turn.giverName)} ➜ ${escapeHtml(turn.guesserName)}</span> — ${text}`;
+    if(turn.kind === 'qualif' && state.subMode === 'team'){
+      renderScorebar('summary-scorebar', turn.colorIdx);
+    } else {
+      document.getElementById('summary-scorebar').innerHTML = "";
+      document.getElementById('summary-scorebar').style.display = 'none';
+    }
+    showScreen('summary');
+  }
+
+  document.getElementById('btn-next-turn').addEventListener('click', () => {
+    document.getElementById('summary-scorebar').style.display = '';
+    state.currentTurnIndex += 1;
+    if(state.currentTurnIndex < state.turnQueue.length){ goToHandoff(); return; }
+    resolvePhase();
+  });
+
+  // ================= TRAINING MODE =================
+  function startTraining(){
+    state.turnQueue = [{
+      kind:'training', style:'cycle', chrono:true,
+      giverName:'', guesserName:'', colorIdx: 0,
+      poolSize: QUALIF_WORDS, target: QUALIF_WORDS, time: QUALIF_TIME
+    }];
+    state.currentTurnIndex = 0;
+    goToHandoff();
+  }
+  function showTrainingSummary(found, elapsed){
+    document.getElementById('training-summary-text').textContent =
+      `${found} mot${found>1?'s':''} trouvé${found>1?'s':''} sur ${QUALIF_WORDS} en ${formatTime(elapsed)}.`;
+    showScreen('trainingSummary');
+  }
+  document.getElementById('btn-training-next').addEventListener('click', () => {
+    goToPlay();
+  });
+  document.getElementById('btn-training-stop').addEventListener('click', () => {
+    showScreen('setup');
+  });
+
+  // ================= PHASE RESOLUTION (fin de qualification) =================
+  function resolvePhase(){
+    if(state.tieKind === 'team'){ resolveTeamTiebreakResult(); return; }
+    if(state.tieKind === 'giver' || state.tieKind === 'guesser'){ resolveSoloTiebreakResult(); return; }
+    if(state.subMode === 'team'){ resolveTeamPhase(); }
+    else { resolveSoloPhase(); }
+  }
+
+  // ---- Team mode ----
+  function resolveTeamPhase(){
+    const scored = state.teams.map((t,i) => ({ idx:i, score: t.score }));
+    const maxScore = Math.max(...scored.map(s => s.score));
+    const tied = scored.filter(s => s.score === maxScore).map(s => s.idx);
+    if(tied.length === 1){
+      announceTeamFinalist(tied[0]);
+    } else {
+      pushTeamTiebreak(tied);
+    }
+  }
+  function resolveTeamTiebreakResult(){
+    const scores = state.tieGroup.map(idx => ({ idx, score: state.tieScores[idx] || 0 }));
+    const maxScore = Math.max(...scores.map(s => s.score));
+    const stillTied = scores.filter(s => s.score === maxScore).map(s => s.idx);
+    state.tieKind = null;
+    if(stillTied.length > 1){
+      pushTeamTiebreak(stillTied); // toujours à égalité : on rejoue avec un nouveau lot de mots
+    } else {
+      announceTeamFinalist(stillTied[0]);
+    }
+  }
+  function pushTeamTiebreak(tiedIdxs){
+    state.tieGroup = tiedIdxs;
+    state.tieScores = {};
+    state.tieKind = 'team';
+    state.turnQueue = tiedIdxs.map(idx => ({
+      kind:'team_tiebreak', style:'cycle',
+      teamIdx: idx,
+      giverName: state.teams[idx].giverName, guesserName: state.teams[idx].guesserName,
+      colorIdx: state.teams[idx].colorIdx,
+      poolSize: TIE_POOL, target:null, time: TIE_TIME
+    }));
+    state.currentTurnIndex = 0;
+    goToHandoff();
+  }
+
+  function announceTeamFinalist(idx){
+    const team = state.teams[idx];
+    state.finaleGiverName = team.giverName;
+    state.finaleGuesserName = team.guesserName;
+    state.finaleColorIdx = team.colorIdx;
+    document.getElementById('finalist-label').textContent = "Se qualifie pour la finale";
+    document.getElementById('finalist-name').textContent = `${team.giverName} ➜ ${team.guesserName}`;
+    document.getElementById('finalist-name').style.color = PLAYER_COLORS[team.colorIdx];
+    document.getElementById('finalist-detail').innerHTML = `${team.score} point${team.score>1?'s':''} en qualification.`;
+    renderLadder('finalist-ladder', 1);
+    showScreen('finalist');
+  }
+
+  // ---- Solo mode ----
+  // Machine à états : on fixe d'abord le meilleur donneur, puis le meilleur devineur,
+  // chacun pouvant déclencher son propre départage, avant de vérifier la double couronne.
+  function resolveSoloPhase(){
+    state._pendingGivers = state.soloStats.map((p,i)=>({idx:i, score:p.giverScore, time:p.giverTime}))
+      .sort((a,b)=> b.score - a.score || a.time - b.time);
+    state._pendingGuessers = state.soloStats.map((p,i)=>({idx:i, score:p.guesserScore, time:p.guesserTime}))
+      .sort((a,b)=> b.score - a.score || a.time - b.time);
+    state._resolvedGiver = undefined;
+    state._resolvedGuesser = undefined;
+    proceedSoloResolution();
+  }
+
+  function proceedSoloResolution(){
+    if(state._resolvedGiver === undefined){
+      const givers = state._pendingGivers;
+      const tied = givers.filter(g => g.score === givers[0].score && g.time === givers[0].time).map(g => g.idx);
+      if(tied.length > 1){ pushSoloTiebreak(tied, 'giver'); return; }
+      state._resolvedGiver = givers[0].idx;
+    }
+    if(state._resolvedGuesser === undefined){
+      const guessers = state._pendingGuessers;
+      const tied = guessers.filter(g => g.score === guessers[0].score && g.time === guessers[0].time).map(g => g.idx);
+      if(tied.length > 1){ pushSoloTiebreak(tied, 'guesser'); return; }
+      state._resolvedGuesser = guessers[0].idx;
+    }
+    const bestGiver = state._resolvedGiver, bestGuesser = state._resolvedGuesser;
+    if(bestGiver === bestGuesser){
+      showRoleChoice(bestGiver);
+    } else {
+      finalizeSoloFinalists(bestGiver, bestGuesser);
+    }
+  }
+
+  function resolveSoloTiebreakResult(){
+    const role = state.tieKind;
+    const scores = state.tieGroup.map(idx => ({ idx, score: state.tieScores[idx] || 0 }));
+    const maxScore = Math.max(...scores.map(s => s.score));
+    const stillTied = scores.filter(s => s.score === maxScore).map(s => s.idx);
+    state.tieKind = null;
+    if(stillTied.length > 1){
+      pushSoloTiebreak(stillTied, role); // toujours à égalité : on rejoue avec un nouveau lot de mots
+      return;
+    }
+    if(role === 'giver') state._resolvedGiver = stillTied[0];
+    else state._resolvedGuesser = stillTied[0];
+    proceedSoloResolution(); // fixe l'autre rôle (avec son propre départage si besoin), puis vérifie la double couronne
+  }
+
+  function pushSoloTiebreak(tiedIdxs, role){
+    state.tieGroup = tiedIdxs;
+    state.tieScores = {};
+    state.tieKind = role;
+    // les joueurs à égalité s'affrontent entre eux, en rotation, dans le rôle disputé
+    state.turnQueue = tiedIdxs.map((idx, i) => {
+      const opponent = tiedIdxs[(i+1) % tiedIdxs.length];
+      const giverIdx = (role === 'giver') ? idx : opponent;
+      const guesserIdx = (role === 'giver') ? opponent : idx;
+      return {
+        kind:'solo_tiebreak', style:'cycle', role, playerIdx: idx,
+        giverName: state.soloStats[giverIdx].name, guesserName: state.soloStats[guesserIdx].name,
+        colorIdx: state.soloStats[idx].colorIdx,
+        poolSize: TIE_POOL, target:null, time: TIE_TIME
+      };
+    });
+    state.currentTurnIndex = 0;
+    goToHandoff();
+  }
+
+  function showRoleChoice(playerIdx){
+    document.getElementById('role-choice-name').textContent = state.soloStats[playerIdx].name;
+    document.getElementById('role-choice-name').style.color = PLAYER_COLORS[state.soloStats[playerIdx].colorIdx];
+    state._roleChoicePlayer = playerIdx;
+    showScreen('roleChoice');
+  }
+  document.getElementById('btn-choice-giver').addEventListener('click', () => {
+    const idx = state._roleChoicePlayer;
+    const nextGuesser = state._pendingGuessers.find(g => g.idx !== idx).idx;
+    finalizeSoloFinalists(idx, nextGuesser);
+  });
+  document.getElementById('btn-choice-guesser').addEventListener('click', () => {
+    const idx = state._roleChoicePlayer;
+    const nextGiver = state._pendingGivers.find(g => g.idx !== idx).idx;
+    finalizeSoloFinalists(nextGiver, idx);
+  });
+
+  function finalizeSoloFinalists(giverIdx, guesserIdx){
+    const giver = state.soloStats[giverIdx], guesser = state.soloStats[guesserIdx];
+    state.finaleGiverName = giver.name;
+    state.finaleGuesserName = guesser.name;
+    state.finaleColorIdx = giver.colorIdx;
+    document.getElementById('finalist-label').textContent = "Se qualifient pour la finale";
+    document.getElementById('finalist-name').textContent = `${giver.name} ➜ ${guesser.name}`;
+    document.getElementById('finalist-name').style.color = PLAYER_COLORS[giver.colorIdx];
+    document.getElementById('finalist-detail').innerHTML =
+      `Meilleur donneur : <b>${escapeHtml(giver.name)}</b> (${giver.giverScore} pts) · Meilleur devineur : <b>${escapeHtml(guesser.name)}</b> (${guesser.guesserScore} pts)`;
+    renderLadder('finalist-ladder', 1);
+    showScreen('finalist');
+  }
+
+  function renderLadder(containerId, currentLevel){
+    const el = document.getElementById(containerId);
+    el.innerHTML = "";
+    PALIERS.forEach(p => {
+      const div = document.createElement('div');
+      let cls = 'ladder-step';
+      const past = state.finalHistory.find(h => h.level === p.level);
+      if(past && past.success) cls += ' done';
+      else if(p.level === currentLevel) cls += ' current';
+      if(p.level === SAFE_LEVEL) cls += ' safe-marker';
+      div.className = cls;
+      div.innerHTML = `<span>Palier ${p.level} — 5 mots parmi ${p.pool}${p.level===SAFE_LEVEL ? ' · sécurité' : ''}</span>
+        <span class="amount">${euro(p.gain)}</span>`;
+      el.appendChild(div);
+    });
+  }
+
+  document.getElementById('btn-start-final').addEventListener('click', () => startPalier(1));
+
+  function startPalier(level){
+    const p = PALIERS[level-1];
+    const turn = {
+      kind:'final', style:'clues', level,
+      giverName: state.finaleGiverName, guesserName: state.finaleGuesserName, colorIdx: state.finaleColorIdx,
+      poolSize: p.pool, target: FINAL_TARGET, time: FINAL_TIME
+    };
+    state.turnQueue.push(turn);
+    state.currentTurnIndex = state.turnQueue.length - 1;
+    state.currentLevel = level;
+    goToHandoff();
+  }
+
+  function goToDecision(turn, success){
+    const p = PALIERS[turn.level-1];
+    if(success){
+      SFX.palier();
+      state.bank = p.gain;
+      if(turn.level >= SAFE_LEVEL){
+        state.safeBank = Math.max(state.safeBank, PALIERS[SAFE_LEVEL-1].gain);
+        if(turn.level === SAFE_LEVEL && !state.jokerUsed) state.jokerAvailable = true;
+      }
+    } else {
+      state.bank = state.safeBank;
+      endFinal(false);
+      return;
+    }
+    if(turn.level === PALIERS.length){ endFinal(true); return; }
+
+    document.getElementById('decision-tag').textContent = `Palier ${turn.level} franchi`;
+    document.getElementById('decision-icon').textContent = "🎉";
+    document.getElementById('decision-title').textContent = `${euro(p.gain)} en jeu`;
+    let sub = `5 mots sur 5 trouvés parmi ${turn.poolSize}.`;
+    if(turn.level === SAFE_LEVEL) sub += ` Palier de sécurité atteint : ${euro(PALIERS[SAFE_LEVEL-1].gain)} sont acquis, et le joker est débloqué.`;
+    document.getElementById('decision-sub').textContent = sub;
+    document.getElementById('decision-bank').innerHTML =
+      `Prochain palier : <b>${euro(PALIERS[turn.level].gain)}</b> — 5 mots parmi ${PALIERS[turn.level].pool}`;
+    renderLadder('decision-ladder', turn.level + 1);
+
+    const jokerZone = document.getElementById('decision-joker-zone');
+    jokerZone.innerHTML = "";
+    if(state.jokerAvailable && !state.jokerUsed){
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-ghost';
+      btn.style.width = '100%';
+      btn.textContent = "🃏 Utiliser le joker (voir les 5 premiers mots)";
+      btn.addEventListener('click', () => usePeek(turn.level + 1));
+      jokerZone.appendChild(btn);
+    }
+    showScreen('decision');
+  }
+
+  document.getElementById('btn-continue-final').addEventListener('click', () => startPalier(state.currentLevel + 1));
+  document.getElementById('btn-stop-final').addEventListener('click', () => {
+    state.endedByStop = true;
+    endFinal(false);
+  });
+
+  function usePeek(nextLevel){
+    state.jokerUsed = true;
+    state.jokerAvailable = false;
+    const p = PALIERS[nextLevel-1];
+    const preview = drawTieredWords(p.pool, FINAL_LEVEL_TIERS[nextLevel]);
+    state.peekedPool = preview;
+    state.peekedLevel = nextLevel;
+    const shown = preview.slice(0, 5);
+    let i = 0;
+    showScreen('peek');
+    const render = () => {
+      document.getElementById('peek-label').textContent = `Mot ${i+1} / ${shown.length}`;
+      document.getElementById('peek-word').textContent = shown[i].toUpperCase();
+    };
+    render();
+    const handle = setInterval(() => {
+      i += 1;
+      if(i >= shown.length){
+        clearInterval(handle);
+        document.getElementById('decision-joker-zone').innerHTML = "";
+        showScreen('decision');
+        return;
+      }
+      render();
+    }, 3000);
+  }
+
+  function endFinal(wonAll){
+    renderTiles('final-tiles');
+    const last = state.finalHistory[state.finalHistory.length - 1];
+    const amount = wonAll ? PALIERS[PALIERS.length-1].gain : state.bank;
+    const color = PLAYER_COLORS[state.finaleColorIdx];
+    const label = `${state.finaleGiverName} ➜ ${state.finaleGuesserName}`;
+
+    if(wonAll){
+      document.getElementById('final-trophy').textContent = "🏆";
+      document.getElementById('final-title').textContent = `${label} remporte la partie !`;
+      document.getElementById('final-sub').textContent = `Les 5 paliers franchis d'affilée.`;
+    } else if(state.endedByStop){
+      document.getElementById('final-trophy').textContent = "🤝";
+      document.getElementById('final-title').textContent = `${label} s'arrête au palier ${state.currentLevel}`;
+      document.getElementById('final-sub').textContent = `Décision prise de sécuriser les gains plutôt que de tout remettre en jeu.`;
+    } else {
+      document.getElementById('final-trophy').textContent = "🎬";
+      document.getElementById('final-title').textContent = `${label} échoue au palier ${last.level}`;
+      document.getElementById('final-sub').textContent =
+        `${last.found} mot${last.found>1?'s':''} sur ${last.target} trouvés parmi ${last.pool}.`;
+    }
+    document.getElementById('final-title').style.color = '';
+    document.getElementById('final-bank').innerHTML =
+      amount > 0 ? `Repart avec <b>${euro(amount)}</b>` : `Repart sans gain`;
+
+    const ranking = document.getElementById('final-ranking');
+    ranking.innerHTML = "";
+    state.finalHistory.forEach(h => {
+      const row = document.createElement('div');
+      row.className = 'final-rank';
+      row.innerHTML = `<div class="name" style="color:${color};">Palier ${h.level} — 5 sur ${h.pool} ${h.success ? '✅' : '❌'}</div>
+        <div class="pts" style="color:${color};">${h.found}</div>`;
+      ranking.appendChild(row);
+    });
+    showScreen('final');
+  }
+
+  document.getElementById('btn-replay').addEventListener('click', () => showScreen('setup'));
+
+})();
+</script>
+</body>
+</html>
