@@ -287,17 +287,34 @@
   }
 
   .word-row{ display:flex; align-items:center; gap:6px; }
+  @property --shine-angle{
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+  }
   .word-pill{
+    position:relative;
     flex:1;
-    background:#0c0302; border:3px solid var(--red); border-radius:999px;
+    background:#0c0302; border:3px solid transparent; border-radius:999px;
     padding: 20px 22px; text-align:center;
     margin: 2px 0;
     cursor: pointer; user-select: none;
   }
-  .word-pill.waiting{ animation: pulseWait 1.25s ease-in-out infinite; }
-  @keyframes pulseWait{
-    0%,100%{ border-color: var(--red); }
-    50%{ border-color: #ff8c85; }
+  .word-pill::before{
+    content:"";
+    position:absolute; inset:0; border-radius:inherit; padding:3px;
+    background: conic-gradient(from var(--shine-angle), var(--red) 0deg, var(--red) 300deg, #e88079 314deg, #f5b3ab 320deg, #e88079 326deg, var(--red) 340deg, var(--red) 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: word-pill-shine 11s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes word-pill-shine{ to{ --shine-angle: 360deg; } }
+  .word-pill.waiting::before{ animation: word-pill-shine 11s linear infinite, pulseGlow 1.25s ease-in-out infinite; }
+  @keyframes pulseGlow{
+    0%,100%{ filter: brightness(1); }
+    50%{ filter: brightness(1.4); }
   }
   .word-text{
     font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size: 34px; letter-spacing:1px; text-transform:uppercase;
