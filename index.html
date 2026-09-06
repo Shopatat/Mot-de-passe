@@ -77,7 +77,7 @@
   .tile-row{
     display:flex; justify-content:center; align-items:center; gap:2px; flex-wrap:wrap;
     margin: 10px 0 2px; padding: 16px 26px; position:relative;
-    background: radial-gradient(ellipse 70% 90% at center, rgba(242,201,76,0.30) 0%, rgba(255,59,48,0.14) 45%, transparent 75%);
+    background: none;
   }
   .tile-row::before, .tile-row::after{
     font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
@@ -264,9 +264,19 @@
 
   .dot-row{ display:flex; justify-content:center; gap:8px; align-self:center; flex-wrap:wrap; max-width:100%;
     background: linear-gradient(180deg, #1c0d0c 0%, #0c0302 60%, #0c0302 100%);
-    border:1px solid #3a1210; border-radius:999px; padding:8px 16px;
-    position:relative; overflow:hidden;
+    border:3px solid transparent; border-radius:999px; padding:8px 16px;
+    position:relative;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5); }
+  .dot-row::before{
+    content:""; position:absolute; inset:-3px; border-radius:inherit; padding:3px;
+    background: conic-gradient(from var(--shine-angle), #4c4c50 0deg, #8c8c92 180deg, #4c4c50 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: word-pill-shine 14s linear infinite;
+    pointer-events:none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
   .dot-row::after{
     content:""; position:absolute; left:6%; right:6%; top:42%; height:40%;
     background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0));
@@ -278,68 +288,152 @@
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.65), inset 0 -1px 1px rgba(255,255,255,0.04);
   }
   .dot-mark.found{
-    background: radial-gradient(circle at 35% 28%, #d4ffe8 0%, #5fe897 32%, #2a9c5c 70%, #166b3c 100%);
+    background: radial-gradient(circle at 35% 28%, #eafff2 0%, #5fe89f 28%, #1ec574 58%, #0a7a44 100%);
     box-shadow:
-      0 0 4px 1px rgba(120,255,180,0.95),
-      0 0 12px 3px rgba(79,191,122,0.65),
-      0 0 22px 6px rgba(79,191,122,0.3),
+      0 0 5px 1px rgba(30,255,140,0.75),
+      0 0 13px 4px rgba(30,255,140,0.45),
       inset 0 0 2px rgba(255,255,255,0.7);
   }
 
-  .word-row{ display:flex; align-items:center; gap:6px; }
+  .word-row{ display:flex; align-items:center; gap:6px; position:relative; }
   @property --shine-angle{
     syntax: '<angle>';
     inherits: false;
     initial-value: 0deg;
   }
   .word-pill{
-    position:relative;
+    position:relative; z-index:1; order:2;
     flex:1;
-    background:#0c0302; border:3px solid transparent; border-radius:999px;
+    background:#0c0302; border:6px solid transparent; border-radius:999px;
     padding: 20px 22px; text-align:center;
     margin: 2px 0;
     cursor: pointer; user-select: none;
+    box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.5);
   }
   .word-pill::before{
     content:"";
-    position:absolute; inset:0; border-radius:inherit; padding:3px;
-    background: conic-gradient(from var(--shine-angle), var(--red) 0deg, var(--red) 300deg, #e88079 314deg, #f5b3ab 320deg, #e88079 326deg, var(--red) 340deg, var(--red) 360deg);
+    position:absolute; inset:-6px; border-radius:inherit; padding:6px;
+    background: conic-gradient(from var(--shine-angle), var(--red-dim) 0deg, #ff6357 180deg, var(--red-dim) 360deg);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    animation: word-pill-shine 11s linear infinite;
+    animation: word-pill-shine 14s linear infinite;
     pointer-events: none;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25);
   }
   @keyframes word-pill-shine{ to{ --shine-angle: 360deg; } }
-  .word-pill.waiting::before{ animation: word-pill-shine 11s linear infinite, pulseGlow 1.25s ease-in-out infinite; }
+  .word-pill.waiting::before{ animation: word-pill-shine 14s linear infinite, pulseGlow 1.25s ease-in-out infinite; }
   @keyframes pulseGlow{
     0%,100%{ filter: brightness(1); }
     50%{ filter: brightness(1.4); }
   }
+
+  /* Matérialisation du cadre en début de manche : le cadre se déplie comme une TV
+     qui s'allume (ligne fine -> plein écran), la lumière gagne toute la surface,
+     puis s'atténue pour révéler le mot. */
+  .word-pill.materialize{
+    animation: pillMaterialize 0.6s cubic-bezier(.22,.85,.25,1) both;
+  }
+  @keyframes pillMaterialize{
+    0%{ transform: scaleX(0.05) scaleY(0.35); opacity:0; }
+    10%{ opacity:1; }
+    50%{ transform: scaleX(1.02) scaleY(1.05); }
+    70%{ transform: scaleX(0.99) scaleY(0.99); }
+    100%{ transform: scaleX(1) scaleY(1); opacity:1; }
+  }
+  .word-flare{
+    position:absolute; inset:-6px; border-radius:inherit;
+    pointer-events:none; z-index:4; opacity:0;
+    background: radial-gradient(ellipse 160% 260% at 50% 50%, #ffffff 0%, #ffe9d6 55%, #ffcfa0 100%);
+  }
+  .word-pill.materialize .word-flare{
+    animation: pillFlare 0.6s ease-out both;
+  }
+  @keyframes pillFlare{
+    0%{ opacity:0; }
+    38%{ opacity:1; }
+    60%{ opacity:1; }
+    100%{ opacity:0; }
+  }
+  .word-pill.materialize .word-text{
+    opacity:0; animation: wordTextReveal 0.2s ease-out 0.43s both;
+  }
+  @keyframes wordTextReveal{
+    from{ opacity:0; transform: translateY(3px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
   .word-text{
     font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size: 34px; letter-spacing:1px; text-transform:uppercase;
     color: #fff; line-height:1.05; word-break: break-word;
+    position:relative; z-index:1;
   }
-  .chevrons{ display:none; flex-shrink:0; flex-direction:row; gap:1px; }
+  .word-wipe{
+    position:absolute; inset:0; overflow:hidden; border-radius:inherit;
+    pointer-events:none; z-index:2;
+  }
+  .wipe-chevron-group{
+    position:absolute; top:50%; height:100%; display:flex;
+    opacity:0; transform: translateY(-50%) translateX(0);
+    transition: transform 0.5s ease-in-out, opacity 0.15s ease-in-out;
+  }
+  .wipe-chevron-group span{
+    width:32px; height:100%; margin-left:-15px;
+    background-image: radial-gradient(circle at center, #ffffff 0%, #ffe9d2 30%, currentColor 62%, transparent 70%);
+    background-size: 7px 7px;
+    color: var(--red);
+    filter: drop-shadow(0 0 10px rgba(255,240,220,0.85)) drop-shadow(0 0 22px rgba(255,90,60,0.75)) brightness(1.18);
+  }
+  .wipe-chevron-group span:first-child{ margin-left:0; }
+  .wipe-chevron-group.left{ left:0; }
+  .wipe-chevron-group.left span{ clip-path: polygon(0% 8%, 46% 50%, 0% 92%, 20% 100%, 66% 50%, 20% 0%); }
+  .wipe-chevron-group.right{ right:0; }
+  .wipe-chevron-group.right span{ clip-path: polygon(100% 8%, 54% 50%, 100% 92%, 80% 100%, 34% 50%, 80% 0%); }
+  .chevrons{ display:none; flex-shrink:0; flex-direction:row; gap:0; position:relative; z-index:50; align-self:center; transition: opacity 0.15s ease; }
   .chevrons.active{ display:flex; }
   .chevrons span{
-    width:0; height:0; opacity:0.1;
-    border-top: 9px solid transparent; border-bottom: 9px solid transparent;
-    transition: opacity 0.45s ease, transform 0.45s ease;
-    transform: scale(0.25);
+    width:32px; height:76px; margin-left:-15px;
+    background-image: radial-gradient(circle at center, currentColor 42%, transparent 46%);
+    background-size: 7px 7px;
+    color: #3a1210;
+    transition: color 0.3s ease, filter 0.3s ease;
   }
-  .chevrons.left span{ border-left: 12px solid var(--red); transform-origin: right center; }
-  .chevrons.right span{ border-right: 12px solid var(--red); transform-origin: left center; }
+  .chevrons span:first-child{ margin-left:0; }
+  .chevrons.left{ order:1; margin-right:-10px; }
+  .chevrons.left span{ clip-path: polygon(0% 8%, 46% 50%, 0% 92%, 20% 100%, 66% 50%, 20% 0%); }
+  .chevrons.right{ order:3; margin-left:-10px; }
+  .chevrons.right span{ clip-path: polygon(100% 8%, 54% 50%, 100% 92%, 80% 100%, 34% 50%, 80% 0%); }
+  .chevron-travel{
+    position:absolute; top:50%; height:76px; display:flex;
+    opacity:0; z-index:60; pointer-events:none;
+    transition: transform 0.28s ease-in-out, opacity 0.15s ease-in-out;
+  }
+  .chevron-travel span{
+    width:32px; height:100%; margin-left:-15px;
+    background-image: radial-gradient(circle at center, #ffffff 0%, #ffe9d2 30%, currentColor 62%, transparent 70%);
+    background-size: 7px 7px;
+    color: var(--red);
+    filter: drop-shadow(0 0 10px rgba(255,240,220,0.85)) drop-shadow(0 0 22px rgba(255,90,60,0.75)) brightness(1.18);
+  }
+  .chevron-travel span:first-child{ margin-left:0; }
+  .chevron-travel.left{ left:0; transform: translateY(-50%) translateX(0); }
+  .chevron-travel.left span{ clip-path: polygon(0% 8%, 46% 50%, 0% 92%, 20% 100%, 66% 50%, 20% 0%); }
+  .chevron-travel.right{ right:0; transform: translateY(-50%) translateX(0); }
+  .chevron-travel.right span{ clip-path: polygon(100% 8%, 54% 50%, 100% 92%, 80% 100%, 34% 50%, 80% 0%); }
   .chevrons span.lit{
-    opacity:1; transform: scale(1);
-    filter: drop-shadow(0 0 4px rgba(255,59,48,0.8));
+    color: var(--red);
+    filter: drop-shadow(0 0 9px rgba(255,59,48,0.9)) drop-shadow(0 0 18px rgba(255,59,48,0.5));
   }
+  .chevrons span:not(.lit){
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.6));
+  }
+  .chevrons.left span.lit:last-child{ filter: brightness(1.3) drop-shadow(0 0 9px rgba(255,59,48,0.9)) drop-shadow(0 0 18px rgba(255,59,48,0.5)); }
+  .chevrons.right span.lit:first-child{ filter: brightness(1.3) drop-shadow(0 0 9px rgba(255,59,48,0.9)) drop-shadow(0 0 18px rgba(255,59,48,0.5)); }
   .chevrons span.lit.pulse{
-    animation: chevronPulse 1.8s ease-in-out infinite;
+    animation: chevronPulse 2.6s ease-in-out infinite;
   }
   @keyframes chevronPulse{
-    0%,100%{ opacity:1; filter: drop-shadow(0 0 4px rgba(255,59,48,0.8)); }
-    50%{ opacity:0.5; filter: drop-shadow(0 0 11px rgba(255,59,48,1)); }
+    0%,100%{ color: #8a1712; filter: drop-shadow(0 0 6px rgba(138,23,18,0.7)); }
+    50%{ color: #ffffff; filter: drop-shadow(0 0 18px rgba(255,255,255,0.95)); }
   }
   .controls-row{ display:flex; gap:10px; }
   .controls-row button{ flex:1; }
@@ -361,18 +455,41 @@
   .summary-title{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:24px; text-align:center; letter-spacing:0.5px; }
   .summary-sub{ text-align:center; color: var(--text-dim); font-size:14px; }
 
-  /* Gains ladder */
-  .ladder{ display:flex; flex-direction:column-reverse; gap:5px; }
+  /* Gains ladder — pyramide façon "paliers" TV, la plus large en bas */
+  .ladder{ display:flex; flex-direction:column-reverse; gap:7px; align-items:center; }
   .ladder-step{
-    display:flex; justify-content:space-between; align-items:center;
-    padding: 9px 13px; border-radius: 10px;
-    background: var(--bg-alt); border: 1px solid var(--card-edge);
-    font-size:13px; font-weight:700; color: var(--text-dim);
+    position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:1px; width:100%; padding:11px 34px; border-radius:999px;
+    background: linear-gradient(180deg, #2a0f0c 0%, #150605 55%, #0c0302 100%);
+    border:1px solid #4a1a16; color: var(--text-dim); overflow:hidden;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -4px 8px rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.3);
   }
-  .ladder-step.current{ background: rgba(242,201,76,0.16); border-color: var(--gold); color: var(--gold); }
-  .ladder-step.done{ background: rgba(79,191,122,0.12); border-color: var(--correct); color: var(--correct); }
-  .ladder-step.safe-marker{ border-left: 4px solid var(--gold); }
-  .ladder-step .amount{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:16px; letter-spacing:0.5px; }
+  .ladder-step::after{
+    content:""; position:absolute; left:8%; right:8%; top:12%; height:34%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0));
+    border-radius:999px; pointer-events:none;
+  }
+  .ladder-step:nth-child(1){ width:100%; }
+  .ladder-step:nth-child(2){ width:91%; }
+  .ladder-step:nth-child(3){ width:82%; }
+  .ladder-step:nth-child(4){ width:73%; }
+  .ladder-step:nth-child(5){ width:64%; }
+  .ladder-step .amount{
+    position:relative; z-index:1; font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
+    font-size:19px; letter-spacing:0.5px; color:inherit;
+  }
+  .ladder-step .meta{ position:relative; z-index:1; font-size:9.5px; letter-spacing:0.3px; color:inherit; opacity:0.65; font-weight:700; }
+  .ladder-step.done{
+    color:#bfe8cf; border-color: rgba(79,191,122,0.55);
+    background: linear-gradient(180deg, #123322 0%, #0c1f16 55%, #071510 100%);
+  }
+  .ladder-step.done .amount{ color: var(--correct); }
+  .ladder-step.current{
+    color: var(--gold); border-color: var(--gold);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -4px 8px rgba(0,0,0,0.5), 0 0 16px rgba(242,201,76,0.4);
+  }
+  .ladder-step.current .amount{ color: var(--gold); text-shadow: 0 0 10px rgba(242,201,76,0.5); }
+  .ladder-step.safe-marker .meta{ color: var(--gold-dim); opacity:0.9; }
 
   .bank-line{ text-align:center; font-size:13px; color:var(--text-dim); font-weight:700; }
   .bank-line b{ color: var(--gold); font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:18px; letter-spacing:0.5px; }
@@ -617,6 +734,9 @@
       </ul>
       <p class="forbidden-consequence">⚠️ Un interdit prononcé = mot annulé aussitôt.</p>
     </div>
+
+    <!-- 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive -->
+    <button class="btn btn-ghost" id="btn-debug-finale" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct en finale</button>
   </section>
 
   <!-- HANDOFF -->
@@ -642,9 +762,20 @@
     <div class="word-row">
       <div class="chevrons left" id="chevrons-left"></div>
       <div class="word-pill" id="word-pill">
+        <div class="word-wipe" id="word-wipe">
+          <div class="wipe-chevron-group left" id="wipe-left">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="wipe-chevron-group right" id="wipe-right">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
         <div class="word-text" id="play-word">MOT</div>
+        <div class="word-flare" id="word-flare"></div>
       </div>
       <div class="chevrons right" id="chevrons-right"></div>
+      <div class="chevron-travel left" id="chevron-travel-left"><span></span><span></span><span></span></div>
+      <div class="chevron-travel right" id="chevron-travel-right"><span></span><span></span><span></span></div>
     </div>
     <p class="footer-note" id="play-hint" style="min-height:2.8em; line-height:1.4;">Tape sur le mot pour lancer le chrono</p>
     <div class="controls-row">
@@ -995,13 +1126,13 @@
   const FINAL_TIME = 90;
   const FINAL_TARGET = 5;
   const MAX_CLUES = 3;
-  // Palier : nombre de mots disponibles + gain (barème de la version 50 000 €)
+  // Palier : nombre de mots disponibles + gain
   const PALIERS = [
     { level:1, pool:9, gain:1000 },
     { level:2, pool:8, gain:2500 },
     { level:3, pool:7, gain:5000 },
     { level:4, pool:6, gain:10000 },
-    { level:5, pool:5, gain:50000 },
+    { level:5, pool:5, gain:20000 },
   ];
   const SAFE_LEVEL = 2; // palier de sécurité : gains acquis + joker débloqué
 
@@ -1322,6 +1453,23 @@
   // ---- Game start ----
   document.getElementById('btn-start-game').addEventListener('click', () => { SFX.select(); startGame(); });
 
+  // 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive
+  document.getElementById('btn-debug-finale').addEventListener('click', () => {
+    SFX.select();
+    state.finalHistory = [];
+    state.bank = 0; state.safeBank = 0;
+    state.jokerAvailable = false; state.jokerUsed = false;
+    state.endedByStop = false;
+    state.gameOver = false;
+    state.subMode = 'solo';
+    state.turnQueue = [];
+    state.currentTurnIndex = -1;
+    state.finaleGiverName = 'Joueur A';
+    state.finaleGuesserName = 'Joueur B';
+    state.finaleColorIdx = 0;
+    startPalier(1);
+  });
+
   function startGame(){
     state.finalHistory = [];
     state.bank = 0; state.safeBank = 0;
@@ -1541,9 +1689,13 @@
     }
 
     updateTimerUI();
-    loadNextWord();
+    loadNextWord(false);
     setPlayControlsEnabled(false);
-    document.getElementById('word-pill').classList.add('waiting');
+    const wordPillEl = document.getElementById('word-pill');
+    wordPillEl.classList.remove('materialize');
+    void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
+    wordPillEl.classList.add('materialize');
+    wordPillEl.classList.add('waiting');
     document.getElementById('play-hint').textContent = "Tape sur le mot pour lancer le chrono";
     showScreen('play');
   }
@@ -1586,14 +1738,14 @@
     leftSpans.forEach((s, i) => {
       const isLit = i >= (MAX_CLUES - lit);
       s.classList.toggle('lit', isLit);
-      s.classList.toggle('pulse', isLit && i === MAX_CLUES - 1);
+      s.classList.toggle('pulse', isLit && i === (MAX_CLUES - lit));
     });
     // Droite : la flèche adjacente au mot est la première (index 0).
     const rightSpans = document.getElementById('chevrons-right').querySelectorAll('span');
     rightSpans.forEach((s, i) => {
       const isLit = i < lit;
       s.classList.toggle('lit', isLit);
-      s.classList.toggle('pulse', isLit && i === 0);
+      s.classList.toggle('pulse', isLit && i === lit - 1);
     });
   }
 
@@ -1633,11 +1785,82 @@
       if(state.timeLeft <= 0){ clearInterval(state.timerHandle); SFX.timeUp(); endTurn(); }
     }
   }
-  function loadNextWord(){
+  function loadNextWord(animate){
     if(state.pool.length === 0){ clearInterval(state.timerHandle); endTurn(); return; }
     state.clueCount = 1;
-    document.getElementById('play-word').textContent = state.pool[0].toUpperCase();
-    renderChevrons();
+    const nextWord = state.pool[0].toUpperCase();
+    const isFinaleStyle = state.currentTurn && state.currentTurn.style === 'clues';
+    if(animate === false){
+      document.getElementById('play-word').textContent = nextWord;
+      renderChevrons();
+    } else if(isFinaleStyle){
+      const chevronsLeft = document.getElementById('chevrons-left');
+      const chevronsRight = document.getElementById('chevrons-right');
+      const travelLeft = document.getElementById('chevron-travel-left');
+      const travelRight = document.getElementById('chevron-travel-right');
+      const pillW = document.getElementById('word-pill').getBoundingClientRect().width;
+      const travelW = travelLeft.getBoundingClientRect().width;
+      const dist = pillW + travelW + 20;
+
+      // Départ : les vrais chevrons s'effacent, les doublures apparaissent à leur place exacte.
+      chevronsLeft.style.opacity = '0';
+      chevronsRight.style.opacity = '0';
+      travelLeft.style.opacity = '1';
+      travelRight.style.opacity = '1';
+
+      // La traversée démarre juste après (laisse le fondu de départ s'amorcer).
+      setTimeout(() => {
+        travelLeft.style.transform = `translateY(-50%) translateX(${dist}px)`;
+        travelRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
+      }, 20);
+
+      setTimeout(() => {
+        document.getElementById('play-word').textContent = nextWord;
+      }, 160);
+
+      setTimeout(() => {
+        // Arrivée : les doublures s'effacent, les vrais chevrons (état mis à jour) réapparaissent.
+        travelLeft.style.opacity = '0';
+        travelRight.style.opacity = '0';
+        renderChevrons();
+        chevronsLeft.style.opacity = '1';
+        chevronsRight.style.opacity = '1';
+      }, 320);
+
+      setTimeout(() => {
+        // Repositionnement silencieux des doublures pour le prochain mot.
+        travelLeft.style.transition = 'none';
+        travelRight.style.transition = 'none';
+        travelLeft.style.transform = 'translateY(-50%) translateX(0)';
+        travelRight.style.transform = 'translateY(-50%) translateX(0)';
+        void travelLeft.offsetWidth;
+        travelLeft.style.transition = '';
+        travelRight.style.transition = '';
+      }, 500);
+    } else {
+      const wipeLeft = document.getElementById('wipe-left');
+      const wipeRight = document.getElementById('wipe-right');
+      const pillW = document.getElementById('word-pill').getBoundingClientRect().width;
+      const dist = pillW + 20;
+      wipeLeft.style.opacity = '1';
+      wipeRight.style.opacity = '1';
+      wipeLeft.style.transform = `translateY(-50%) translateX(${dist}px)`;
+      wipeRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
+      setTimeout(() => {
+        document.getElementById('play-word').textContent = nextWord;
+      }, 250);
+      setTimeout(() => {
+        wipeLeft.style.transition = 'none';
+        wipeRight.style.transition = 'none';
+        wipeLeft.style.opacity = '0';
+        wipeRight.style.opacity = '0';
+        wipeLeft.style.transform = 'translateY(-50%) translateX(0)';
+        wipeRight.style.transform = 'translateY(-50%) translateX(0)';
+        void wipeLeft.offsetWidth; // relance proprement pour le prochain mot
+        wipeLeft.style.transition = '';
+        wipeRight.style.transition = '';
+      }, 520);
+    }
     renderDots();
   }
 
@@ -1943,12 +2166,13 @@
       const div = document.createElement('div');
       let cls = 'ladder-step';
       const past = state.finalHistory.find(h => h.level === p.level);
+      const isCurrent = p.level === currentLevel;
       if(past && past.success) cls += ' done';
-      else if(p.level === currentLevel) cls += ' current';
+      else if(isCurrent) cls += ' current';
       if(p.level === SAFE_LEVEL) cls += ' safe-marker';
       div.className = cls;
-      div.innerHTML = `<span>Palier ${p.level} — 5 mots parmi ${p.pool}${p.level===SAFE_LEVEL ? ' · sécurité' : ''}</span>
-        <span class="amount">${euro(p.gain)}</span>`;
+      div.innerHTML = `<span class="amount">${euro(p.gain)}</span>
+        <span class="meta">Palier ${p.level} — 5 mots parmi ${p.pool}${p.level===SAFE_LEVEL ? ' · sécurité' : ''}</span>`;
       el.appendChild(div);
     });
   }
