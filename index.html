@@ -122,6 +122,10 @@
   .dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; }
 
   .chip-group{ display:flex; flex-wrap:wrap; gap:8px; }
+  .sound-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; color:var(--text); margin-bottom:6px; }
+  .sound-toggle{ flex:0 0 auto; gap:6px; }
+  .sound-toggle .toggle-btn{ flex:0 0 auto; padding:6px 12px; font-size:11px; min-width:0; }
+  input[type="range"]{ width:100%; accent-color: var(--red); margin: 0 0 4px; }
   .chip{
     padding: 8px 13px; border-radius: 999px;
     background: linear-gradient(180deg, var(--bg-alt), #05070c);
@@ -131,9 +135,12 @@
   }
   .chip:active{ transform: scale(0.96); }
   .chip.selected{
-    background: linear-gradient(180deg, rgba(255,59,48,0.24), rgba(255,59,48,0.10));
-    border-color: var(--red-dim); color: var(--red);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 8px rgba(255,59,48,0.2);
+    border: 1px solid transparent;
+    background:
+      linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
+      linear-gradient(135deg, var(--red), var(--gold)) border-box;
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
   }
 
   button.btn{
@@ -319,6 +326,19 @@
   }
   .controls-row{ display:flex; gap:10px; }
   .controls-row button{ flex:1; }
+  .final-extra-row{
+    display:flex; justify-content:center; align-items:center; gap:44px;
+    margin-top:6px;
+  }
+  .text-action{
+    background:none; border:none; padding:10px 14px; cursor:pointer;
+    font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size:14px; font-weight:800; letter-spacing:0.5px;
+    color: var(--text-dim);
+  }
+  .text-action.danger{ color: var(--wrong); }
+  .text-action:active{ opacity:0.55; }
+  .text-action:disabled{ opacity:0.3; }
 
   .summary-icon{ font-size:40px; text-align:center; }
   .summary-title{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:24px; text-align:center; letter-spacing:0.5px; }
@@ -369,9 +389,12 @@
   }
   .toggle-btn:active{ transform: scale(0.96); }
   .toggle-btn.selected{
-    background: linear-gradient(180deg, rgba(255,59,48,0.24), rgba(255,59,48,0.10));
-    border-color:var(--red-dim); color:var(--red);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 0 10px rgba(255,59,48,0.25);
+    border: 1px solid transparent;
+    background:
+      linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
+      linear-gradient(135deg, var(--red), var(--gold)) border-box;
+    color:#fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
   }
   .toggle-btn.disabled{ opacity:0.3; pointer-events:none; }
   .team-name-block{ margin-bottom:12px; }
@@ -449,6 +472,26 @@
       <div class="block-header">⚙️ Réglages</div>
       <label class="field-label">Catégories de mots</label>
       <div class="chip-group" id="category-group"></div>
+
+      <label class="field-label" style="margin-top:18px;">Sons</label>
+      <div class="sound-row">
+        <span>Sons d'interface (clics)</span>
+        <div class="toggle-row sound-toggle" id="ui-sound-toggle">
+          <div class="toggle-btn" data-val="on">Activé</div>
+          <div class="toggle-btn" data-val="off">Désactivé</div>
+        </div>
+      </div>
+      <input type="range" id="ui-volume-slider" min="0" max="100" value="100">
+
+      <div class="sound-row" style="margin-top:14px;">
+        <span>Sons de jeu (réponses, interdits...)</span>
+        <div class="toggle-row sound-toggle" id="game-sound-toggle">
+          <div class="toggle-btn" data-val="on">Activé</div>
+          <div class="toggle-btn" data-val="off">Désactivé</div>
+        </div>
+      </div>
+      <input type="range" id="game-volume-slider" min="0" max="100" value="100">
+
       <button class="btn btn-gold" id="btn-close-settings" style="margin-top:16px; width:100%;">OK</button>
     </div>
   </div>
@@ -591,9 +634,9 @@
       <button class="btn btn-wrong" id="btn-not-found">✗ Passer</button>
       <button class="btn btn-correct" id="btn-correct">✓ Trouvé</button>
     </div>
-    <div class="controls-row" id="final-extra-row">
-      <button class="btn btn-ghost" id="btn-interdit">🔔 Interdit</button>
-      <button class="btn btn-wrong" id="btn-skip-final" style="display:none;">⏭️ Passer</button>
+    <div class="final-extra-row" id="final-extra-row">
+      <button class="text-action" id="btn-interdit">🔔 Interdit</button>
+      <button class="text-action danger" id="btn-skip-final" style="display:none;">⏭️ Passer</button>
     </div>
   </section>
 
@@ -842,6 +885,14 @@
   // Sons courts générés à la volée (Web Audio API), aucun fichier audio à héberger.
   const SFX = (function(){
     let ctx = null;
+    const settings = { uiOn:true, uiVol:1, gameOn:true, gameVol:1 };
+    try {
+      const saved = JSON.parse(localStorage.getItem('mdp_sound_settings') || 'null');
+      if(saved) Object.assign(settings, saved);
+    } catch(e){}
+    function save(){
+      try { localStorage.setItem('mdp_sound_settings', JSON.stringify(settings)); } catch(e){}
+    }
     function getCtx(){
       if(!ctx || ctx.state === 'closed'){
         ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -864,7 +915,12 @@
     ['touchstart','touchend','pointerdown','click'].forEach(evt=>{
       document.addEventListener(evt, tryResume, { passive:true });
     });
-    function tone(freq, start, dur, type, gainPeak, glideTo){
+    function catOn(cat){ return cat === 'ui' ? settings.uiOn : settings.gameOn; }
+    function catVol(cat){ return cat === 'ui' ? settings.uiVol : settings.gameVol; }
+    function tone(freq, start, dur, type, gainPeak, glideTo, cat){
+      cat = cat || 'game';
+      if(!catOn(cat)) return;
+      const vol = catVol(cat);
       const c = getCtx();
       const osc = c.createOscillator();
       const gain = c.createGain();
@@ -872,13 +928,16 @@
       osc.frequency.setValueAtTime(freq, c.currentTime + start);
       if(glideTo) osc.frequency.linearRampToValueAtTime(glideTo, c.currentTime + start + dur);
       gain.gain.setValueAtTime(0.0001, c.currentTime + start);
-      gain.gain.linearRampToValueAtTime(gainPeak || 0.18, c.currentTime + start + 0.012);
+      gain.gain.linearRampToValueAtTime((gainPeak || 0.18) * vol, c.currentTime + start + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
       osc.connect(gain); gain.connect(c.destination);
       osc.start(c.currentTime + start);
       osc.stop(c.currentTime + start + dur + 0.02);
     }
-    function bell(freq, start, dur, gainPeak){
+    function bell(freq, start, dur, gainPeak, cat){
+      cat = cat || 'game';
+      if(!catOn(cat)) return;
+      const vol = catVol(cat);
       const c = getCtx();
       [[1,1],[2.4,0.35]].forEach(([mult,weight])=>{
         const osc = c.createOscillator();
@@ -886,7 +945,7 @@
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq*mult, c.currentTime + start);
         gain.gain.setValueAtTime(0.0001, c.currentTime + start);
-        gain.gain.linearRampToValueAtTime(gainPeak*weight, c.currentTime + start + 0.006);
+        gain.gain.linearRampToValueAtTime(gainPeak*weight*vol, c.currentTime + start + 0.006);
         gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
         osc.connect(gain); gain.connect(c.destination);
         osc.start(c.currentTime + start);
@@ -894,11 +953,18 @@
       });
     }
     return {
-      correct(){ tone(740, 0, 0.10, 'sine', 0.18); tone(1108, 0.09, 0.16, 'sine', 0.18); },
-      wrong(){ tone(360, 0, 0.18, 'sine', 0.15, 240); },
-      forbidden(){ bell(520, 0, 0.32, 0.20); bell(520, 0.16, 0.45, 0.20); },
-      timeUp(){ tone(520, 0, 0.14, 'triangle', 0.17); tone(300, 0.13, 0.32, 'triangle', 0.17); },
-      palier(){ tone(523,0,0.10,'sine',0.15); tone(659,0.09,0.10,'sine',0.15); tone(784,0.18,0.10,'sine',0.15); tone(1047,0.27,0.22,'sine',0.17); },
+      correct(){ tone(740, 0, 0.10, 'sine', 0.18, null, 'game'); tone(1108, 0.09, 0.16, 'sine', 0.18, null, 'game'); },
+      wrong(){ tone(360, 0, 0.18, 'sine', 0.15, 240, 'game'); },
+      forbidden(){ bell(520, 0, 0.32, 0.20, 'game'); bell(520, 0.16, 0.45, 0.20, 'game'); },
+      timeUp(){ tone(520, 0, 0.14, 'triangle', 0.17, null, 'game'); tone(300, 0.13, 0.32, 'triangle', 0.17, null, 'game'); },
+      palier(){ tone(523,0,0.10,'sine',0.15,null,'game'); tone(659,0.09,0.10,'sine',0.15,null,'game'); tone(784,0.18,0.10,'sine',0.15,null,'game'); tone(1047,0.27,0.22,'sine',0.17,null,'game'); },
+      select(){ tone(300, 0, 0.06, 'sine', 0.045, 500, 'ui'); },
+      deselect(){ tone(300, 0, 0.06, 'sine', 0.045, 500, 'ui'); },
+      getSettings(){ return { uiOn: settings.uiOn, uiVol: settings.uiVol, gameOn: settings.gameOn, gameVol: settings.gameVol }; },
+      setUiOn(v){ settings.uiOn = v; save(); },
+      setGameOn(v){ settings.gameOn = v; save(); },
+      setUiVol(v){ settings.uiVol = v; save(); },
+      setGameVol(v){ settings.gameVol = v; save(); },
     };
   })();
 
@@ -1031,19 +1097,24 @@
     });
   }
   document.getElementById('btn-schedule').addEventListener('click', () => {
+    SFX.select();
     renderScheduleOverlay();
     document.getElementById('schedule-overlay').classList.add('visible');
   });
   document.getElementById('btn-close-schedule').addEventListener('click', () => {
+    SFX.select();
     document.getElementById('schedule-overlay').classList.remove('visible');
   });
   document.getElementById('btn-quit-game').addEventListener('click', () => {
+    SFX.select();
     document.getElementById('quit-confirm-overlay').classList.add('visible');
   });
   document.getElementById('btn-quit-cancel').addEventListener('click', () => {
+    SFX.select();
     document.getElementById('quit-confirm-overlay').classList.remove('visible');
   });
   document.getElementById('btn-quit-confirm').addEventListener('click', () => {
+    SFX.select();
     document.getElementById('quit-confirm-overlay').classList.remove('visible');
     clearInterval(state.timerHandle);
     showScreen('setup');
@@ -1086,9 +1157,11 @@
         if(state.selectedCategories.size === 1) return;
         state.selectedCategories.delete(cat);
         chip.classList.remove('selected');
+        SFX.deselect();
       } else {
         state.selectedCategories.add(cat);
         chip.classList.add('selected');
+        SFX.select();
       }
       updateSettingsSummary();
     });
@@ -1096,10 +1169,37 @@
   });
   updateSettingsSummary();
 
+  // ---- Réglages sons ----
+  function wireSoundToggle(groupId, getVal, onPick){
+    const group = document.getElementById(groupId);
+    group.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.classList.toggle('selected', btn.dataset.val === (getVal() ? 'on' : 'off'));
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        onPick(btn.dataset.val === 'on');
+      });
+    });
+  }
+  const initialSfxSettings = SFX.getSettings();
+  document.getElementById('ui-volume-slider').value = Math.round(initialSfxSettings.uiVol * 100);
+  document.getElementById('game-volume-slider').value = Math.round(initialSfxSettings.gameVol * 100);
+  wireSoundToggle('ui-sound-toggle', () => SFX.getSettings().uiOn, v => SFX.setUiOn(v));
+  wireSoundToggle('game-sound-toggle', () => SFX.getSettings().gameOn, v => SFX.setGameOn(v));
+  document.getElementById('ui-volume-slider').addEventListener('input', e => {
+    SFX.setUiVol(Number(e.target.value) / 100);
+  });
+  document.getElementById('ui-volume-slider').addEventListener('change', () => SFX.select());
+  document.getElementById('game-volume-slider').addEventListener('input', e => {
+    SFX.setGameVol(Number(e.target.value) / 100);
+  });
+  document.getElementById('game-volume-slider').addEventListener('change', () => SFX.wrong());
+
   document.getElementById('btn-open-settings').addEventListener('click', () => {
     document.getElementById('settings-overlay').classList.add('visible');
   });
   document.getElementById('btn-close-settings').addEventListener('click', () => {
+    SFX.select();
     document.getElementById('settings-overlay').classList.remove('visible');
   });
 
@@ -1117,6 +1217,8 @@
     group.querySelectorAll('.toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if(btn.classList.contains('disabled')) return;
+        if(btn.classList.contains('selected')) return;
+        SFX.select();
         group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         onPick(btn.dataset.val);
@@ -1201,7 +1303,7 @@
   renderPlayerFields();
 
   // ---- Game start ----
-  document.getElementById('btn-start-game').addEventListener('click', startGame);
+  document.getElementById('btn-start-game').addEventListener('click', () => { SFX.select(); startGame(); });
 
   function startGame(){
     state.finalHistory = [];
@@ -1369,7 +1471,7 @@
     showScreen('handoff');
   }
 
-  document.getElementById('btn-ready').addEventListener('click', goToPlay);
+  document.getElementById('btn-ready').addEventListener('click', () => { SFX.select(); goToPlay(); });
 
   // ---- Play ----
   function goToPlay(){
@@ -1437,6 +1539,7 @@
   }
 
   document.getElementById('word-pill').addEventListener('click', () => {
+    SFX.select();
     if(state.running){
       // pause
       state.running = false;
@@ -1624,6 +1727,7 @@
   }
 
   document.getElementById('btn-next-turn').addEventListener('click', () => {
+    SFX.select();
     document.getElementById('summary-scorebar').style.display = '';
     state.currentTurnIndex += 1;
     if(state.currentTurnIndex < state.turnQueue.length){ goToHandoff(); return; }
@@ -1647,9 +1751,11 @@
     showScreen('trainingSummary');
   }
   document.getElementById('btn-training-next').addEventListener('click', () => {
+    SFX.select();
     goToPlay();
   });
   document.getElementById('btn-training-stop').addEventListener('click', () => {
+    SFX.select();
     showScreen('setup');
   });
 
@@ -1787,11 +1893,13 @@
     showScreen('roleChoice');
   }
   document.getElementById('btn-choice-giver').addEventListener('click', () => {
+    SFX.select();
     const idx = state._roleChoicePlayer;
     const nextGuesser = state._pendingGuessers.find(g => g.idx !== idx).idx;
     finalizeSoloFinalists(idx, nextGuesser);
   });
   document.getElementById('btn-choice-guesser').addEventListener('click', () => {
+    SFX.select();
     const idx = state._roleChoicePlayer;
     const nextGiver = state._pendingGivers.find(g => g.idx !== idx).idx;
     finalizeSoloFinalists(nextGiver, idx);
@@ -1828,7 +1936,7 @@
     });
   }
 
-  document.getElementById('btn-start-final').addEventListener('click', () => startPalier(1));
+  document.getElementById('btn-start-final').addEventListener('click', () => { SFX.select(); startPalier(1); });
 
   function startPalier(level){
     const p = PALIERS[level-1];
@@ -1877,14 +1985,15 @@
       btn.className = 'btn btn-ghost';
       btn.style.width = '100%';
       btn.textContent = "🃏 Utiliser le joker (voir les 5 premiers mots)";
-      btn.addEventListener('click', () => usePeek(turn.level + 1));
+      btn.addEventListener('click', () => { SFX.select(); usePeek(turn.level + 1); });
       jokerZone.appendChild(btn);
     }
     showScreen('decision');
   }
 
-  document.getElementById('btn-continue-final').addEventListener('click', () => startPalier(state.currentLevel + 1));
+  document.getElementById('btn-continue-final').addEventListener('click', () => { SFX.select(); startPalier(state.currentLevel + 1); });
   document.getElementById('btn-stop-final').addEventListener('click', () => {
+    SFX.select();
     state.endedByStop = true;
     endFinal(false);
   });
@@ -1953,7 +2062,7 @@
     showScreen('final');
   }
 
-  document.getElementById('btn-replay').addEventListener('click', () => showScreen('setup'));
+  document.getElementById('btn-replay').addEventListener('click', () => { SFX.select(); showScreen('setup'); });
 
 })();
 </script>
