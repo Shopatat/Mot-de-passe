@@ -158,7 +158,7 @@
     background: linear-gradient(180deg, #1c1c1c, #050505);
     border: 2px solid var(--red);
     color: #fff;
-    box-shadow: 0 0 12px rgba(255,59,48,0.35), inset 0 0 10px rgba(255,59,48,0.12);
+    box-shadow: 0 0 20px rgba(255,59,48,0.55), inset 0 0 12px rgba(255,59,48,0.18);
   }
   .btn-correct{
     background: linear-gradient(180deg, #6ad696 0%, var(--correct) 55%, #3a9c60 100%);
@@ -518,11 +518,11 @@
     background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0));
     border-radius:999px; pointer-events:none;
   }
-  .ladder-step:nth-child(1){ width:100%; }
-  .ladder-step:nth-child(2){ width:91%; }
+  .ladder-step:nth-child(1){ width:64%; }
+  .ladder-step:nth-child(2){ width:73%; }
   .ladder-step:nth-child(3){ width:82%; }
-  .ladder-step:nth-child(4){ width:73%; }
-  .ladder-step:nth-child(5){ width:64%; }
+  .ladder-step:nth-child(4){ width:91%; }
+  .ladder-step:nth-child(5){ width:100%; }
   .ladder-step .amount{
     position:relative; z-index:1; font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
     font-size:15px; letter-spacing:0.4px; color:inherit;
@@ -539,6 +539,30 @@
   }
   .ladder-step.current .amount{ color: var(--gold); text-shadow: 0 0 10px rgba(242,201,76,0.5); }
   .ladder-step.safe-marker .meta{ color: var(--gold-dim); opacity:0.9; }
+
+  /* Révélation LED d'un palier juste avant de le jouer : deux volets "diode" façon
+     plateau TV traversent la boîte de bord à bord (comme un rideau), un premier
+     passage pour cacher le montant et révéler l'objectif du palier (pastilles :
+     5 mots à trouver parmi le pool), un second pour cacher cet objectif et
+     redévoiler le montant, prêt à jouer. Éléments injectés dynamiquement en JS
+     (voir playLadderReveal). */
+  .ladder-step{ overflow:hidden; }
+  .ladder-face{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:1px; transition: opacity .16s ease; }
+  .ladder-led{ position:absolute; inset:0; z-index:3; pointer-events:none; }
+  .ladder-led-strip{
+    position:absolute; top:0; bottom:0; width:54%;
+    background-image: radial-gradient(circle at center, #fff 0%, #ffe9d2 26%, var(--red) 58%, transparent 68%);
+    background-size:6px 6px;
+    filter: drop-shadow(0 0 6px rgba(255,120,90,0.7)) brightness(1.15);
+    transition: transform .38s cubic-bezier(.4,0,.2,1);
+  }
+  .ladder-led-strip.left{ left:0; transform: translateX(-100%); clip-path: polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%); }
+  .ladder-led-strip.right{ right:0; transform: translateX(100%); clip-path: polygon(100% 0, 20% 0, 0 50%, 20% 100%, 100% 100%); }
+  .ladder-dots{
+    position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center;
+    gap:7px; opacity:0; transition: opacity .2s ease; pointer-events:none;
+  }
+  .ladder-dots .dot-mark{ width:9px; height:9px; }
 
   .bank-line{ text-align:center; font-size:13px; color:var(--text-dim); font-weight:700; }
   .bank-line b{ color: var(--gold); font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:18px; letter-spacing:0.5px; }
@@ -1154,6 +1178,8 @@
       forbidden(){ bell(520, 0, 0.32, 0.20, 'game'); bell(520, 0.16, 0.45, 0.20, 'game'); },
       timeUp(){ tone(520, 0, 0.14, 'triangle', 0.17, null, 'game'); tone(300, 0.13, 0.32, 'triangle', 0.17, null, 'game'); },
       palier(){ tone(523,0,0.10,'sine',0.15,null,'game'); tone(659,0.09,0.10,'sine',0.15,null,'game'); tone(784,0.18,0.10,'sine',0.15,null,'game'); tone(1047,0.27,0.22,'sine',0.17,null,'game'); },
+      ladderTick(i){ const freqs=[659,740,831,932,1046]; tone(freqs[i]||1046, 0, 0.07, 'sine', 0.14, null, 'game'); },
+      ladderLock(){ tone(392,0,0.09,'sine',0.16,null,'game'); tone(523,0.08,0.16,'sine',0.19,null,'game'); },
       select(){ tone(300, 0, 0.06, 'sine', 0.045, 500, 'ui'); },
       deselect(){ tone(300, 0, 0.06, 'sine', 0.045, 500, 'ui'); },
       getSettings(){ return { uiOn: settings.uiOn, uiVol: settings.uiVol, gameOn: settings.gameOn, gameVol: settings.gameVol }; },
@@ -2370,25 +2396,112 @@
     showScreen('finalist');
   }
 
-  function renderLadder(containerId, currentLevel){
+  function renderLadder(containerId, currentLevel, opts){
+    opts = opts || {};
     const el = document.getElementById(containerId);
     el.innerHTML = "";
     PALIERS.forEach(p => {
       const div = document.createElement('div');
       let cls = 'ladder-step';
       const past = state.finalHistory.find(h => h.level === p.level);
-      const isCurrent = p.level === currentLevel;
-      if(past && past.success) cls += ' done';
+      // forceCurrent : sert à figer un palier déjà gagné en "doré" pour la frame
+      // de départ de l'animation LED, avant qu'il ne bascule en "acquis".
+      const forcedCurrent = opts.forceCurrent === p.level;
+      const isDone = past && past.success && !forcedCurrent;
+      const isCurrent = forcedCurrent || (!isDone && p.level === currentLevel);
+      if(isDone) cls += ' done';
       else if(isCurrent) cls += ' current';
       if(p.level === SAFE_LEVEL) cls += ' safe-marker';
       div.className = cls;
-      div.innerHTML = `<span class="amount">${euro(p.gain)}</span>
-        <span class="meta">Palier ${p.level} — 5 mots parmi ${p.pool}${p.level===SAFE_LEVEL ? ' · sécurité' : ''}</span>`;
+      div.dataset.level = p.level;
+      div.innerHTML = `<div class="ladder-face">
+        <span class="amount">${euro(p.gain)}</span>
+        <span class="meta">Palier ${p.level} — 5 mots parmi ${p.pool}${p.level===SAFE_LEVEL ? ' · sécurité' : ''}</span>
+      </div>`;
       el.appendChild(div);
     });
   }
 
-  document.getElementById('btn-start-final').addEventListener('click', () => { SFX.select(); startPalier(1); });
+  // Révèle le palier qu'on s'apprête à jouer (déjà doré) juste avant de démarrer la
+  // manche : deux passages de volets LED qui traversent la boîte de bord à bord —
+  // le 1er cache le montant et dévoile l'objectif du palier (X mots à trouver
+  // parmi le pool, sous forme de pastilles), le 2nd cache cet objectif et
+  // redévoile le montant, prêt à jouer. Anticipation, pas bilan.
+  function playLadderReveal(containerId, level, onDone){
+    const container = document.getElementById(containerId);
+    const stepEl = container && container.querySelector(`[data-level="${level}"]`);
+    if(!stepEl){ if(onDone) onDone(); return; }
+
+    const face = stepEl.querySelector('.ladder-face');
+    // Le nombre de pastilles reflète le pool du palier (9, 8, 7...) : 5 s'allument
+    // en vert (l'objectif à atteindre), le reste reste gris (mots "en trop").
+    const totalDots = PALIERS[level-1].pool;
+    const litCount = Math.min(FINAL_TARGET, totalDots);
+    const dots = document.createElement('div');
+    dots.className = 'ladder-dots';
+    for(let i=0;i<totalDots;i++){
+      const d = document.createElement('div');
+      d.className = 'dot-mark';
+      dots.appendChild(d);
+    }
+    stepEl.appendChild(dots);
+
+    const SWEEP_DURATION = 900;
+    // Fait traverser un jeu de volets LED de bord à bord (le gauche part de la
+    // gauche et sort à droite, le droit fait l'inverse) : onMidpoint s'exécute
+    // quand ils se croisent au centre (tout est recouvert), onComplete une fois
+    // qu'ils sont entièrement sortis de la boîte.
+    function sweepChevrons(onMidpoint, onComplete){
+      const led = document.createElement('div');
+      led.className = 'ladder-led';
+      led.innerHTML = `<div class="ladder-led-strip left"></div><div class="ladder-led-strip right"></div>`;
+      stepEl.appendChild(led);
+      const stripLeft = led.querySelector('.left');
+      const stripRight = led.querySelector('.right');
+      requestAnimationFrame(() => {
+        stripLeft.style.transition = `transform ${SWEEP_DURATION}ms cubic-bezier(.4,0,.2,1)`;
+        stripRight.style.transition = `transform ${SWEEP_DURATION}ms cubic-bezier(.4,0,.2,1)`;
+        stripLeft.style.transform = 'translateX(240%)';
+        stripRight.style.transform = 'translateX(-240%)';
+      });
+      setTimeout(onMidpoint, SWEEP_DURATION * 0.5);
+      setTimeout(() => { led.remove(); if(onComplete) onComplete(); }, SWEEP_DURATION + 20);
+    }
+
+    // 1er passage : le montant se cache, l'objectif du palier apparaît (pastilles).
+    sweepChevrons(() => {
+      face.style.opacity = '0';
+      dots.style.opacity = '1';
+    }, () => {
+      // Les 5 mots à trouver s'allument un à un, avec le tic sonore.
+      const dotEls = dots.querySelectorAll('.dot-mark');
+      for(let i=0;i<litCount;i++){
+        const d = dotEls[i];
+        setTimeout(() => { d.classList.add('found'); SFX.ladderTick(i); }, i*260);
+      }
+      setTimeout(() => {
+        // 2e passage : l'objectif se cache, le montant réapparaît, prêt à jouer.
+        sweepChevrons(() => {
+          dots.style.opacity = '0';
+          face.style.opacity = '1';
+        }, () => {
+          SFX.ladderLock();
+          dots.remove();
+          if(onDone) onDone();
+        });
+      }, litCount*260 + 400);
+    });
+  }
+
+  document.getElementById('btn-start-final').addEventListener('click', () => {
+    SFX.select();
+    const btn = document.getElementById('btn-start-final');
+    btn.disabled = true;
+    playLadderReveal('finalist-ladder', 1, () => {
+      btn.disabled = false;
+      startPalier(1);
+    });
+  });
 
   function startPalier(level){
     const p = PALIERS[level-1];
@@ -2427,6 +2540,8 @@
     document.getElementById('decision-bank').innerHTML =
       `Prochain palier : <b>${euro(PALIERS[turn.level].gain)}</b> — 5 mots parmi ${PALIERS[turn.level].pool}`;
     renderWordRecap('decision-recap', true);
+    // L'échelle reflète immédiatement le vrai état (palier gagné en vert, suivant
+    // en doré) : la révélation animée se joue plus tard, juste avant de le jouer.
     renderLadder('decision-ladder', turn.level + 1);
 
     const jokerZone = document.getElementById('decision-joker-zone');
@@ -2442,7 +2557,21 @@
     showScreen('decision');
   }
 
-  document.getElementById('btn-continue-final').addEventListener('click', () => { SFX.select(); startPalier(state.currentLevel + 1); });
+  document.getElementById('btn-continue-final').addEventListener('click', () => {
+    SFX.select();
+    const nextLevel = state.currentLevel + 1;
+    const btnContinue = document.getElementById('btn-continue-final');
+    const btnStop = document.getElementById('btn-stop-final');
+    btnContinue.disabled = true;
+    btnStop.disabled = true;
+    // La révélation LED du palier suivant (son objectif, "5 mots parmi X") se joue
+    // juste avant d'y entrer, pour bien marquer l'enjeu qui arrive.
+    playLadderReveal('decision-ladder', nextLevel, () => {
+      btnContinue.disabled = false;
+      btnStop.disabled = false;
+      startPalier(nextLevel);
+    });
+  });
   document.getElementById('btn-stop-final').addEventListener('click', () => {
     SFX.select();
     state.endedByStop = true;
