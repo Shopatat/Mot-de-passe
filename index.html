@@ -75,25 +75,28 @@
   @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
   .tile-row{
-    display:flex; justify-content:center; align-items:center; gap:2px; flex-wrap:wrap;
-    margin: 10px 0 2px; padding: 16px 26px; position:relative;
+    display:flex; justify-content:center; align-items:center; gap:2px; flex-wrap:nowrap;
+    margin: 10px 0 2px; padding: 16px 14px; position:relative;
     background: none;
   }
   .tile-row::before, .tile-row::after{
     font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
-    font-size:38px; line-height:1; align-self:center;
+    /* Suit la taille des lettres pour que les crochets restent proportionnés partout. */
+    font-size: clamp(26px, 8.8vw, 38px); line-height:1; align-self:center; flex-shrink:0;
     background: linear-gradient(180deg, var(--gold), var(--red-dim));
     -webkit-background-clip:text; background-clip:text; color:transparent;
     filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
   }
-  .tile-row::before{ content:"["; margin-right:8px; }
-  .tile-row::after{ content:"]"; margin-left:12px; }
+  .tile-row::before{ content:"["; margin-right:5px; }
+  .tile-row::after{ content:"]"; margin-left:8px; }
   .tile{
     background:transparent; border:none; box-shadow:none;
-    padding: 0 1px; height:auto;
+    padding: 0 1px; height:auto; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
     color:#fff;
-    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:32px;
+    /* Taille fluide : "MOT DE PASSE" tient sur une seule ligne dès 320px de large,
+       sans jamais dépasser la taille d'origine sur écran large. */
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size: clamp(22px, 7.4vw, 32px);
     text-shadow:
       1px 1px 0 var(--red-dim),
       2px 2px 0 var(--red-dim),
@@ -101,7 +104,7 @@
       4px 5px 4px rgba(0,0,0,0.55),
       0 0 20px rgba(255,150,60,0.55);
   }
-  .tile.space{ background:transparent; box-shadow:none; border:none; width:12px; }
+  .tile.space{ background:transparent; box-shadow:none; border:none; width: clamp(8px, 2.8vw, 12px); flex-shrink:0; }
   .marquee-sub{ text-align:center; color: var(--text-dim); font-size:13px; font-style:italic; margin:0 0 8px; }
 
   .card{ background: var(--card); border: 1px solid var(--card-edge); border-radius: var(--radius); padding: 18px; }
@@ -849,7 +852,7 @@
   <!-- TRAINING SUMMARY -->
   <section class="screen" id="screen-training-summary">
     <div class="card" style="display:flex; flex-direction:column; gap:10px; align-items:center; padding:28px 20px;">
-      <div class="summary-icon">🔔</div>
+      <div class="summary-icon" id="training-summary-icon">🔔</div>
       <div class="summary-title">Manche terminée</div>
       <div class="summary-sub" id="training-summary-text"></div>
     </div>
@@ -1537,7 +1540,13 @@
     state.jokerAvailable = false; state.jokerUsed = false;
     state.endedByStop = false;
     state.gameOver = false;
+    // Le mode solo est forcé pour ce raccourci de test. On synchronise l'interface avec
+    // cet état, sinon un retour au menu laisserait les boutons sur "Équipes de 2" alors
+    // que le moteur est en solo — et la partie suivante planterait au démarrage.
     state.subMode = 'solo';
+    selectToggle('submode-group', 'solo');
+    document.getElementById('team-assignment-card').style.display = 'none';
+    renderPlayerFields();
     state.turnQueue = [];
     state.currentTurnIndex = -1;
     state.finaleGiverName = 'Joueur A';
@@ -2186,6 +2195,7 @@
   }
   function showTrainingSummary(found, elapsed){
     const reachedTarget = state.target && found >= state.target;
+    document.getElementById('training-summary-icon').textContent = reachedTarget ? "🎉" : "🔔";
     document.getElementById('training-summary-text').textContent =
       `${found} mot${found>1?'s':''} trouvé${found>1?'s':''} sur ${QUALIF_WORDS} en ${formatTime(elapsed)}.`;
     renderWordRecap('training-recap', reachedTarget);
