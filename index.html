@@ -476,17 +476,17 @@
   .summary-sub{ text-align:center; color: var(--text-dim); font-size:14px; }
 
   /* Gains ladder — pyramide façon "paliers" TV, la plus large en bas */
-  .ladder{ display:flex; flex-direction:column-reverse; gap:7px; align-items:center; }
+  .ladder{ display:flex; flex-direction:column-reverse; gap:5px; align-items:center; }
   .ladder-step{
     position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:1px; width:100%; padding:11px 34px; border-radius:999px;
+    gap:1px; width:100%; padding:7px 28px; border-radius:999px;
     background: linear-gradient(180deg, #2a0f0c 0%, #150605 55%, #0c0302 100%);
     border:1px solid #4a1a16; color: var(--text-dim); overflow:hidden;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -4px 8px rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.3);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -3px 6px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.3);
   }
   .ladder-step::after{
     content:""; position:absolute; left:8%; right:8%; top:12%; height:34%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0));
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0));
     border-radius:999px; pointer-events:none;
   }
   .ladder-step:nth-child(1){ width:100%; }
@@ -496,9 +496,9 @@
   .ladder-step:nth-child(5){ width:64%; }
   .ladder-step .amount{
     position:relative; z-index:1; font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
-    font-size:19px; letter-spacing:0.5px; color:inherit;
+    font-size:15px; letter-spacing:0.4px; color:inherit;
   }
-  .ladder-step .meta{ position:relative; z-index:1; font-size:9.5px; letter-spacing:0.3px; color:inherit; opacity:0.65; font-weight:700; }
+  .ladder-step .meta{ position:relative; z-index:1; font-size:8.5px; letter-spacing:0.3px; color:inherit; opacity:0.65; font-weight:700; }
   .ladder-step.done{
     color:#bfe8cf; border-color: rgba(79,191,122,0.55);
     background: linear-gradient(180deg, #123322 0%, #0c1f16 55%, #071510 100%);
@@ -1713,6 +1713,7 @@
     loadNextWord(false);
     setPlayControlsEnabled(false);
     const wordPillEl = document.getElementById('word-pill');
+    document.getElementById('play-word').style.opacity = '';
     wordPillEl.classList.remove('materialize', 'dematerialize');
     void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
     wordPillEl.classList.add('materialize');
@@ -1833,8 +1834,13 @@
       }, 20);
 
       setTimeout(() => {
+        // Le mot disparaît au moment où les chevrons le traversent, comme sur un changement normal.
+        document.getElementById('play-word').style.opacity = '0';
+      }, 160);
+
+      setTimeout(() => {
         // Les chevrons terminent leur traversée et se retirent normalement,
-        // le cadre reste visible avec son dernier mot le temps qu'ils dégagent.
+        // le cadre (vide, le mot est déjà caché) reste visible le temps qu'ils dégagent.
         travelLeft.style.opacity = '0';
         travelRight.style.opacity = '0';
         chevronsLeft.style.opacity = '1';
@@ -1873,8 +1879,13 @@
       wipeRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
 
       setTimeout(() => {
+        // Le mot disparaît au moment où les chevrons le traversent, comme sur un changement normal.
+        document.getElementById('play-word').style.opacity = '0';
+      }, 250);
+
+      setTimeout(() => {
         // Les chevrons terminent leur traversée normalement et dégagent,
-        // le cadre reste visible avec son dernier mot le temps qu'ils sortent.
+        // le cadre (vide, le mot est déjà caché) reste visible le temps qu'ils sortent.
         wipeLeft.style.transition = 'none';
         wipeRight.style.transition = 'none';
         wipeLeft.style.opacity = '0';
