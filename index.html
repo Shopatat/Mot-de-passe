@@ -175,6 +175,19 @@
   .btn-ghost{ background: transparent; border: 1px solid var(--card-edge); color: var(--text-dim); }
   .btn-ghost:active{ background: rgba(255,255,255,0.06); }
 
+  .settings-card{
+    display:flex; align-items:center; justify-content:center;
+    padding: 18px;
+    background: var(--card); border: 1px solid var(--card-edge); border-radius: var(--radius);
+    color: var(--text); font-size:16px; letter-spacing:0.5px; font-weight:800;
+    cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
+    transition: background .15s ease;
+  }
+  .settings-card:active{ background: rgba(255,255,255,0.04); }
+  .settings-card .gear-icon{
+    font-size:17px; margin-right:8px;
+  }
+
   .rules-list{ font-size:13px; color:var(--text-dim); line-height:1.6; margin:0; padding-left:18px; }
   .rules-list li b{ color: var(--text); }
 
@@ -690,10 +703,7 @@
   <div class="quit-overlay" id="settings-overlay">
     <div class="card settings-modal">
       <div class="block-header">⚙️ Réglages</div>
-      <label class="field-label">Catégories de mots</label>
-      <div class="chip-group" id="category-group"></div>
-
-      <label class="field-label" style="margin-top:18px;">Sons</label>
+      <label class="field-label">Sons</label>
       <div class="sound-row">
         <span>Sons d'interface (clics)</span>
         <div class="toggle-row sound-toggle" id="ui-sound-toggle">
@@ -808,26 +818,28 @@
       </div>
     </div>
 
-    <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-      <div>
-        <label class="field-label" style="margin-bottom:2px;">Réglages</label>
-        <div id="settings-summary" style="font-size:13px; color:var(--text-dim); font-weight:700;"></div>
-      </div>
-      <button class="btn btn-ghost" id="btn-open-settings" style="padding:10px 16px; flex-shrink:0;">⚙️ Modifier</button>
-    </div>
-
     <button class="btn btn-gold" id="btn-start-game">Lancer la partie</button>
 
-    <div class="card">
-      <label class="field-label" style="text-align:center;">Les règles</label>
-      <ul class="rules-list" id="rules-list">
-        <li><b>Qualification</b> : des manches de <b>30 secondes</b> où il faut faire deviner 5 mots. Indices illimités ; un mot passé peut revenir plus tard dans la même manche. En équipe : chaque équipe joue <b>4 manches</b> (2 chacun), en alternant qui fait deviner.</li>
-        <li>Seul le meilleur total en qualification (équipe ou joueur) se qualifie pour la finale.</li>
-        <li><b>Finale</b> : 5 paliers de <b>1min30</b>. Il faut deviner 5 mots à chaque palier, mais le choix de mots proposés rétrécit à chaque palier : 9, puis 8, 7, 6, et enfin 5 — plus on avance, plus c'est serré.</li>
-        <li>En finale : <b>3 indices maximum</b> par mot, et un mot passé est perdu pour de bon. Si les mots restants ne suffisent plus pour atteindre les 5, la manche s'arrête aussitôt.</li>
-        <li>Après chaque palier, on peut s'arrêter et garder ses gains, ou continuer en remettant tout en jeu. Le palier 2 est le <b>palier de sécurité</b> : les gains sont acquis et un <b>joker</b> est débloqué.</li>
-      </ul>
+    <div class="settings-card" id="btn-open-settings">Paramètres</div>
+
+    <div class="word-recap" id="rules-recap">
+      <div class="word-recap-toggle" style="justify-content:center; position:relative;">
+        <span class="word-recap-toggle-label" style="color:#fff; font-size:16px; letter-spacing:1px;">Les règles</span>
+        <span class="word-recap-chevron" style="position:absolute; right:14px;">▼</span>
+      </div>
+      <div class="word-recap-body">
+        <div class="card">
+          <ul class="rules-list" id="rules-list">
+            <li><b>Qualification</b> : des manches de <b>30 secondes</b> où il faut faire deviner 5 mots. Indices illimités ; un mot passé peut revenir plus tard dans la même manche. En équipe : chaque équipe joue <b>4 manches</b> (2 chacun), en alternant qui fait deviner.</li>
+            <li>Seul le meilleur total en qualification (équipe ou joueur) se qualifie pour la finale.</li>
+            <li><b>Finale</b> : 5 paliers de <b>1min30</b>. Il faut deviner 5 mots à chaque palier, mais le choix de mots proposés rétrécit à chaque palier : 9, puis 8, 7, 6, et enfin 5 — plus on avance, plus c'est serré.</li>
+            <li>En finale : <b>3 indices maximum</b> par mot, et un mot passé est perdu pour de bon. Si les mots restants ne suffisent plus pour atteindre les 5, la manche s'arrête aussitôt.</li>
+            <li>Après chaque palier, on peut s'arrêter et garder ses gains, ou continuer en remettant tout en jeu. Le palier 2 est le <b>palier de sécurité</b> : les gains sont acquis et un <b>joker</b> est débloqué.</li>
+          </ul>
+        </div>
+      </div>
     </div>
+
     <div class="forbidden-banner">
       <div class="forbidden-title">INTERDITS</div>
       <ul class="forbidden-list">
@@ -941,6 +953,11 @@
       <div class="handoff-label" id="finalist-label">Se qualifient pour la finale</div>
       <div class="handoff-team" id="finalist-name" style="color:var(--gold);"></div>
       <div class="handoff-role" id="finalist-detail"></div>
+    </div>
+    <div id="finalist-role-block" style="display:none; margin-top:14px;">
+      <label class="field-label" style="text-align:center;">Qui fait deviner en finale ?</label>
+      <p style="text-align:center; font-size:12.5px; color:var(--text-dim); margin:0 0 10px;" id="finalist-role-stats"></p>
+      <div class="chip-group" id="finalist-role-toggle" style="justify-content:center;"></div>
     </div>
     <div class="ladder" id="finalist-ladder"></div>
     <button class="btn btn-gold" id="btn-start-final">Jouer pour 1 000 €</button>
@@ -1117,13 +1134,13 @@
 
   function drawTieredWords(n, tiers){
     let pool = [];
-    state.selectedCategories.forEach(cat => {
+    Object.keys(WORD_BANK).forEach(cat => {
       WORD_BANK[cat].forEach(item => { if(tiers.includes(item.d)) pool.push(item.w); });
     });
     pool = shuffle(pool);
     if(pool.length === 0){
-      // catégories sélectionnées trop restreintes pour ce niveau : on élargit à tous les niveaux
-      state.selectedCategories.forEach(cat => WORD_BANK[cat].forEach(item => pool.push(item.w)));
+      // niveau trop restreint : on élargit à tous les niveaux
+      Object.keys(WORD_BANK).forEach(cat => WORD_BANK[cat].forEach(item => pool.push(item.w)));
       pool = shuffle(pool);
     }
     const result = [];
@@ -1355,7 +1372,6 @@
     teams: [],            // [{giverName, guesserName, giverIdx, guesserIdx, score, colorIdx}]
     soloStats: [],         // [{name, giverScore, guesserScore, giverTime, guesserTime, colorIdx}]
 
-    selectedCategories: new Set(Object.keys(WORD_BANK)),
     turnQueue: [], currentTurnIndex: 0,
     currentTurn: null,
     pool: [], foundCount: 0, target: null, clueCount: 1,
@@ -1491,33 +1507,6 @@
     });
   }
 
-  // ---- Category chips ----
-  const categoryGroup = document.getElementById('category-group');
-  function updateSettingsSummary(){
-    const n = state.selectedCategories.size;
-    document.getElementById('settings-summary').textContent = `${n} catégorie${n>1?'s':''} sélectionnée${n>1?'s':''}`;
-  }
-  Object.keys(WORD_BANK).forEach(cat => {
-    const chip = document.createElement('div');
-    chip.className = 'chip selected';
-    chip.textContent = cat;
-    chip.addEventListener('click', () => {
-      if(state.selectedCategories.has(cat)){
-        if(state.selectedCategories.size === 1) return;
-        state.selectedCategories.delete(cat);
-        chip.classList.remove('selected');
-        SFX.deselect();
-      } else {
-        state.selectedCategories.add(cat);
-        chip.classList.add('selected');
-        SFX.select();
-      }
-      updateSettingsSummary();
-    });
-    categoryGroup.appendChild(chip);
-  });
-  updateSettingsSummary();
-
   // ---- Réglages sons ----
   function wireSoundToggle(groupId, getVal, onPick){
     const group = document.getElementById(groupId);
@@ -1553,6 +1542,26 @@
     SFX.select();
     document.getElementById('settings-overlay').classList.remove('visible');
   });
+
+  // ---- Pavé des règles, dépliable ----
+  (() => {
+    const container = document.getElementById('rules-recap');
+    const toggle = container.querySelector('.word-recap-toggle');
+    const body = container.querySelector('.word-recap-body');
+    toggle.addEventListener('click', () => {
+      const isExpanded = container.classList.contains('expanded');
+      if(!isExpanded){
+        container.classList.add('expanded');
+        body.style.maxHeight = body.scrollHeight + 'px';
+      } else {
+        body.style.maxHeight = body.scrollHeight + 'px'; // fige la hauteur actuelle avant de la ramener à 0
+        requestAnimationFrame(() => {
+          body.style.maxHeight = '0px';
+          container.classList.remove('expanded');
+        });
+      }
+    });
+  })();
 
   function shuffle(arr){
     for(let i = arr.length -1; i>0; i--){
@@ -1699,6 +1708,7 @@
     document.getElementById('finalist-detail').innerHTML = "Test — accès direct à la finale.";
     renderLadder('finalist-ladder', 1);
     document.getElementById('btn-start-final').textContent = `Jouer pour ${euro(PALIERS[0].gain)}`;
+    hideFinaleRoleChoice();
     showScreen('finalist');
   });
 
@@ -1755,7 +1765,7 @@
       for(let t=0; t<N/2; t++){
         const giverName = document.getElementById(`team${t}-giver`).value.trim() || `Joueur ${2*t+1}`;
         const guesserName = document.getElementById(`team${t}-guesser`).value.trim() || `Joueur ${2*t+2}`;
-        state.teams.push({ giverName, guesserName, score:0, colorIdx: t });
+        state.teams.push({ giverName, guesserName, score:0, giverNamePoints:0, guesserNamePoints:0, colorIdx: t });
       }
     } else {
       const names = [];
@@ -1767,7 +1777,7 @@
         const swap = Math.random() < 0.5;
         state.teams.push({
           giverName: swap ? b : a, guesserName: swap ? a : b,
-          score:0, colorIdx: t
+          score:0, giverNamePoints:0, guesserNamePoints:0, colorIdx: t
         });
       }
     }
@@ -2346,7 +2356,12 @@
 
     if(turn.kind === 'qualif'){
       if(state.subMode === 'team'){
-        state.teams[turn.teamIdx].score += state.foundCount;
+        const team = state.teams[turn.teamIdx];
+        team.score += state.foundCount;
+        // On garde trace des mots devinés selon qui donnait, pour désigner
+        // automatiquement le meilleur donneur du duo en finale.
+        if(turn.giverName === team.giverName) team.giverNamePoints += state.foundCount;
+        else team.guesserNamePoints += state.foundCount;
       } else {
         state.soloStats[turn.giverIdx].giverScore += state.foundCount;
         state.soloStats[turn.giverIdx].giverTime += elapsed;
@@ -2467,10 +2482,45 @@
     goToHandoff();
   }
 
+  function renderFinaleRoleChoice(team){
+    const block = document.getElementById('finalist-role-block');
+    const statsEl = document.getElementById('finalist-role-stats');
+    const el = document.getElementById('finalist-role-toggle');
+    block.style.display = '';
+    const gPts = team.giverNamePoints, pPts = team.guesserNamePoints;
+    statsEl.innerHTML = `En qualif : <b>${escapeHtml(team.giverName)}</b> a fait deviner ${gPts} mot${gPts>1?'s':''} · <b>${escapeHtml(team.guesserName)}</b> en a fait deviner ${pPts}${pPts>1?'s':''}`;
+    // Le score de qualif ne fait ici que suggérer un défaut : le duo tranche.
+    el.innerHTML = `
+      <div class="chip${team.giverName===state.finaleGiverName ? ' selected':''}" id="finale-role-a">${escapeHtml(team.giverName)} fait deviner</div>
+      <div class="chip${team.guesserName===state.finaleGiverName ? ' selected':''}" id="finale-role-b">${escapeHtml(team.guesserName)} fait deviner</div>
+    `;
+    document.getElementById('finale-role-a').addEventListener('click', () => {
+      if(document.getElementById('finale-role-a').classList.contains('selected')) return;
+      SFX.select();
+      state.finaleGiverName = team.giverName; state.finaleGuesserName = team.guesserName;
+      document.getElementById('finale-role-a').classList.add('selected');
+      document.getElementById('finale-role-b').classList.remove('selected');
+    });
+    document.getElementById('finale-role-b').addEventListener('click', () => {
+      if(document.getElementById('finale-role-b').classList.contains('selected')) return;
+      SFX.select();
+      state.finaleGiverName = team.guesserName; state.finaleGuesserName = team.giverName;
+      document.getElementById('finale-role-b').classList.add('selected');
+      document.getElementById('finale-role-a').classList.remove('selected');
+    });
+  }
+  function hideFinaleRoleChoice(){
+    document.getElementById('finalist-role-block').style.display = 'none';
+    document.getElementById('finalist-role-toggle').innerHTML = '';
+  }
+
   function announceTeamFinalist(idx){
     const team = state.teams[idx];
-    state.finaleGiverName = team.giverName;
-    state.finaleGuesserName = team.guesserName;
+    // Le score de qualif propose une pré-sélection (le meilleur donneur des deux),
+    // mais c'est le duo qui tranche via les chips juste en dessous.
+    const giverIsBest = team.giverNamePoints >= team.guesserNamePoints; // égalité : on garde l'attribution d'origine
+    state.finaleGiverName = giverIsBest ? team.giverName : team.guesserName;
+    state.finaleGuesserName = giverIsBest ? team.guesserName : team.giverName;
     state.finaleColorIdx = team.colorIdx;
     document.getElementById('finalist-label').textContent = "Se qualifie pour la finale";
     document.getElementById('finalist-name').textContent = `${team.giverName} et ${team.guesserName}`;
@@ -2478,6 +2528,7 @@
     document.getElementById('finalist-detail').innerHTML = `${team.score} point${team.score>1?'s':''} en qualification.`;
     renderLadder('finalist-ladder', 1);
     document.getElementById('btn-start-final').textContent = `Jouer pour ${euro(PALIERS[0].gain)}`;
+    renderFinaleRoleChoice(team);
     showScreen('finalist');
   }
 
@@ -2581,6 +2632,7 @@
       `Meilleur donneur : <b>${escapeHtml(giver.name)}</b> (${giver.giverScore} pts) · Meilleur devineur : <b>${escapeHtml(guesser.name)}</b> (${guesser.guesserScore} pts)`;
     renderLadder('finalist-ladder', 1);
     document.getElementById('btn-start-final').textContent = `Jouer pour ${euro(PALIERS[0].gain)}`;
+    hideFinaleRoleChoice();
     showScreen('finalist');
   }
 
