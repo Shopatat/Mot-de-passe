@@ -2155,7 +2155,9 @@
     state.pool.shift();
     state.foundCount += 1;
     state.dotsFound += 1;
-    if(state.target && state.foundCount >= state.target){
+    // Pool vide (plus aucun mot à tenter) OU target atteint : dans les deux cas
+    // la manche est terminée et mérite la fermeture animée plutôt qu'un cut sec.
+    if(state.pool.length === 0 || (state.target && state.foundCount >= state.target)){
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
@@ -2193,7 +2195,13 @@
     state.wordsFailed.push(state.pool[0]);
     state.pool.shift();
     state.dotsLost += 1;
-    if(turn.style === 'clues' && isObjectiveImpossible()){
+    // Finale : on abandonne dès que le palier devient mathématiquement impossible.
+    // Qualif/entraînement/tie-break (cycle) : pas d'abandon anticipé, la manche
+    // continue tant qu'il reste des mots dans le pool — seul un pool réellement
+    // vide y déclenche la fermeture (sinon le tout premier interdit, qui rend déjà
+    // le 5/5 impossible puisque pool=target, couperait la manche instantanément).
+    const roundOver = state.pool.length === 0 || (turn.style === 'clues' && isObjectiveImpossible());
+    if(roundOver){
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
@@ -2598,6 +2606,12 @@
       return;
     }
     if(turn.level === PALIERS.length){ endFinal(true); return; }
+
+    // Réactive les boutons : ils avaient été désactivés au clic "Continuer" du
+    // palier précédent (anti double-tap) et ne se réactivaient jamais ensuite,
+    // ce qui bloquait la progression dès le 2e palier.
+    document.getElementById('btn-continue-final').disabled = false;
+    document.getElementById('btn-stop-final').disabled = false;
 
     document.getElementById('decision-icon').textContent = "🎉";
     document.getElementById('decision-title').textContent = `${euro(p.gain)} en jeu`;
