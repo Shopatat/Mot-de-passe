@@ -358,6 +358,14 @@
     0%,100%{ filter: brightness(1); }
     50%{ filter: brightness(1.4); }
   }
+  /* Masque le mot pendant une pause en cours de manche, pour éviter qu'il reste
+     visible à l'écran quand on lâche le téléphone. L'animation wordTextReveal
+     (fill-mode: both) maintient sinon opacity:1 avec une priorité supérieure
+     à une règle CSS normale — d'où le !important nécessaire ici. */
+  .word-pill.paused-hidden .word-text{
+    opacity: 0 !important;
+    transition: opacity 0.2s ease;
+  }
 
   /* Matérialisation du cadre en début de manche : le cadre se déplie comme une TV
      qui s'allume (ligne fine -> plein écran), la lumière gagne toute la surface,
@@ -697,6 +705,24 @@
         </div>
       </div>
       <input type="range" id="game-volume-slider" min="0" max="100" value="100">
+
+      <label class="field-label" style="margin-top:18px;">Fin de manche</label>
+      <div class="sound-row">
+        <span>Afficher le détail des mots (trouvés / ratés)</span>
+        <div class="toggle-row sound-toggle" id="recap-detail-toggle">
+          <div class="toggle-btn" data-val="on">Activé</div>
+          <div class="toggle-btn" data-val="off">Désactivé</div>
+        </div>
+      </div>
+
+      <label class="field-label" style="margin-top:18px;">Pause en cours de manche</label>
+      <div class="sound-row">
+        <span>Masquer le mot pendant la pause</span>
+        <div class="toggle-row sound-toggle" id="pause-hide-toggle">
+          <div class="toggle-btn" data-val="on">Activé</div>
+          <div class="toggle-btn" data-val="off">Désactivé</div>
+        </div>
+      </div>
 
       <button class="btn btn-gold" id="btn-close-settings" style="margin-top:16px; width:100%;">OK</button>
     </div>
@@ -1189,6 +1215,63 @@
     };
   })();
 
+  // ---------- PRÉFÉRENCES UI ----------
+  // Petites préférences d'affichage persistées, séparées des réglages sons.
+  const UIPREFS = (function(){
+    const prefs = { showRoundRecap: true, hideWordOnPause: true };
+    try {
+      const saved = JSON.parse(localStorage.getItem('mdp_ui_prefs') || 'null');
+      if(saved) Object.assign(prefs, saved);
+    } catch(e){}
+    function save(){
+      try { localStorage.setItem('mdp_ui_prefs', JSON.stringify(prefs)); } catch(e){}
+    }
+    return {
+      getShowRoundRecap(){ return prefs.showRoundRecap; },
+      setShowRoundRecap(v){ prefs.showRoundRecap = v; save(); },
+      getHideWordOnPause(){ return prefs.hideWordOnPause; },
+      setHideWordOnPause(v){ prefs.hideWordOnPause = v; save(); },
+    };
+  })();
+
+  // ---------- NOMS DES JOUEURS ----------
+  // Mémorise les prénoms saisis pour ne pas avoir à les retaper à chaque partie.
+  // Une seule liste, indexée par position de joueur (0 à 5 = Joueur 1 à 6),
+  // partagée entre l'affichage "chacun pour soi" et l'affichage "équipes
+  // prédéfinies" : en mode équipe, l'équipe t correspond aux joueurs 2t (fait
+  // deviner) et 2t+1 (devine). Ainsi le nom du joueur N reste le même quel que
+  // soit le nombre de joueurs ou le mode choisi.
+  const PLAYERNAMES = (function(){
+    const data = { names: [] };
+    try {
+      const saved = JSON.parse(localStorage.getItem('mdp_player_names') || 'null');
+      if(saved){
+        // Migration depuis l'ancien format à deux listes séparées (flat / équipes),
+        // au cas où une partie précédente aurait déjà sauvegardé des noms.
+        if(saved.names){
+          data.names = saved.names;
+        } else {
+          const merged = [];
+          (saved.teamGivers || []).forEach((v, t) => { merged[2*t] = v; });
+          (saved.teamGuessers || []).forEach((v, t) => { merged[2*t+1] = v; });
+          (saved.flat || []).forEach((v, i) => { if(v && !merged[i]) merged[i] = v; });
+          data.names = merged;
+        }
+      }
+    } catch(e){}
+    function save(){
+      try { localStorage.setItem('mdp_player_names', JSON.stringify(data)); } catch(e){}
+    }
+    return {
+      getFlat(i){ return data.names[i] || ''; },
+      setFlat(i, val){ data.names[i] = val; save(); },
+      getTeamGiver(t){ return data.names[2*t] || ''; },
+      getTeamGuesser(t){ return data.names[2*t+1] || ''; },
+      setTeamGiver(t, val){ data.names[2*t] = val; save(); },
+      setTeamGuesser(t, val){ data.names[2*t+1] = val; save(); },
+    };
+  })();
+
   const PLAYER_COLORS = ["#f2c94c", "#5aa9e6", "#4fbf7a", "#e6614f", "#b98fff", "#ffa552"];
 
   const QUALIF_TIME = 30;
@@ -1259,6 +1342,7 @@
   const state = {
     mode: 'full',        // 'full' | 'training'
     subMode: 'team',      // 'team' | 'solo'
+    subModeForcedSolo: false, // true si passé en solo automatiquement (nb impair), pas par choix
     teamAssignment: 'predefined', // 'predefined' | 'random'
     playerCount: 4,
 
@@ -1347,6 +1431,13 @@
   function renderWordRecap(containerId, success){
     const container = document.getElementById(containerId);
     if(!container) return;
+    if(!UIPREFS.getShowRoundRecap()){
+      container.innerHTML = '';
+      container.classList.remove('expanded');
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = '';
     const found = state.wordsFound || [];
     const failed = state.wordsFailed || [];
     const leftover = state.pool || [];
@@ -1438,6 +1529,8 @@
   document.getElementById('game-volume-slider').value = Math.round(initialSfxSettings.gameVol * 100);
   wireSoundToggle('ui-sound-toggle', () => SFX.getSettings().uiOn, v => SFX.setUiOn(v));
   wireSoundToggle('game-sound-toggle', () => SFX.getSettings().gameOn, v => SFX.setGameOn(v));
+  wireSoundToggle('recap-detail-toggle', () => UIPREFS.getShowRoundRecap(), v => UIPREFS.setShowRoundRecap(v));
+  wireSoundToggle('pause-hide-toggle', () => UIPREFS.getHideWordOnPause(), v => UIPREFS.setHideWordOnPause(v));
   document.getElementById('ui-volume-slider').addEventListener('input', e => {
     SFX.setUiVol(Number(e.target.value) / 100);
   });
@@ -1497,7 +1590,15 @@
     document.getElementById('submode-note').style.display = teamImpossible ? '' : 'none';
     if(teamImpossible && state.subMode === 'team'){
       state.subMode = 'solo';
+      state.subModeForcedSolo = true;
       selectToggle('submode-group', 'solo');
+    } else if(!teamImpossible && state.subModeForcedSolo){
+      // Le passage en solo n'était pas un choix : on revient sur "Équipes de 2"
+      // maintenant que le nombre de joueurs le permet de nouveau, pour ne pas
+      // donner l'impression que les noms d'équipe ont été perdus.
+      state.subMode = 'team';
+      state.subModeForcedSolo = false;
+      selectToggle('submode-group', 'team');
     }
     document.getElementById('team-assignment-card').style.display = (state.subMode === 'team') ? '' : 'none';
     renderPlayerFields();
@@ -1505,6 +1606,7 @@
 
   wireToggleGroup('submode-group', val => {
     state.subMode = val;
+    state.subModeForcedSolo = false; // choix manuel : on ne corrige plus automatiquement
     document.getElementById('team-assignment-card').style.display = (val === 'team') ? '' : 'none';
     renderPlayerFields();
   });
@@ -1528,14 +1630,18 @@
           <div class="field-pair">
             <div>
               <label class="field-label">Fait deviner</label>
-              <input type="text" id="team${t}-giver" placeholder="Prénom" maxlength="14">
+              <input type="text" id="team${t}-giver" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getTeamGiver(t))}">
             </div>
             <div>
               <label class="field-label">Devine</label>
-              <input type="text" id="team${t}-guesser" placeholder="Prénom" maxlength="14">
+              <input type="text" id="team${t}-guesser" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getTeamGuesser(t))}">
             </div>
           </div>`;
         container.appendChild(block);
+        const giverInput = block.querySelector(`#team${t}-giver`);
+        const guesserInput = block.querySelector(`#team${t}-guesser`);
+        giverInput.addEventListener('input', () => PLAYERNAMES.setTeamGiver(t, giverInput.value.trim()));
+        guesserInput.addEventListener('input', () => PLAYERNAMES.setTeamGuesser(t, guesserInput.value.trim()));
       }
     } else {
       // équipes aléatoires, ou chacun pour soi : liste à plat de N noms
@@ -1546,8 +1652,10 @@
       for(let i=0; i<N; i++){
         const div = document.createElement('div');
         div.innerHTML = `<label class="field-label">Joueur ${i+1}</label>
-          <input type="text" id="player${i}" placeholder="Prénom" maxlength="14">`;
+          <input type="text" id="player${i}" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getFlat(i))}">`;
         wrap.appendChild(div);
+        const input = div.querySelector(`#player${i}`);
+        input.addEventListener('input', () => PLAYERNAMES.setFlat(i, input.value.trim()));
       }
       container.appendChild(wrap);
     }
@@ -1820,7 +1928,7 @@
     // plus se lancer, et le mot reste bloqué à opacity:0 = invisible).
     wordEl.style.opacity = '';
     wordEl.style.animation = '';
-    wordPillEl.classList.remove('materialize', 'dematerialize');
+    wordPillEl.classList.remove('materialize', 'dematerialize', 'paused-hidden');
     void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
     wordPillEl.classList.add('materialize');
     wordPillEl.classList.add('waiting');
@@ -1842,12 +1950,14 @@
       state.running = false;
       clearInterval(state.timerHandle);
       document.getElementById('word-pill').classList.add('waiting');
+      if(UIPREFS.getHideWordOnPause()) document.getElementById('word-pill').classList.add('paused-hidden');
       document.getElementById('play-hint').textContent = "En pause — tape sur le mot pour reprendre";
       setPlayControlsEnabled(false);
     } else {
       // démarrage ou reprise
       state.running = true;
       document.getElementById('word-pill').classList.remove('waiting');
+      document.getElementById('word-pill').classList.remove('paused-hidden');
       document.getElementById('play-hint').textContent = "";
       setPlayControlsEnabled(true);
       state.timerHandle = setInterval(tick, 1000);
