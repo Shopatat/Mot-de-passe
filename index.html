@@ -353,7 +353,7 @@
   }
   .word-pill{
     position:relative; z-index:1; order:2;
-    flex:1;
+    flex:1; min-width:0;
     background:#0c0302; border:6px solid transparent; border-radius:999px;
     padding: 20px 22px; text-align:center;
     margin: 2px 0;
@@ -432,8 +432,10 @@
     100%{ transform: scaleX(0.05) scaleY(0.35); opacity:0; }
   }
   .word-text{
-    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size: 34px; letter-spacing:1px; text-transform:uppercase;
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
+    font-size: var(--word-size, 34px); letter-spacing:1px; text-transform:uppercase;
     color: #fff; line-height:1.05; word-break: break-word;
+    white-space: nowrap;
     position:relative; z-index:1;
   }
   .word-wipe{
@@ -1010,121 +1012,289 @@
   // d: 1 = facile, 2 = moyen, 3 = difficile
   const WORD_BANK = {
     "Général": [
-      {w:"Soleil",d:1},{w:"Voiture",d:1},{w:"Téléphone",d:1},{w:"Musique",d:1},{w:"Jardin",d:1},
-      {w:"Nuage",d:1},{w:"Miroir",d:1},{w:"Parapluie",d:1},{w:"Chaussure",d:1},{w:"Fenêtre",d:1},
-      {w:"Bougie",d:1},{w:"Ballon",d:1},{w:"Clavier",d:1},{w:"Piscine",d:1},{w:"Table",d:1},
-      {w:"Chaise",d:1},{w:"Lit",d:1},{w:"Porte",d:1},{w:"Rue",d:1},{w:"Ville",d:1},{w:"École",d:1},
-      {w:"Papier",d:1},{w:"Crayon",d:1},{w:"Livre",d:1},{w:"Sac",d:1},{w:"Clé",d:1},{w:"Lampe",d:1},
-      {w:"Radio",d:1},{w:"Journal",d:1},{w:"Photo",d:1},{w:"Robe",d:1},{w:"Chapeau",d:1},{w:"Gant",d:1},
-      {w:"Ceinture",d:1},{w:"Montre",d:1},{w:"Bijou",d:1},{w:"Pont",d:1},{w:"Train",d:1},{w:"Bateau",d:1},
-      {w:"Avion",d:1},{w:"Vélo",d:1},{w:"Camion",d:1},{w:"Route",d:1},{w:"Trottoir",d:1},
-      {w:"Montagne",d:2},{w:"Rivière",d:2},{w:"Bibliothèque",d:2},{w:"Horloge",d:2},{w:"Valise",d:2},
-      {w:"Escalier",d:2},{w:"Volcan",d:2},{w:"Tempête",d:2},{w:"Fusée",d:2},{w:"Trésor",d:2},{w:"Ombre",d:2},
-      {w:"Cascade",d:2},{w:"Falaise",d:2},{w:"Vallée",d:2},{w:"Colline",d:2},{w:"Plaine",d:2},{w:"Désert",d:2},
-      {w:"Glacier",d:2},{w:"Marée",d:2},{w:"Tourbillon",d:2},{w:"Avalanche",d:2},{w:"Inondation",d:2},
-      {w:"Éclair",d:2},{w:"Tonnerre",d:2},{w:"Brouillard",d:2},{w:"Rosée",d:2},{w:"Aurore",d:2},
-      {w:"Crépuscule",d:2},{w:"Horizon",d:2},{w:"Sentier",d:2},{w:"Carrefour",d:2},{w:"Impasse",d:2},
-      {w:"Ruelle",d:2},{w:"Quartier",d:2},{w:"Banlieue",d:2},{w:"Frontière",d:2},{w:"Récolte",d:2},
-      {w:"Moisson",d:2},{w:"Vendange",d:2},
-      {w:"Labyrinthe",d:3},{w:"Silence",d:3},{w:"Fantôme",d:3},{w:"Racine",d:3},{w:"Naufrage",d:3},
-      {w:"Mirage",d:3},{w:"Éclipse",d:3},{w:"Écho",d:3},{w:"Vertige",d:3},{w:"Silhouette",d:3},
-      {w:"Mélancolie",d:3},{w:"Nostalgie",d:3},{w:"Étreinte",d:3},{w:"Incertitude",d:3},{w:"Résilience",d:3},
-      {w:"Sérénité",d:3},{w:"Turbulence",d:3},{w:"Ambivalence",d:3},{w:"Pénombre",d:3},{w:"Effluve",d:3},
-      {w:"Réminiscence",d:3},{w:"Équinoxe",d:3},{w:"Solstice",d:3},{w:"Méandre",d:3},{w:"Vestige",d:3},
-      {w:"Anachronisme",d:3},{w:"Paradoxe",d:3},{w:"Apogée",d:3},{w:"Déclin",d:3},{w:"Ferveur",d:3}
-    ],
+      {w:"Soleil",d:1},{w:"Voiture",d:1},{w:"Téléphone",d:1},{w:"Musique",d:1},
+      {w:"Jardin",d:1},{w:"Nuage",d:1},{w:"Miroir",d:1},{w:"Parapluie",d:1},
+      {w:"Chaussure",d:1},{w:"Fenêtre",d:1},{w:"Bougie",d:1},{w:"Ballon",d:1},
+      {w:"Clavier",d:1},{w:"Piscine",d:1},{w:"Table",d:1},{w:"Chaise",d:1},{w:"Lit",d:1},
+      {w:"Porte",d:1},{w:"Rue",d:1},{w:"Ville",d:1},{w:"École",d:1},{w:"Papier",d:1},
+      {w:"Crayon",d:1},{w:"Livre",d:1},{w:"Sac",d:1},{w:"Clé",d:1},{w:"Lampe",d:1},
+      {w:"Radio",d:1},{w:"Journal",d:1},{w:"Photo",d:1},{w:"Robe",d:1},{w:"Chapeau",d:1},
+      {w:"Gant",d:1},{w:"Ceinture",d:1},{w:"Montre",d:1},{w:"Pont",d:1},{w:"Train",d:1},
+      {w:"Bateau",d:1},{w:"Avion",d:1},{w:"Vélo",d:1},{w:"Camion",d:1},{w:"Route",d:1},
+      {w:"Plage",d:1},{w:"Neige",d:1},{w:"Pluie",d:1},{w:"Vent",d:1},{w:"Feu",d:1},
+      {w:"Argent",d:1},{w:"Cadeau",d:1},{w:"Anniversaire",d:1},{w:"Vacances",d:1},
+      {w:"Hôpital",d:1},{w:"Église",d:1},{w:"Château",d:1},{w:"Forêt",d:1},{w:"Mer",d:1},
+      {w:"Étoile",d:1},{w:"Lune",d:1},{w:"Arbre",d:1},{w:"Fleur",d:1},{w:"Maison",d:1},
+      {w:"Cuisine",d:1},{w:"Chambre",d:1},{w:"Salon",d:1},{w:"Garage",d:1},{w:"Marché",d:1},
+      {w:"Restaurant",d:1},{w:"Hôtel",d:1},{w:"Gare",d:1},{w:"Magasin",d:1},
+      {w:"Pharmacie",d:1},{w:"Banque",d:1},{w:"Danse",d:1},{w:"Chanson",d:1},{w:"Câlin",d:1},
+      {w:"Baiser",d:1},{w:"Nuit",d:1},{w:"Matin",d:1},{w:"Weekend",d:1},{w:"Fête",d:1},
+      {w:"Noël",d:1},{w:"Bébé",d:1},{w:"Famille",d:1},{w:"Voisin",d:1},{w:"Boîte",d:1},
+      {w:"Cartable",d:1},{w:"Cravate",d:1},{w:"Bracelet",d:1},{w:"Collier",d:1},
+      {w:"Bague",d:1},{w:"Écharpe",d:1},{w:"Manteau",d:1},{w:"Pyjama",d:1},
+      {w:"Chaussette",d:1},{w:"Parfum",d:1},{w:"Camping",d:1},{w:"Île",d:1},{w:"Vague",d:1},
+      {w:"Sable",d:1},{w:"Coquillage",d:1},{w:"Bulle",d:1},{w:"Rêve",d:1},{w:"Sommeil",d:1},
+      {w:"Prénom",d:1},
+      {w:"Montagne",d:2},{w:"Rivière",d:2},{w:"Bibliothèque",d:2},{w:"Horloge",d:2},
+      {w:"Valise",d:2},{w:"Escalier",d:2},{w:"Volcan",d:2},{w:"Tempête",d:2},{w:"Fusée",d:2},
+      {w:"Trésor",d:2},{w:"Ombre",d:2},{w:"Cascade",d:2},{w:"Falaise",d:2},{w:"Vallée",d:2},
+      {w:"Colline",d:2},{w:"Désert",d:2},{w:"Glacier",d:2},{w:"Marée",d:2},{w:"Avalanche",d:2},
+      {w:"Inondation",d:2},{w:"Éclair",d:2},{w:"Tonnerre",d:2},{w:"Brouillard",d:2},
+      {w:"Aurore",d:2},{w:"Horizon",d:2},{w:"Sentier",d:2},{w:"Carrefour",d:2},
+      {w:"Impasse",d:2},{w:"Ruelle",d:2},{w:"Quartier",d:2},{w:"Banlieue",d:2},
+      {w:"Frontière",d:2},{w:"Récolte",d:2},{w:"Vendange",d:2},{w:"Tourbillon",d:2},
+      {w:"Trottoir",d:2},{w:"Bijou",d:2},{w:"Grenier",d:2},{w:"Cave",d:2},{w:"Balcon",d:2},
+      {w:"Cheminée",d:2},{w:"Toit",d:2},{w:"Tunnel",d:2},{w:"Phare",d:2},{w:"Moulin",d:2},
+      {w:"Puits",d:2},{w:"Fontaine",d:2},{w:"Statue",d:2},{w:"Cimetière",d:2},{w:"Prison",d:2},
+      {w:"Cirque",d:2},{w:"Musée",d:2},{w:"Aéroport",d:2},{w:"Autoroute",d:2},
+      {w:"Mariage",d:2},{w:"Secret",d:2},{w:"Mensonge",d:2},{w:"Dispute",d:2},
+      {w:"Terrasse",d:2},{w:"Portail",d:2},{w:"Cour",d:2},{w:"Verger",d:2},{w:"Potager",d:2},
+      {w:"Serre",d:2},{w:"Étable",d:2},{w:"Grange",d:2},{w:"Chalet",d:2},{w:"Cabane",d:2},
+      {w:"Tente",d:2},{w:"Igloo",d:2},{w:"Village",d:2},{w:"Capitale",d:2},{w:"Panneau",d:2},
+      {w:"Trafic",d:2},{w:"Embouteillage",d:2},{w:"Péage",d:2},{w:"Douane",d:2},
+      {w:"Passeport",d:2},{w:"Ambassade",d:2},{w:"Otage",d:2},{w:"Rançon",d:2},
+      {w:"Émeute",d:2},{w:"Grève",d:2},{w:"Manifestation",d:2},{w:"Enquête",d:2},
+      {w:"Alibi",d:2},{w:"Témoin",d:2},{w:"Complot",d:2},{w:"Trahison",d:2},
+      {w:"Vengeance",d:2},{w:"Réconciliation",d:2},{w:"Divorce",d:2},{w:"Deuil",d:2},
+      {w:"Héritage",d:2},{w:"Testament",d:2},{w:"Adoption",d:2},{w:"Jumeau",d:2},
+      {w:"Orphelin",d:2},{w:"Ancêtre",d:2},{w:"Descendant",d:2},
+      {w:"Labyrinthe",d:3},{w:"Silence",d:3},{w:"Fantôme",d:3},{w:"Racine",d:3},
+      {w:"Naufrage",d:3},{w:"Mirage",d:3},{w:"Éclipse",d:3},{w:"Écho",d:3},{w:"Vertige",d:3},
+      {w:"Silhouette",d:3},{w:"Mélancolie",d:3},{w:"Nostalgie",d:3},{w:"Étreinte",d:3},
+      {w:"Pénombre",d:3},{w:"Équinoxe",d:3},{w:"Solstice",d:3},{w:"Méandre",d:3},
+      {w:"Vestige",d:3},{w:"Paradoxe",d:3},{w:"Crépuscule",d:3},{w:"Rosée",d:3},
+      {w:"Grotte",d:3},{w:"Marais",d:3},{w:"Lagune",d:3},{w:"Récif",d:3},{w:"Dune",d:3},
+      {w:"Geyser",d:3},{w:"Tsunami",d:3},{w:"Séisme",d:3},{w:"Cratère",d:3},{w:"Comète",d:3},
+      {w:"Météorite",d:3},{w:"Épave",d:3},{w:"Ruine",d:3},{w:"Sarcophage",d:3},{w:"Momie",d:3},
+      {w:"Sorcière",d:3},{w:"Malédiction",d:3},{w:"Prophétie",d:3},{w:"Exil",d:3},
+      {w:"Cauchemar",d:3},{w:"Métamorphose",d:3},{w:"Frisson",d:3},{w:"Braise",d:3},
+      {w:"Insomnie",d:3},{w:"Somnambule",d:3},{w:"Hallucination",d:3},{w:"Amnésie",d:3},
+      {w:"Contrebande",d:3},{w:"Espionnage",d:3},{w:"Sabotage",d:3},{w:"Embuscade",d:3},
+      {w:"Mutinerie",d:3},{w:"Naufragé",d:3},{w:"Rescapé",d:3},{w:"Réfugié",d:3},
+      {w:"Bannissement",d:3},{w:"Rédemption",d:3},{w:"Apocalypse",d:3},{w:"Purgatoire",d:3},
+      {w:"Résurrection",d:3},{w:"Prémonition",d:3},{w:"Envoûtement",d:3},
+      {w:"Superstition",d:3},{w:"Talisman",d:3},{w:"Amulette",d:3},{w:"Grimoire",d:3},
+      {w:"Sortilège",d:3}
+],
     "Animaux": [
-      {w:"Éléphant",d:1},{w:"Girafe",d:1},{w:"Kangourou",d:1},{w:"Pingouin",d:1},{w:"Dauphin",d:1},
-      {w:"Tortue",d:1},{w:"Panda",d:1},{w:"Zèbre",d:1},{w:"Renard",d:1},{w:"Grenouille",d:1},
-      {w:"Chat",d:1},{w:"Chien",d:1},{w:"Cheval",d:1},{w:"Vache",d:1},{w:"Cochon",d:1},{w:"Mouton",d:1},
-      {w:"Poule",d:1},{w:"Canard",d:1},{w:"Lapin",d:1},{w:"Souris",d:1},{w:"Ours",d:1},{w:"Loup",d:1},
-      {w:"Singe",d:1},{w:"Poisson",d:1},{w:"Oiseau",d:1},{w:"Serpent",d:1},{w:"Abeille",d:1},
-      {w:"Papillon",d:1},{w:"Araignée",d:1},{w:"Mouche",d:1},
-      {w:"Hérisson",d:2},{w:"Perroquet",d:2},{w:"Crocodile",d:2},{w:"Écureuil",d:2},{w:"Flamant",d:2},
-      {w:"Requin",d:2},{w:"Hibou",d:2},{w:"Loutre",d:2},{w:"Poulpe",d:2},{w:"Paresseux",d:2},
-      {w:"Lynx",d:2},{w:"Chameau",d:2},{w:"Antilope",d:2},{w:"Bison",d:2},{w:"Chèvre",d:2},{w:"Phoque",d:2},
-      {w:"Morse",d:2},{w:"Hippopotame",d:2},{w:"Rhinocéros",d:2},{w:"Guépard",d:2},{w:"Léopard",d:2},
-      {w:"Vautour",d:2},{w:"Corbeau",d:2},{w:"Cigogne",d:2},{w:"Pélican",d:2},{w:"Toucan",d:2},
-      {w:"Colibri",d:2},{w:"Libellule",d:2},{w:"Sauterelle",d:2},{w:"Fourmi",d:2},
-      {w:"Scorpion",d:3},{w:"Coccinelle",d:3},{w:"Marmotte",d:3},{w:"Belette",d:3},
-      {w:"Ornithorynque",d:3},{w:"Iguane",d:3},{w:"Salamandre",d:3},{w:"Mangouste",d:3},{w:"Chacal",d:3},
-      {w:"Tatou",d:3},{w:"Pangolin",d:3},{w:"Okapi",d:3},{w:"Narval",d:3},{w:"Axolotl",d:3},
-      {w:"Caméléon",d:3},{w:"Wombat",d:3},{w:"Suricate",d:3},{w:"Capybara",d:3},{w:"Gecko",d:3},
-      {w:"Furet",d:3},{w:"Putois",d:3},{w:"Hyène",d:3},{w:"Vipère",d:3},{w:"Anaconda",d:3}
-    ],
+      {w:"Éléphant",d:1},{w:"Girafe",d:1},{w:"Kangourou",d:1},{w:"Pingouin",d:1},
+      {w:"Dauphin",d:1},{w:"Tortue",d:1},{w:"Panda",d:1},{w:"Zèbre",d:1},{w:"Renard",d:1},
+      {w:"Grenouille",d:1},{w:"Chat",d:1},{w:"Chien",d:1},{w:"Cheval",d:1},{w:"Vache",d:1},
+      {w:"Cochon",d:1},{w:"Mouton",d:1},{w:"Poule",d:1},{w:"Canard",d:1},{w:"Lapin",d:1},
+      {w:"Souris",d:1},{w:"Ours",d:1},{w:"Loup",d:1},{w:"Singe",d:1},{w:"Oiseau",d:1},
+      {w:"Serpent",d:1},{w:"Abeille",d:1},{w:"Papillon",d:1},{w:"Araignée",d:1},
+      {w:"Mouche",d:1},{w:"Lion",d:1},{w:"Tigre",d:1},{w:"Crocodile",d:1},{w:"Requin",d:1},
+      {w:"Hibou",d:1},{w:"Écureuil",d:1},{w:"Fourmi",d:1},{w:"Corbeau",d:1},{w:"Chèvre",d:1},
+      {w:"Poussin",d:1},{w:"Baleine",d:1},{w:"Faucon",d:1},{w:"Aigle",d:1},{w:"Pie",d:1},
+      {w:"Moineau",d:1},{w:"Hirondelle",d:1},{w:"Cygne",d:1},{w:"Oie",d:1},{w:"Dindon",d:1},
+      {w:"Âne",d:1},{w:"Rat",d:1},{w:"Puce",d:1},{w:"Ver",d:1},{w:"Limace",d:1},
+      {w:"Poney",d:1},{w:"Chaton",d:1},{w:"Chiot",d:1},{w:"Guêpe",d:1},{w:"Moustique",d:1},
+      {w:"Tique",d:1},
+      {w:"Hérisson",d:2},{w:"Perroquet",d:2},{w:"Flamant",d:2},{w:"Loutre",d:2},
+      {w:"Poulpe",d:2},{w:"Paresseux",d:2},{w:"Lynx",d:2},{w:"Chameau",d:2},{w:"Antilope",d:2},
+      {w:"Bison",d:2},{w:"Phoque",d:2},{w:"Morse",d:2},{w:"Hippopotame",d:2},
+      {w:"Rhinocéros",d:2},{w:"Guépard",d:2},{w:"Léopard",d:2},{w:"Vautour",d:2},
+      {w:"Cigogne",d:2},{w:"Pélican",d:2},{w:"Toucan",d:2},{w:"Colibri",d:2},
+      {w:"Libellule",d:2},{w:"Sauterelle",d:2},{w:"Scorpion",d:2},{w:"Coccinelle",d:2},
+      {w:"Marmotte",d:2},{w:"Caméléon",d:2},{w:"Vipère",d:2},{w:"Hyène",d:2},{w:"Furet",d:2},
+      {w:"Gecko",d:2},{w:"Autruche",d:2},{w:"Buffle",d:2},{w:"Taupe",d:2},{w:"Bourdon",d:2},
+      {w:"Frelon",d:2},{w:"Criquet",d:2},{w:"Cigale",d:2},{w:"Puma",d:2},{w:"Jaguar",d:2},
+      {w:"Panthère",d:2},{w:"Sanglier",d:2},{w:"Cerf",d:2},{w:"Biche",d:2},{w:"Faon",d:2},
+      {w:"Élan",d:2},{w:"Renne",d:2},{w:"Bouquetin",d:2},{w:"Mouflon",d:2},{w:"Yack",d:2},
+      {w:"Lama",d:2},{w:"Alpaga",d:2},{w:"Zébu",d:2},{w:"Gazelle",d:2},{w:"Ouistiti",d:2},
+      {w:"Gorille",d:2},{w:"Orang-outan",d:2},{w:"Chimpanzé",d:2},{w:"Manchot",d:2},
+      {w:"Albatros",d:2},{w:"Mouette",d:2},{w:"Cormoran",d:2},{w:"Huître",d:2},{w:"Moule",d:2},
+      {w:"Crabe",d:2},{w:"Crevette",d:2},
+      {w:"Belette",d:3},{w:"Ornithorynque",d:3},{w:"Iguane",d:3},{w:"Salamandre",d:3},
+      {w:"Mangouste",d:3},{w:"Chacal",d:3},{w:"Tatou",d:3},{w:"Pangolin",d:3},{w:"Narval",d:3},
+      {w:"Axolotl",d:3},{w:"Wombat",d:3},{w:"Suricate",d:3},{w:"Capybara",d:3},
+      {w:"Putois",d:3},{w:"Anaconda",d:3},{w:"Hermine",d:3},{w:"Fouine",d:3},
+      {w:"Blaireau",d:3},{w:"Lémurien",d:3},{w:"Orque",d:3},{w:"Raie",d:3},{w:"Méduse",d:3},
+      {w:"Oursin",d:3},{w:"Hippocampe",d:3},{w:"Cachalot",d:3},{w:"Piranha",d:3},
+      {w:"Cobra",d:3},{w:"Mante",d:3},{w:"Termite",d:3},{w:"Sangsue",d:3},{w:"Girafon",d:3},
+      {w:"Larve",d:3},{w:"Chrysalide",d:3},{w:"Nymphe",d:3},{w:"Otarie",d:3},{w:"Béluga",d:3},
+      {w:"Dugong",d:3},{w:"Lamantin",d:3},{w:"Fennec",d:3},{w:"Coyote",d:3},{w:"Dingo",d:3},
+      {w:"Wapiti",d:3},{w:"Bernard-l'ermite",d:3},{w:"Étourneau",d:3},{w:"Geai",d:3},
+      {w:"Martin-pêcheur",d:3},{w:"Vanneau",d:3},{w:"Guêpier",d:3},{w:"Percnoptère",d:3}
+],
     "Cinéma & Séries": [
       {w:"Titanic",d:1},{w:"Batman",d:1},{w:"Netflix",d:1},{w:"Popcorn",d:1},{w:"Zombie",d:1},
       {w:"Cinéma",d:1},{w:"Écran",d:1},{w:"Film",d:1},{w:"Acteur",d:1},{w:"Actrice",d:1},
       {w:"Comédie",d:1},{w:"Drame",d:1},{w:"Aventure",d:1},{w:"Héros",d:1},{w:"Épisode",d:1},
       {w:"Saison",d:1},{w:"Série",d:1},{w:"Public",d:1},{w:"Salle",d:1},{w:"Billet",d:1},
+      {w:"Caméra",d:1},{w:"Star",d:1},{w:"Pirate",d:1},{w:"Robot",d:1},
+      {w:"Extraterrestre",d:1},{w:"Vampire",d:1},{w:"Sorcier",d:1},{w:"Espion",d:1},
+      {w:"Chevalier",d:1},{w:"Cowboy",d:1},{w:"Princesse",d:1},{w:"Dragon",d:1},
+      {w:"Monstre",d:1},{w:"Détective",d:1},{w:"Explosion",d:1},{w:"Poursuite",d:1},
+      {w:"Bagarre",d:1},{w:"Trailer",d:1},{w:"Marvel",d:1},{w:"Disney",d:1},{w:"Émission",d:1},
       {w:"Matrix",d:2},{w:"Avatar",d:2},{w:"Shrek",d:2},{w:"Pixar",d:2},{w:"Oscar",d:2},
       {w:"Tournage",d:2},{w:"Casting",d:2},{w:"Suspense",d:2},{w:"Décor",d:2},{w:"Scène",d:2},
-      {w:"Dialogue",d:2},{w:"Intrigue",d:2},{w:"Personnage",d:2},{w:"Costume",d:2},{w:"Maquillage",d:2},
-      {w:"Effet",d:2},{w:"Studio",d:2},{w:"Réalisation",d:2},{w:"Adaptation",d:2},{w:"Remake",d:2},
-      {w:"Trilogie",d:2},{w:"Panoramique",d:2},{w:"Travelling",d:2},{w:"Fondu",d:2},
-      {w:"Scénario",d:3},{w:"Cascadeur",d:3},{w:"Générique",d:3},{w:"Franchise",d:3},{w:"Réplique",d:3},
-      {w:"Doublure",d:3},{w:"Scénariste",d:3},{w:"Montage",d:3},{w:"Storyboard",d:3},{w:"Narration",d:3},
-      {w:"Symbolisme",d:3},{w:"Dénouement",d:3},{w:"Prologue",d:3},{w:"Épilogue",d:3},{w:"Métaphore",d:3}
-    ],
+      {w:"Dialogue",d:2},{w:"Intrigue",d:2},{w:"Personnage",d:2},{w:"Costume",d:2},
+      {w:"Maquillage",d:2},{w:"Studio",d:2},{w:"Remake",d:2},{w:"Trilogie",d:2},
+      {w:"Générique",d:2},{w:"Réplique",d:2},{w:"Montage",d:2},{w:"Thriller",d:2},
+      {w:"Documentaire",d:2},{w:"Western",d:2},{w:"Figurant",d:2},{w:"Réalisateur",d:2},
+      {w:"Cliffhanger",d:2},{w:"Spin-off",d:2},{w:"Sitcom",d:2},{w:"Sous-titre",d:2},
+      {w:"Doublage",d:2},{w:"Bande-annonce",d:2},{w:"Plateau",d:2},{w:"Répétition",d:2},
+      {w:"Audition",d:2},{w:"Nomination",d:2},{w:"Festival",d:2},{w:"Paparazzi",d:2},
+      {w:"Biopic",d:2},{w:"Marionnette",d:2},{w:"Twist",d:2},{w:"Flashback",d:2},
+      {w:"Scénario",d:3},{w:"Cascadeur",d:3},{w:"Franchise",d:3},{w:"Doublure",d:3},
+      {w:"Scénariste",d:3},{w:"Storyboard",d:3},{w:"Prologue",d:3},{w:"Épilogue",d:3},
+      {w:"Clap",d:3},{w:"Pellicule",d:3},{w:"Bobine",d:3},{w:"Projectionniste",d:3},
+      {w:"Ouvreuse",d:3},{w:"Rebondissement",d:3},{w:"Antihéros",d:3},{w:"Péplum",d:3},
+      {w:"Navet",d:3},{w:"Blockbuster",d:3},{w:"Cliché",d:3},{w:"Caméo",d:3},
+      {w:"Antagoniste",d:3},{w:"Protagoniste",d:3},{w:"Intégrale",d:3},{w:"Diffuseur",d:3},
+      {w:"Novélisation",d:3}
+],
     "Nourriture": [
-      {w:"Croissant",d:1},{w:"Fromage",d:1},{w:"Chocolat",d:1},{w:"Sushi",d:1},{w:"Baguette",d:1},
-      {w:"Crêpe",d:1},{w:"Tarte",d:1},{w:"Biscuit",d:1},{w:"Miel",d:1},{w:"Pain",d:1},{w:"Beurre",d:1},
-      {w:"Lait",d:1},{w:"Œuf",d:1},{w:"Sel",d:1},{w:"Sucre",d:1},{w:"Riz",d:1},{w:"Pâtes",d:1},
-      {w:"Pizza",d:1},{w:"Salade",d:1},{w:"Soupe",d:1},{w:"Gâteau",d:1},{w:"Bonbon",d:1},{w:"Glace",d:1},
-      {w:"Yaourt",d:1},{w:"Jambon",d:1},{w:"Poulet",d:1},{w:"Bœuf",d:1},{w:"Poisson",d:1},{w:"Fruit",d:1},
-      {w:"Légume",d:1},{w:"Pomme",d:1},{w:"Banane",d:1},{w:"Orange",d:1},{w:"Fraise",d:1},{w:"Cerise",d:1},
-      {w:"Raisin",d:1},{w:"Citron",d:1},
-      {w:"Spaghetti",d:2},{w:"Fondue",d:2},{w:"Escargot",d:2},{w:"Macaron",d:2},{w:"Camembert",d:2},
-      {w:"Champagne",d:2},{w:"Barbecue",d:2},{w:"Gaufre",d:2},{w:"Confiture",d:2},{w:"Ratatouille",d:2},
-      {w:"Bouillabaisse",d:2},{w:"Cassoulet",d:2},{w:"Quiche",d:2},{w:"Omelette",d:2},{w:"Bouillon",d:2},
-      {w:"Compote",d:2},{w:"Nougat",d:2},{w:"Caramel",d:2},{w:"Praline",d:2},{w:"Meringue",d:2},
-      {w:"Sorbet",d:2},{w:"Cidre",d:2},{w:"Pastis",d:2},{w:"Moutarde",d:2},{w:"Mayonnaise",d:2},
-      {w:"Vinaigrette",d:2},{w:"Bisque",d:2},
-      {w:"Caviar",d:3},{w:"Nouille",d:3},{w:"Poivre",d:3},{w:"Vinaigre",d:3},{w:"Marinade",d:3},
-      {w:"Assaisonnement",d:3},{w:"Fermentation",d:3},{w:"Émulsion",d:3},{w:"Réduction",d:3},
-      {w:"Braisage",d:3},{w:"Clarification",d:3},{w:"Déglaçage",d:3},{w:"Macération",d:3},
-      {w:"Infusion",d:3},{w:"Consommé",d:3},{w:"Velouté",d:3},{w:"Feuilletage",d:3},{w:"Panure",d:3}
-    ],
+      {w:"Croissant",d:1},{w:"Fromage",d:1},{w:"Chocolat",d:1},{w:"Sushi",d:1},
+      {w:"Baguette",d:1},{w:"Crêpe",d:1},{w:"Tarte",d:1},{w:"Biscuit",d:1},{w:"Miel",d:1},
+      {w:"Pain",d:1},{w:"Beurre",d:1},{w:"Lait",d:1},{w:"Œuf",d:1},{w:"Sel",d:1},
+      {w:"Sucre",d:1},{w:"Riz",d:1},{w:"Pâtes",d:1},{w:"Pizza",d:1},{w:"Salade",d:1},
+      {w:"Soupe",d:1},{w:"Gâteau",d:1},{w:"Bonbon",d:1},{w:"Glace",d:1},{w:"Yaourt",d:1},
+      {w:"Jambon",d:1},{w:"Poulet",d:1},{w:"Bœuf",d:1},{w:"Poisson",d:1},{w:"Fruit",d:1},
+      {w:"Légume",d:1},{w:"Pomme",d:1},{w:"Banane",d:1},{w:"Orange",d:1},{w:"Fraise",d:1},
+      {w:"Cerise",d:1},{w:"Raisin",d:1},{w:"Citron",d:1},{w:"Café",d:1},{w:"Frite",d:1},
+      {w:"Burger",d:1},{w:"Steak",d:1},{w:"Saucisse",d:1},{w:"Frites",d:1},{w:"Ketchup",d:1},
+      {w:"Sandwich",d:1},{w:"Kebab",d:1},{w:"Chips",d:1},{w:"Nutella",d:1},
+      {w:"Petit-déjeuner",d:1},{w:"Goûter",d:1},{w:"Dessert",d:1},{w:"Entrée",d:1},
+      {w:"Menu",d:1},{w:"Recette",d:1},{w:"Four",d:1},{w:"Frigo",d:1},{w:"Poêle",d:1},
+      {w:"Régime",d:1},{w:"Vin",d:1},{w:"Bière",d:1},{w:"Jus",d:1},
+      {w:"Spaghetti",d:2},{w:"Fondue",d:2},{w:"Escargot",d:2},{w:"Macaron",d:2},
+      {w:"Camembert",d:2},{w:"Champagne",d:2},{w:"Barbecue",d:2},{w:"Gaufre",d:2},
+      {w:"Confiture",d:2},{w:"Ratatouille",d:2},{w:"Cassoulet",d:2},{w:"Quiche",d:2},
+      {w:"Omelette",d:2},{w:"Bouillon",d:2},{w:"Compote",d:2},{w:"Nougat",d:2},
+      {w:"Caramel",d:2},{w:"Praline",d:2},{w:"Meringue",d:2},{w:"Sorbet",d:2},{w:"Cidre",d:2},
+      {w:"Moutarde",d:2},{w:"Mayonnaise",d:2},{w:"Vinaigrette",d:2},{w:"Poivre",d:2},
+      {w:"Vinaigre",d:2},{w:"Nouille",d:2},{w:"Épice",d:2},{w:"Cannelle",d:2},
+      {w:"Basilic",d:2},{w:"Truffe",d:2},{w:"Gratin",d:2},{w:"Cocktail",d:2},
+      {w:"Apéritif",d:2},{w:"Digestif",d:2},{w:"Entremets",d:2},{w:"Bicarbonate",d:2},
+      {w:"Levure",d:2},{w:"Gingembre",d:2},{w:"Safran",d:2},{w:"Curry",d:2},{w:"Wasabi",d:2},
+      {w:"Guacamole",d:2},{w:"Houmous",d:2},{w:"Falafel",d:2},{w:"Paella",d:2},
+      {w:"Risotto",d:2},{w:"Ravioli",d:2},{w:"Croque-monsieur",d:2},{w:"Vol-au-vent",d:2},
+      {w:"Charcuterie",d:2},
+      {w:"Bouillabaisse",d:3},{w:"Pastis",d:3},{w:"Bisque",d:3},{w:"Caviar",d:3},
+      {w:"Consommé",d:3},{w:"Velouté",d:3},{w:"Marinade",d:3},{w:"Tapenade",d:3},
+      {w:"Rillettes",d:3},{w:"Andouillette",d:3},{w:"Choucroute",d:3},{w:"Tartiflette",d:3},
+      {w:"Blanquette",d:3},{w:"Aïoli",d:3},{w:"Clafoutis",d:3},{w:"Kouglof",d:3},
+      {w:"Nougatine",d:3},{w:"Ganache",d:3},{w:"Chantilly",d:3},{w:"Levain",d:3},
+      {w:"Saumure",d:3},{w:"Fumet",d:3},{w:"Bavarois",d:3},{w:"Homard",d:3},{w:"Terroir",d:3},
+      {w:"Appellation",d:3},{w:"Dégustation",d:3},{w:"Terrine",d:3},{w:"Confit",d:3},
+      {w:"Gésier",d:3},{w:"Abats",d:3},{w:"Tripes",d:3},{w:"Pot-au-feu",d:3},
+      {w:"Bourguignon",d:3},{w:"Bortsch",d:3},{w:"Gaspacho",d:3}
+],
     "Métiers": [
-      {w:"Boulanger",d:1},{w:"Pompier",d:1},{w:"Avocat",d:1},{w:"Facteur",d:1},{w:"Peintre",d:1},
-      {w:"Boucher",d:1},{w:"Coiffeur",d:1},{w:"Pilote",d:1},{w:"Médecin",d:1},{w:"Infirmier",d:1},
-      {w:"Professeur",d:1},{w:"Policier",d:1},{w:"Cuisinier",d:1},{w:"Serveur",d:1},{w:"Vendeur",d:1},
-      {w:"Chauffeur",d:1},{w:"Agriculteur",d:1},{w:"Mécanicien",d:1},{w:"Caissier",d:1},{w:"Livreur",d:1},
-      {w:"Chirurgien",d:2},{w:"Astronaute",d:2},{w:"Jardinier",d:2},{w:"Menuisier",d:2},{w:"Journaliste",d:2},
-      {w:"Plombier",d:2},{w:"Architecte",d:2},{w:"Photographe",d:2},{w:"Berger",d:2},{w:"Dentiste",d:2},
-      {w:"Pharmacien",d:2},{w:"Psychologue",d:2},{w:"Ingénieur",d:2},{w:"Informaticien",d:2},
-      {w:"Bibliothécaire",d:2},{w:"Bijoutier",d:2},{w:"Tapissier",d:2},{w:"Horticulteur",d:2},
-      {w:"Apiculteur",d:2},{w:"Éleveur",d:2},{w:"Vigneron",d:2},{w:"Meunier",d:2},
-      {w:"Vétérinaire",d:3},{w:"Traducteur",d:3},{w:"Comptable",d:3},{w:"Notaire",d:3},{w:"Serrurier",d:3},
-      {w:"Ébéniste",d:3},{w:"Cartographe",d:3},{w:"Géomètre",d:3},{w:"Ostréiculteur",d:3},{w:"Tonnelier",d:3},
-      {w:"Vannier",d:3},{w:"Chaudronnier",d:3},{w:"Ferronnier",d:3},{w:"Taxidermiste",d:3},
-      {w:"Sommelier",d:3},{w:"Archiviste",d:3},{w:"Paléontologue",d:3},{w:"Astrophysicien",d:3}
-    ],
+      {w:"Boulanger",d:1},{w:"Pompier",d:1},{w:"Avocat",d:1},{w:"Facteur",d:1},
+      {w:"Peintre",d:1},{w:"Boucher",d:1},{w:"Coiffeur",d:1},{w:"Pilote",d:1},
+      {w:"Médecin",d:1},{w:"Infirmier",d:1},{w:"Professeur",d:1},{w:"Policier",d:1},
+      {w:"Cuisinier",d:1},{w:"Serveur",d:1},{w:"Vendeur",d:1},{w:"Chauffeur",d:1},
+      {w:"Agriculteur",d:1},{w:"Mécanicien",d:1},{w:"Caissier",d:1},{w:"Livreur",d:1},
+      {w:"Juge",d:1},{w:"Soldat",d:1},{w:"Chanteur",d:1},{w:"Danseur",d:1},{w:"Musicien",d:1},
+      {w:"Écrivain",d:1},{w:"Secrétaire",d:1},{w:"Employé",d:1},{w:"Directeur",d:1},
+      {w:"Patron",d:1},{w:"Militaire",d:1},{w:"Marin",d:1},{w:"Steward",d:1},{w:"Guide",d:1},
+      {w:"Chirurgien",d:2},{w:"Astronaute",d:2},{w:"Jardinier",d:2},{w:"Menuisier",d:2},
+      {w:"Journaliste",d:2},{w:"Plombier",d:2},{w:"Architecte",d:2},{w:"Photographe",d:2},
+      {w:"Berger",d:2},{w:"Dentiste",d:2},{w:"Pharmacien",d:2},{w:"Psychologue",d:2},
+      {w:"Ingénieur",d:2},{w:"Informaticien",d:2},{w:"Bibliothécaire",d:2},{w:"Bijoutier",d:2},
+      {w:"Éleveur",d:2},{w:"Vigneron",d:2},{w:"Vétérinaire",d:2},{w:"Traducteur",d:2},
+      {w:"Comptable",d:2},{w:"Notaire",d:2},{w:"Serrurier",d:2},{w:"Électricien",d:2},
+      {w:"Maçon",d:2},{w:"Couturier",d:2},{w:"Traiteur",d:2},{w:"Pâtissier",d:2},
+      {w:"Fleuriste",d:2},{w:"Antiquaire",d:2},{w:"Brocanteur",d:2},{w:"Douanier",d:2},
+      {w:"Gendarme",d:2},{w:"Sage-femme",d:2},{w:"Chercheur",d:2},{w:"Biologiste",d:2},
+      {w:"Météorologue",d:2},{w:"Statisticien",d:2},{w:"Urbaniste",d:2},{w:"Décorateur",d:2},
+      {w:"Styliste",d:2},{w:"Designer",d:2},{w:"Éboueur",d:2},{w:"Balayeur",d:2},
+      {w:"Grutier",d:2},{w:"Charpentier",d:2},{w:"Vitrier",d:2},
+      {w:"Ébéniste",d:3},{w:"Sommelier",d:3},{w:"Archiviste",d:3},{w:"Paléontologue",d:3},
+      {w:"Astrophysicien",d:3},{w:"Apiculteur",d:3},{w:"Herboriste",d:3},{w:"Cordonnier",d:3},
+      {w:"Horloger",d:3},{w:"Fossoyeur",d:3},{w:"Bourreau",d:3},{w:"Alchimiste",d:3},
+      {w:"Corsaire",d:3},{w:"Croupier",d:3},{w:"Marionnettiste",d:3},{w:"Funambule",d:3},
+      {w:"Dresseur",d:3},{w:"Diplomate",d:3},{w:"Kinésithérapeute",d:3},{w:"Colporteur",d:3},
+      {w:"Contrebandier",d:3},{w:"Mercenaire",d:3},{w:"Ambassadeur",d:3},{w:"Régent",d:3}
+],
     "Objets": [
       {w:"Ciseaux",d:1},{w:"Marteau",d:1},{w:"Réveil",d:1},{w:"Éponge",d:1},{w:"Balai",d:1},
       {w:"Ampoule",d:1},{w:"Robinet",d:1},{w:"Tapis",d:1},{w:"Stylo",d:1},{w:"Cahier",d:1},
-      {w:"Fourchette",d:1},{w:"Couteau",d:1},{w:"Cuillère",d:1},{w:"Assiette",d:1},{w:"Verre",d:1},
-      {w:"Tasse",d:1},{w:"Peigne",d:1},{w:"Brosse",d:1},{w:"Savon",d:1},{w:"Serviette",d:1},
-      {w:"Aspirateur",d:2},{w:"Trombone",d:2},{w:"Cintre",d:2},{w:"Cadenas",d:2},{w:"Boussole",d:2},
-      {w:"Lanterne",d:2},{w:"Tabouret",d:2},{w:"Coussin",d:2},{w:"Sifflet",d:2},{w:"Pince",d:2},
-      {w:"Perceuse",d:2},{w:"Scie",d:2},{w:"Râteau",d:2},{w:"Pelle",d:2},{w:"Arrosoir",d:2},
-      {w:"Brouette",d:2},{w:"Échelle",d:2},{w:"Cadre",d:2},{w:"Vase",d:2},{w:"Bougeoir",d:2},{w:"Chandelier",d:2},
-      {w:"Thermomètre",d:3},{w:"Entonnoir",d:3},{w:"Bouchon",d:3},{w:"Ficelle",d:3},
-      {w:"Tournevis",d:3},{w:"Poulie",d:3},{w:"Charnière",d:3},{w:"Étau",d:3},{w:"Rivet",d:3},
-      {w:"Écrou",d:3},{w:"Boulon",d:3},{w:"Cliquet",d:3},{w:"Étrier",d:3},{w:"Maillet",d:3},{w:"Vilebrequin",d:3}
-    ],
+      {w:"Fourchette",d:1},{w:"Couteau",d:1},{w:"Cuillère",d:1},{w:"Assiette",d:1},
+      {w:"Verre",d:1},{w:"Tasse",d:1},{w:"Peigne",d:1},{w:"Brosse",d:1},{w:"Savon",d:1},
+      {w:"Serviette",d:1},{w:"Bouteille",d:1},{w:"Casserole",d:1},{w:"Oreiller",d:1},
+      {w:"Couverture",d:1},{w:"Téléviseur",d:1},{w:"Ordinateur",d:1},{w:"Chargeur",d:1},
+      {w:"Batterie",d:1},{w:"Pile",d:1},{w:"Câble",d:1},{w:"Prise",d:1},{w:"Interrupteur",d:1},
+      {w:"Télécommande",d:1},{w:"Casque",d:1},{w:"Écouteur",d:1},{w:"Portefeuille",d:1},
+      {w:"Panier",d:1},{w:"Caddie",d:1},{w:"Cageot",d:1},{w:"Poubelle",d:1},
+      {w:"Aspirateur",d:2},{w:"Trombone",d:2},{w:"Cintre",d:2},{w:"Cadenas",d:2},
+      {w:"Boussole",d:2},{w:"Lanterne",d:2},{w:"Tabouret",d:2},{w:"Coussin",d:2},
+      {w:"Sifflet",d:2},{w:"Pince",d:2},{w:"Perceuse",d:2},{w:"Scie",d:2},{w:"Râteau",d:2},
+      {w:"Pelle",d:2},{w:"Arrosoir",d:2},{w:"Brouette",d:2},{w:"Échelle",d:2},{w:"Cadre",d:2},
+      {w:"Vase",d:2},{w:"Chandelier",d:2},{w:"Thermomètre",d:2},{w:"Tournevis",d:2},
+      {w:"Bouchon",d:2},{w:"Ficelle",d:2},{w:"Entonnoir",d:2},{w:"Parasol",d:2},
+      {w:"Extincteur",d:2},{w:"Rallonge",d:2},{w:"Multiprise",d:2},{w:"Tondeuse",d:2},
+      {w:"Sécateur",d:2},{w:"Bêche",d:2},{w:"Fouet",d:2},{w:"Presse-agrumes",d:2},
+      {w:"Balance",d:2},{w:"Niveau",d:2},{w:"Serpillière",d:2},{w:"Éventail",d:2},
+      {w:"Berceau",d:2},
+      {w:"Sablier",d:3},{w:"Loupe",d:3},{w:"Jumelles",d:3},{w:"Enclume",d:3},
+      {w:"Bougeoir",d:3},{w:"Soufflet",d:3},{w:"Rouet",d:3},{w:"Métronome",d:3},
+      {w:"Kaléidoscope",d:3},{w:"Baromètre",d:3},{w:"Sextant",d:3},{w:"Encrier",d:3},
+      {w:"Plumeau",d:3},{w:"Écumoire",d:3},{w:"Passoire",d:3},{w:"Tamis",d:3},{w:"Bocal",d:3},
+      {w:"Trépied",d:3},{w:"Débroussailleuse",d:3},{w:"Binette",d:3},{w:"Pendule",d:3},
+      {w:"Girouette",d:3},{w:"Paratonnerre",d:3},{w:"Chausse-pied",d:3},{w:"Coupe-papier",d:3},
+      {w:"Presse-purée",d:3},{w:"Casse-noix",d:3},{w:"Tire-bouchon",d:3},{w:"Décapsuleur",d:3},
+      {w:"Éteignoir",d:3}
+],
     "Noms propres": [
       {w:"Napoléon",d:1},{w:"Mozart",d:1},{w:"Sahara",d:1},{w:"Everest",d:1},{w:"Paris",d:1},
       {w:"France",d:1},{w:"Europe",d:1},{w:"Afrique",d:1},{w:"Chine",d:1},{w:"Japon",d:1},
-      {w:"Londres",d:1},{w:"Rome",d:1},{w:"Égypte",d:1},{w:"Amérique",d:1},
-      {w:"Vénus",d:2},{w:"Cléopâtre",d:2},{w:"Amazone",d:2},{w:"Picasso",d:2},{w:"Islande",d:2},
-      {w:"Bretagne",d:2},{w:"Corse",d:2},{w:"Normandie",d:2},{w:"Provence",d:2},{w:"Alsace",d:2},
-      {w:"Bourgogne",d:2},{w:"Andorre",d:2},{w:"Monaco",d:2},{w:"Tahiti",d:2},{w:"Bali",d:2},
-      {w:"Venise",d:2},{w:"Florence",d:2},
-      {w:"Roosevelt",d:3},{w:"Gutenberg",d:3},{w:"Sibérie",d:3},{w:"Molière",d:3},{w:"Vésuve",d:3},
-      {w:"Copernic",d:3},{w:"Atacama",d:3},{w:"Néfertiti",d:3},{w:"Machiavel",d:3},{w:"Nostradamus",d:3},
-      {w:"Mésopotamie",d:3},{w:"Atlantide",d:3},{w:"Pompéi",d:3},{w:"Kilimandjaro",d:3},
-      {w:"Patagonie",d:3},{w:"Groenland",d:3}
+      {w:"Londres",d:1},{w:"Rome",d:1},{w:"Égypte",d:1},{w:"Amérique",d:1},{w:"Italie",d:1},
+      {w:"Espagne",d:1},{w:"Australie",d:1},{w:"Marseille",d:1},{w:"Canada",d:1},
+      {w:"Brésil",d:1},{w:"Mexique",d:1},{w:"Portugal",d:1},{w:"Allemagne",d:1},
+      {w:"Suisse",d:1},{w:"Belgique",d:1},{w:"Russie",d:1},{w:"Inde",d:1},{w:"Grèce",d:1},
+      {w:"Tokyo",d:1},{w:"Berlin",d:1},{w:"Madrid",d:1},{w:"Rio",d:1},
+      {w:"Vénus",d:2},{w:"Cléopâtre",d:2},{w:"Amazone",d:2},{w:"Picasso",d:2},
+      {w:"Islande",d:2},{w:"Bretagne",d:2},{w:"Corse",d:2},{w:"Normandie",d:2},
+      {w:"Provence",d:2},{w:"Alsace",d:2},{w:"Bourgogne",d:2},{w:"Andorre",d:2},
+      {w:"Monaco",d:2},{w:"Tahiti",d:2},{w:"Bali",d:2},{w:"Venise",d:2},{w:"Florence",d:2},
+      {w:"Beethoven",d:2},{w:"Einstein",d:2},{w:"Shakespeare",d:2},{w:"Versailles",d:2},
+      {w:"Hollywood",d:2},{w:"Sibérie",d:2},{w:"Groenland",d:2},{w:"Nil",d:2},{w:"Seine",d:2},
+      {w:"Alpes",d:2},{w:"Pyrénées",d:2},{w:"Andes",d:2},{w:"Himalaya",d:2},
+      {w:"Antarctique",d:2},{w:"Arctique",d:2},{w:"Océanie",d:2},{w:"Pompadour",d:2},
+      {w:"Gandhi",d:2},{w:"Vinci",d:2},{w:"Darwin",d:2},{w:"Newton",d:2},{w:"Galilée",d:2},
+      {w:"Pasteur",d:2},{w:"Curie",d:2},{w:"Bagdad",d:2},{w:"Jérusalem",d:2},
+      {w:"Istanbul",d:2},{w:"Vatican",d:2},{w:"Magellan",d:2},
+      {w:"Molière",d:3},{w:"Vésuve",d:3},{w:"Atlantide",d:3},{w:"Pompéi",d:3},
+      {w:"Patagonie",d:3},{w:"Babylone",d:3},{w:"Carthage",d:3},{w:"Sparte",d:3},
+      {w:"Olympe",d:3},{w:"Excalibur",d:3},{w:"Odyssée",d:3},{w:"Colisée",d:3},
+      {w:"Acropole",d:3},{w:"Kremlin",d:3},{w:"Alcatraz",d:3},{w:"Klondike",d:3},
+      {w:"Transsibérien",d:3},{w:"Zanzibar",d:3},{w:"Tombouctou",d:3},{w:"Bosphore",d:3},
+      {w:"Angkor",d:3},{w:"Persépolis",d:3},{w:"Ninive",d:3},{w:"Samarcande",d:3},
+      {w:"Kilauea",d:3},{w:"Krakatoa",d:3},{w:"Fujiyama",d:3},{w:"Stonehenge",d:3}
+],
+    "Sport": [
+      {w:"Football",d:1},{w:"Basket",d:1},{w:"Tennis",d:1},{w:"Rugby",d:1},{w:"Natation",d:1},
+      {w:"Course",d:1},{w:"But",d:1},{w:"Arbitre",d:1},{w:"Équipe",d:1},{w:"Match",d:1},
+      {w:"Stade",d:1},{w:"Victoire",d:1},{w:"Défaite",d:1},{w:"Médaille",d:1},
+      {w:"Champion",d:1},{w:"Entraîneur",d:1},{w:"Boxe",d:1},{w:"Judo",d:1},{w:"Ski",d:1},
+      {w:"Golf",d:1},{w:"Marathon",d:1},{w:"Vélodrome",d:1},
+      {w:"Penalty",d:2},{w:"Mi-temps",d:2},{w:"Prolongation",d:2},{w:"Podium",d:2},
+      {w:"Chronomètre",d:2},{w:"Haltérophilie",d:2},{w:"Escrime",d:2},{w:"Aviron",d:2},
+      {w:"Voile",d:2},{w:"Surf",d:2},{w:"Plongeon",d:2},{w:"Gymnastique",d:2},
+      {w:"Patinage",d:2},{w:"Bobsleigh",d:2},{w:"Biathlon",d:2},{w:"Décathlon",d:2},
+      {w:"Supporter",d:2},{w:"Vestiaire",d:2},
+      {w:"Antidopage",d:3},{w:"Commotion",d:3},{w:"Var",d:3},{w:"Sparring-partner",d:3},
+      {w:"Homologation",d:3},{w:"Disqualification",d:3},{w:"Forfait",d:3},{w:"Pentathlon",d:3},
+      {w:"Curling",d:3},{w:"Water-polo",d:3},{w:"Freestyle",d:3}
+],
+    "Corps & Santé": [
+      {w:"Main",d:1},{w:"Pied",d:1},{w:"Tête",d:1},{w:"Œil",d:1},{w:"Nez",d:1},
+      {w:"Bouche",d:1},{w:"Oreille",d:1},{w:"Dent",d:1},{w:"Cheveux",d:1},{w:"Doigt",d:1},
+      {w:"Genou",d:1},{w:"Coude",d:1},{w:"Épaule",d:1},{w:"Dos",d:1},{w:"Ventre",d:1},
+      {w:"Cœur",d:1},{w:"Os",d:1},{w:"Peau",d:1},{w:"Ongle",d:1},{w:"Sourcil",d:1},
+      {w:"Cicatrice",d:1},{w:"Bleu",d:1},{w:"Bosse",d:1},{w:"Rhume",d:1},{w:"Fièvre",d:1},
+      {w:"Muscle",d:2},{w:"Squelette",d:2},{w:"Poumon",d:2},{w:"Cerveau",d:2},
+      {w:"Estomac",d:2},{w:"Foie",d:2},{w:"Rein",d:2},{w:"Veine",d:2},{w:"Artère",d:2},
+      {w:"Nerf",d:2},{w:"Vaccin",d:2},{w:"Pansement",d:2},{w:"Plâtre",d:2},{w:"Béquille",d:2},
+      {w:"Piqûre",d:2},{w:"Ambulance",d:2},{w:"Urgence",d:2},{w:"Radiographie",d:2},
+      {w:"Cicatrisation",d:2},
+      {w:"Cartilage",d:3},{w:"Tendon",d:3},{w:"Ligament",d:3},{w:"Cervelet",d:3},
+      {w:"Pupille",d:3},{w:"Rétine",d:3},{w:"Larynx",d:3},{w:"Trachée",d:3},
+      {w:"Diaphragme",d:3},{w:"Globule",d:3},{w:"Anticorps",d:3},
     ]
   };
 
@@ -2185,13 +2355,51 @@
     }
   }
 
+  // Ajuste la taille du mot pour qu'il tienne toujours sur une seule ligne sans
+  // élargir la pastille : on part de la taille nominale et on descend par pas de
+  // 1px tant que le texte déborde de la largeur disponible. Mesure réelle plutôt
+  // que paliers par nombre de lettres, pour rester juste quelle que soit la
+  // largeur d'écran et la largeur propre des lettres (III vs MMM).
+  const WORD_SIZE_MAX = 34;
+  const WORD_SIZE_MIN = 17;
+  function fitWordText(){
+    const el = document.getElementById('play-word');
+    if(!el) return;
+    const pill = el.closest('.word-pill');
+    if(!pill) return;
+    const cs = getComputedStyle(pill);
+    const avail = pill.clientWidth
+      - parseFloat(cs.paddingLeft || 0)
+      - parseFloat(cs.paddingRight || 0);
+    if(!(avail > 0)) return;
+    let size = WORD_SIZE_MAX;
+    el.style.setProperty('--word-size', size + 'px');
+    el.style.whiteSpace = 'nowrap';
+    while(size > WORD_SIZE_MIN && el.scrollWidth > avail){
+      size -= 1;
+      el.style.setProperty('--word-size', size + 'px');
+    }
+    // Filet de sécurité : si même au minimum ça déborde (écran très étroit),
+    // on autorise le retour à la ligne plutôt que de laisser le mot dépasser.
+    el.style.whiteSpace = (el.scrollWidth > avail) ? 'normal' : 'nowrap';
+  }
+  function setWordText(txt){
+    const el = document.getElementById('play-word');
+    if(!el) return;
+    el.textContent = txt;
+    fitWordText();
+  }
+  // Réajuste en cas de rotation de l'écran ou de redimensionnement.
+  window.addEventListener('resize', fitWordText);
+  window.addEventListener('orientationchange', () => setTimeout(fitWordText, 120));
+
   function loadNextWord(animate){
     if(state.pool.length === 0){ clearInterval(state.timerHandle); endTurn(); return; }
     state.clueCount = 1;
     const nextWord = state.pool[0].toUpperCase();
     const isFinaleStyle = state.currentTurn && state.currentTurn.style === 'clues';
     if(animate === false){
-      document.getElementById('play-word').textContent = nextWord;
+      setWordText(nextWord);
       renderChevrons();
     } else if(isFinaleStyle){
       const chevronsLeft = document.getElementById('chevrons-left');
@@ -2217,7 +2425,7 @@
 
       // Le mot bascule pile au moment où le chevron le croise, pas à un délai fixe.
       waitForChevronCrossing(pillEl, travelLeft, () => {
-        document.getElementById('play-word').textContent = nextWord;
+        setWordText(nextWord);
       });
 
       setTimeout(() => {
@@ -2252,7 +2460,7 @@
       // Le mot bascule pile au moment où les chevrons le croisent (pas à un délai
       // fixe), pour rester synchro quelle que soit la largeur du mot.
       waitForChevronCrossing(pillEl, wipeLeft, () => {
-        document.getElementById('play-word').textContent = nextWord;
+        setWordText(nextWord);
       });
       setTimeout(() => {
         wipeLeft.style.transition = 'none';
