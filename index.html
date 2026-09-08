@@ -2512,10 +2512,17 @@
     const litCount = Math.min(FINAL_TARGET, totalDots);
     const dots = document.createElement('div');
     dots.className = 'ladder-dots';
+    const dotEls = [];
     for(let i=0;i<totalDots;i++){
       const d = document.createElement('div');
-      d.className = 'dot-mark';
+      // Les 5 diodes des mots à trouver sont déjà allumées dès leur création : elles
+      // doivent apparaître directement vertes, jamais grises puis vertes.
+      d.className = 'dot-mark' + (i < litCount ? ' found' : '');
+      // Les diodes "en trop" (au-delà des 5 mots à trouver) restent hors flux tant
+      // que le groupe des 5 vertes n'est pas apparu seul et centré (cf. plus bas).
+      if(i >= litCount) d.style.display = 'none';
       dots.appendChild(d);
+      dotEls.push(d);
     }
     stepEl.appendChild(dots);
 
@@ -2548,23 +2555,50 @@
       face.style.opacity = '0';
       dots.style.opacity = '1';
     }, () => {
-      // Les 5 mots à trouver s'allument un à un, avec le tic sonore.
-      const dotEls = dots.querySelectorAll('.dot-mark');
-      for(let i=0;i<litCount;i++){
-        const d = dotEls[i];
-        setTimeout(() => { d.classList.add('found'); SFX.ladderTick(i); }, i*260);
-      }
+      const litEls = dotEls.slice(0, litCount);
+      const extraEls = dotEls.slice(litCount);
+      // Les 5 diodes sont déjà vertes depuis leur création (voir plus haut) : elles
+      // apparaissent d'un coup, sans s'allumer une à une et sans son.
+
       setTimeout(() => {
-        // 2e passage : l'objectif se cache, le montant réapparaît, prêt à jouer.
-        sweepChevrons(() => {
-          dots.style.opacity = '0';
-          face.style.opacity = '1';
-        }, () => {
-          SFX.ladderLock();
-          dots.remove();
-          if(onDone) onDone();
+        // Étape 2 — FLIP : les diodes grises "en trop" rejoignent le flux, ce qui
+        // élargit le groupe centré. On capture la position des vertes juste avant
+        // (First), puis juste après (Last), et on rejoue l'écart en transform pour
+        // transformer ce saut de mise en page en un glissement animé.
+        const firstRects = litEls.map(d => d.getBoundingClientRect());
+        extraEls.forEach(d => { d.style.display = ''; d.style.opacity = '0'; });
+        void dots.offsetWidth; // reflow forcé
+        litEls.forEach((d, i) => {
+          const dx = firstRects[i].left - d.getBoundingClientRect().left;
+          if(dx){ d.style.transition = 'none'; d.style.transform = `translateX(${dx}px)`; }
         });
-      }, litCount*260 + 400);
+        void dots.offsetWidth; // reflow forcé avant de relâcher vers la position finale
+        litEls.forEach(d => {
+          d.style.transition = 'transform .38s cubic-bezier(.4,0,.2,1)';
+          d.style.transform = '';
+        });
+        extraEls.forEach(d => {
+          d.style.transition = 'opacity .3s ease .14s';
+          d.style.opacity = '1';
+        });
+
+        setTimeout(() => {
+          litEls.forEach(d => { d.style.transition = ''; d.style.transform = ''; });
+          extraEls.forEach(d => { d.style.transition = ''; d.style.display = ''; });
+
+          setTimeout(() => {
+            // 2e passage : l'objectif se cache, le montant réapparaît, prêt à jouer.
+            sweepChevrons(() => {
+              dots.style.opacity = '0';
+              face.style.opacity = '1';
+            }, () => {
+              SFX.ladderLock();
+              dots.remove();
+              if(onDone) onDone();
+            });
+          }, 350);
+        }, 480);
+      }, 380);
     });
   }
 
