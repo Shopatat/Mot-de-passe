@@ -207,11 +207,17 @@
   }
 
   .scorebar{
-    display:flex; justify-content:space-between; align-items:center;
-    padding: 10px 14px; background: var(--card); border: 1px solid var(--card-edge);
+    display:flex; justify-content:space-between; align-items:stretch; gap:10px;
+    padding: 10px 12px; background: var(--card); border: 1px solid var(--card-edge);
     border-radius: 14px; font-size: 12px; font-weight:800;
   }
-  .score-team{ display:flex; align-items:center; gap:7px; }
+  .score-team{
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    gap:6px; flex:1 1 0; min-width:0; text-align:center;
+  }
+  .score-team + .score-team{ border-left:1px solid var(--card-edge); padding-left:10px; }
+  .score-team .name-row{ line-height:1.25; }
+  .score-team .name-row .dot{ margin-right:5px; vertical-align:middle; }
   .score-team .val{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:19px; letter-spacing:1px; }
 
   .word-recap{
@@ -1796,8 +1802,7 @@
         div.className = 'score-team';
         const label = `${team.giverName} et ${team.guesserName}`;
         const color = PLAYER_COLORS[team.colorIdx];
-        div.innerHTML = `<span class="dot" style="width:9px;height:9px;background:${color};display:inline-block;"></span>
-          <span style="color:${i===highlightColorIdx ? color : 'var(--text-dim)'};">${escapeHtml(label)}</span>
+        div.innerHTML = `<span class="name-row"><span class="dot" style="width:9px;height:9px;background:${color};display:inline-block;"></span><span style="color:${i===highlightColorIdx ? color : 'var(--text-dim)'};">${escapeHtml(label)}</span></span>
           <span class="val" style="color:${color};">${team.score}</span>`;
         el.appendChild(div);
       });
@@ -2104,9 +2109,8 @@
         travelRight.style.opacity = '0';
         chevronsLeft.style.opacity = '1';
         chevronsRight.style.opacity = '1';
-      }, 320);
-
-      setTimeout(() => {
+        // Repositionnement immédiat pendant qu'ils sont invisibles (pas besoin
+        // d'attendre : ça ne se voit pas et ça évite un délai mort avant le cadre).
         travelLeft.style.transition = 'none';
         travelRight.style.transition = 'none';
         travelLeft.style.transform = 'translateY(-50%) translateX(0)';
@@ -2114,7 +2118,7 @@
         void travelLeft.offsetWidth;
         travelLeft.style.transition = '';
         travelRight.style.transition = '';
-      }, 500);
+      }, 320);
 
       setTimeout(() => {
         // ...puis c'est le cadre qui se referme, visible cette fois : le vrai point final.
@@ -2124,9 +2128,9 @@
         pillEl.classList.add('dematerialize');
         chevronsLeft.style.opacity = '0';
         chevronsRight.style.opacity = '0';
-      }, 560);
+      }, 470);
 
-      setTimeout(onDone, 900);
+      setTimeout(onDone, 810);
     } else {
       const wipeLeft = document.getElementById('wipe-left');
       const wipeRight = document.getElementById('wipe-right');
@@ -2165,9 +2169,9 @@
         pillEl.style.setProperty('--dematerialize-duration', '0.32s');
         pillEl.classList.remove('materialize');
         pillEl.classList.add('dematerialize');
-      }, 660);
+      }, 600);
 
-      setTimeout(onDone, 1000);
+      setTimeout(onDone, 940);
     }
   }
 
