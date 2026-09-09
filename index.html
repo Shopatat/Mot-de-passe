@@ -153,7 +153,7 @@
     text-transform:uppercase; letter-spacing:0.5px;
   }
   button.btn:active{ transform: scale(0.97); }
-  button.btn:disabled{ opacity:0.4; cursor:default; }
+  button.btn:disabled{ opacity:0.4; cursor:default; pointer-events:none; }
   .btn-gold{
     background: linear-gradient(180deg, #1c1c1c, #050505);
     border: 2px solid var(--red);
@@ -532,7 +532,7 @@
   }
   .text-action.danger{ color: var(--wrong); }
   .text-action:active{ opacity:0.55; }
-  .text-action:disabled{ opacity:0.3; }
+  .text-action:disabled{ opacity:0.3; pointer-events:none; }
   .text-action{ display:inline-flex; align-items:center; gap:7px; }
   .text-action svg{ flex-shrink:0; display:block; }
   /* Voyant d'alarme "Interdit" : faisceau qui tourne en continu façon gyrophare,
@@ -2489,6 +2489,7 @@
     // plus se lancer, et le mot reste bloqué à opacity:0 = invisible).
     wordEl.style.opacity = '';
     wordEl.style.animation = '';
+    inputLocked = false;
     wordPillEl.classList.remove('materialize', 'dematerialize', 'paused-hidden');
     void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
     wordPillEl.classList.add('materialize');
@@ -2503,6 +2504,15 @@
     document.getElementById('btn-interdit').disabled = !enabled;
     document.getElementById('btn-skip-final').disabled = !enabled;
   }
+
+  // Verrou anti-rafale : le passage d'un mot à l'autre (ou la fermeture de
+  // manche) prend le temps d'une animation. Sans ce verrou, un tap trop rapide
+  // pendant cette fenêtre relance une deuxième transition sur les mêmes
+  // éléments DOM en plein vol, ce qui peut bloquer le mot en transparence
+  // (opacity/animation inline jamais réinitialisés) jusqu'à la manche suivante.
+  let inputLocked = false;
+  function lockInput(){ inputLocked = true; setPlayControlsEnabled(false); }
+  function unlockInput(){ inputLocked = false; setPlayControlsEnabled(true); }
 
   document.getElementById('word-pill').addEventListener('click', () => {
     SFX.select();
@@ -2822,6 +2832,7 @@
         void travelLeft.offsetWidth;
         travelLeft.style.transition = '';
         travelRight.style.transition = '';
+        unlockInput();
       }, 500);
     } else {
       const wipeLeft = document.getElementById('wipe-left');
@@ -2848,6 +2859,7 @@
         void wipeLeft.offsetWidth; // relance proprement pour le prochain mot
         wipeLeft.style.transition = '';
         wipeRight.style.transition = '';
+        unlockInput();
       }, 600);
     }
     renderDots();
@@ -2858,6 +2870,7 @@
   }
 
   document.getElementById('btn-correct').addEventListener('click', () => {
+    if(inputLocked) return;
     SFX.correct();
     state.wordsFound.push(state.pool[0]);
     state.pool.shift();
@@ -2866,18 +2879,22 @@
     // Pool vide (plus aucun mot à tenter) OU target atteint : dans les deux cas
     // la manche est terminée et mérite la fermeture animée plutôt qu'un cut sec.
     if(state.pool.length === 0 || (state.target && state.foundCount >= state.target)){
+      lockInput();
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
       return;
     }
+    lockInput();
     loadNextWord();
   });
 
   document.getElementById('btn-not-found').addEventListener('click', () => {
+    if(inputLocked) return;
     SFX.wrong();
     const turn = state.currentTurn;
     if(turn.style === 'cycle'){
+      lockInput();
       const w = state.pool.shift(); state.pool.push(w); loadNextWord(); return;
     }
     if(state.clueCount < MAX_CLUES){
@@ -2888,16 +2905,19 @@
       state.pool.shift();
       state.dotsLost += 1;
       if(isObjectiveImpossible()){
+        lockInput();
         clearInterval(state.timerHandle);
         renderDots();
         playClosingChevronTransition(() => endTurn());
         return;
       }
+      lockInput();
       loadNextWord();
     }
   });
 
   document.getElementById('btn-interdit').addEventListener('click', () => {
+    if(inputLocked) return;
     SFX.forbidden();
     const turn = state.currentTurn;
     state.wordsFailed.push(state.pool[0]);
@@ -2910,25 +2930,30 @@
     // le 5/5 impossible puisque pool=target, couperait la manche instantanément).
     const roundOver = state.pool.length === 0 || (turn.style === 'clues' && isObjectiveImpossible());
     if(roundOver){
+      lockInput();
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
       return;
     }
+    lockInput();
     loadNextWord();
   });
 
   document.getElementById('btn-skip-final').addEventListener('click', () => {
+    if(inputLocked) return;
     SFX.finalePass();
     state.wordsFailed.push(state.pool[0]);
     state.pool.shift();
     state.dotsLost += 1;
     if(isObjectiveImpossible()){
+      lockInput();
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
       return;
     }
+    lockInput();
     loadNextWord();
   });
 
@@ -2970,10 +2995,54 @@
     }
   }
 
+  // ---- Verdicts de fin de manche : le ton change selon le score ----
+  const ROUND_VERDICTS = [
+    { icon:"💪", titles:[
+      "On la retente !", "La prochaine est la bonne", "Ça va venir", "Pas de souci, on continue",
+      "Petite manche, grande équipe", "On ne lâche rien", "Ça arrive à tout le monde", "On rebondit",
+      "Allez, on se refait !", "Le meilleur reste à venir"
+    ] },
+    { icon:"😅", titles:[
+      "C'est un début", "Il y a une piste", "Ça a failli marcher", "L'essentiel, c'est de participer",
+      "Un petit pas pour l'équipe", "Bon, au moins un", "On progresse", "Pas glorieux, mais pas nul",
+      "Ça compte quand même !", "Mieux que zéro"
+    ] },
+    { icon:"🙂", titles:[
+      "Ça se réveille", "Pas ridicule", "Le moteur chauffe", "On tient quelque chose",
+      "La mayonnaise prend", "Correct, sans plus", "Ça monte doucement", "On garde le cap",
+      "Un peu de tenue", "Ça commence à ressembler à quelque chose"
+    ] },
+    { icon:"👍", titles:[
+      "Pas mal du tout !", "Du solide", "Belle manche", "Ça sent bon",
+      "Du beau travail", "On y croit !", "Une équipe qui assure", "Ça, c'est du jeu",
+      "Franchement propre", "On applaudit"
+    ] },
+    { icon:"🎉", titles:[
+      "Bien joué !", "Tout près du sans-faute", "Excellent !", "À un cheveu du parfait",
+      "Presque tout bon !", "Sacrée performance", "Ça, c'est du niveau", "Superbe manche",
+      "Il ne manquait qu'un mot !", "Chapeau !"
+    ] },
+    { icon:"🏆", titles:[
+      "PARFAIT !", "Carton plein !", "Sans-faute !", "Impeccable !",
+      "Du grand art !", "Les 5 mots, rien que ça !", "C'est ça, un vrai duo !", "Magistral !",
+      "On ne fait pas mieux !", "La classe absolue !"
+    ] }
+  ];
+  function pickVerdict(found, pool){
+    let idx;
+    if(!pool || pool <= 0) idx = 0;
+    else if(found >= pool) idx = 5;
+    else if(found <= 0) idx = 0;
+    else idx = Math.min(4, Math.max(1, Math.round((found / pool) * 5)));
+    const v = ROUND_VERDICTS[idx];
+    return { icon: v.icon, title: v.titles[Math.floor(Math.random() * v.titles.length)] };
+  }
+
   function showTurnSummary(turn, text){
     const reachedTarget = turn.target && state.foundCount >= turn.target;
-    document.getElementById('summary-icon').textContent = reachedTarget ? "🎉" : "🔔";
-    document.getElementById('summary-title').textContent = "Manche terminée";
+    const verdict = pickVerdict(state.foundCount, turn.poolSize || turn.target);
+    document.getElementById('summary-icon').textContent = verdict.icon;
+    document.getElementById('summary-title').textContent = verdict.title;
     document.getElementById('summary-text').innerHTML =
       `<span style="color:${PLAYER_COLORS[turn.colorIdx]}; font-weight:800;">${escapeHtml(turn.giverName)} et ${escapeHtml(turn.guesserName)}</span> — ${text}`;
     if(turn.kind === 'qualif' && state.subMode === 'team'){
@@ -3006,7 +3075,10 @@
   }
   function showTrainingSummary(found, elapsed){
     const reachedTarget = state.target && found >= state.target;
-    document.getElementById('training-summary-icon').textContent = reachedTarget ? "🎉" : "🔔";
+    const verdict = pickVerdict(found, QUALIF_WORDS);
+    document.getElementById('training-summary-icon').textContent = verdict.icon;
+    const tTitle = document.querySelector('#screen-training-summary .summary-title');
+    if(tTitle) tTitle.textContent = verdict.title;
     document.getElementById('training-summary-text').textContent =
       `${found} mot${found>1?'s':''} trouvé${found>1?'s':''} sur ${QUALIF_WORDS} en ${formatTime(elapsed)}.`;
     renderWordRecap('training-recap', reachedTarget);
