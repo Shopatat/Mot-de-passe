@@ -162,16 +162,26 @@
   }
   .btn-correct{
     background: linear-gradient(180deg, #6ad696 0%, var(--correct) 55%, #3a9c60 100%);
-    color: #08210f; border-radius:999px;
+    color: #fff; border-radius:999px;
     box-shadow: 0 3px 0 #2e7a4a, 0 5px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.35);
+    text-shadow: 0 1px 3px rgba(6,40,18,0.55), 0 0 8px rgba(210,255,220,0.4);
   }
   .btn-correct:active{ box-shadow: 0 1px 0 #2e7a4a, inset 0 1px 0 rgba(255,255,255,0.25); }
   .btn-wrong{
     background: linear-gradient(180deg, #ef8a7a 0%, var(--wrong) 55%, #c1432f 100%);
-    color: #2a0a05; border-radius:999px;
+    color: #fff; border-radius:999px;
     box-shadow: 0 3px 0 #8a3324, 0 5px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.35);
+    text-shadow: 0 1px 3px rgba(48,10,0,0.55), 0 0 8px rgba(255,220,210,0.4);
   }
   .btn-wrong:active{ box-shadow: 0 1px 0 #8a3324, inset 0 1px 0 rgba(255,255,255,0.25); }
+  .check-glow{
+    color:#e8ffee;
+    text-shadow: 0 0 4px #baffcf, 0 0 10px rgba(80,255,140,0.85), 0 0 18px rgba(60,220,110,0.6);
+  }
+  .skip-icon-glow{
+    color:#fffdf2;
+    filter: drop-shadow(0 0 3px #fff6d9) drop-shadow(0 0 8px rgba(255,214,120,0.85)) drop-shadow(0 0 14px rgba(255,190,80,0.55));
+  }
   .btn-ghost{ background: transparent; border: 1px solid var(--card-edge); color: var(--text-dim); }
   .btn-ghost:active{ background: rgba(255,255,255,0.06); }
 
@@ -531,12 +541,12 @@
   .voyant-lamp{ animation: voyantBreathe 2.8s ease-in-out infinite; transform-origin:center; }
   .voyant-halo{ animation: voyantHalo 2.8s ease-in-out infinite; transform-origin:center; }
   @keyframes voyantBreathe{
-    0%,100%{ opacity:0.72; }
-    50%{ opacity:1; }
+    0%,100%{ opacity:0.55; filter:brightness(1); }
+    50%{ opacity:1; filter:brightness(1.6); }
   }
   @keyframes voyantHalo{
-    0%,100%{ opacity:0.18; transform:scale(1); }
-    50%{ opacity:0.5; transform:scale(1.13); }
+    0%,100%{ opacity:0.25; transform:scale(1); }
+    50%{ opacity:0.85; transform:scale(1.35); }
   }
   .text-action:disabled .voyant-lamp,
   .text-action:disabled .voyant-halo{ animation:none; }
@@ -917,8 +927,8 @@
     </div>
     <p class="footer-note" id="play-hint" style="min-height:2.8em; line-height:1.4;">Tape sur le mot pour lancer le chrono</p>
     <div class="controls-row">
-      <button class="btn btn-wrong" id="btn-not-found">✗ Passer</button>
-      <button class="btn btn-correct" id="btn-correct">✓ Trouvé</button>
+      <button class="btn btn-wrong" id="btn-not-found">✗ Pas trouvé</button>
+      <button class="btn btn-correct" id="btn-correct"><span class="check-glow">✓</span> Trouvé</button>
     </div>
     <div class="final-extra-row" id="final-extra-row">
       <button class="text-action" id="btn-interdit">
@@ -1645,6 +1655,66 @@
       palier(){ tone(523,0,0.10,'sine',0.15,null,'game'); tone(659,0.09,0.10,'sine',0.15,null,'game'); tone(784,0.18,0.10,'sine',0.15,null,'game'); tone(1047,0.27,0.22,'sine',0.17,null,'game'); },
       ladderTick(i){ const freqs=[659,740,831,932,1046]; tone(freqs[i]||1046, 0, 0.07, 'sine', 0.14, null, 'game'); },
       ladderLock(){ tone(392,0,0.09,'sine',0.16,null,'game'); tone(523,0.08,0.16,'sine',0.19,null,'game'); },
+      // Mot passé en finale (perdu pour de bon) : descente façon "tir laser",
+      // lourde et volontairement rêche — la saturation est poussée fort pour
+      // que ça accroche l'oreille plutôt que de sonner propre.
+      finalePass(){
+        if(!catOn('game')) return;
+        const vol = catVol('game');
+        const c = getCtx();
+        const dur = 0.9;
+        function distortionCurve(amount){
+          const n = 4096;
+          const curve = new Float32Array(n);
+          for(let i=0;i<n;i++){
+            const x = i*2/n - 1;
+            curve[i] = (3+amount)*x*20*(Math.PI/180)/(Math.PI+amount*Math.abs(x));
+          }
+          return curve;
+        }
+        // Petit grain de bruit au tout début, pour donner du corps au "départ du tir".
+        const noiseDur = 0.03;
+        const bufSize = Math.max(1, Math.floor(c.sampleRate * noiseDur));
+        const buffer = c.createBuffer(1, bufSize, c.sampleRate);
+        const data = buffer.getChannelData(0);
+        for(let i=0;i<bufSize;i++){ data[i] = (Math.random()*2-1) * (1 - i/bufSize); }
+        const noise = c.createBufferSource();
+        noise.buffer = buffer;
+        const noiseGain = c.createGain();
+        noiseGain.gain.setValueAtTime(0.22*vol, c.currentTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+noiseDur);
+        noise.connect(noiseGain); noiseGain.connect(c.destination);
+        noise.start(c.currentTime);
+        // Deux couches désaccordées qui plongent ensemble sur une plage large
+        // (aigu vers grave), chacune saturée puis filtrée juste assez pour ne
+        // pas devenir criarde tout en gardant le grain.
+        [ {type:'sawtooth', f0:1900, f1:210, peak:0.17, vibHz:22, distortion:380},
+          {type:'square',   f0:1300, f1:150, peak:0.10, vibHz:15, distortion:190} ].forEach(layer => {
+          const osc = c.createOscillator();
+          const gain = c.createGain();
+          const shaper = c.createWaveShaper();
+          shaper.curve = distortionCurve(layer.distortion);
+          shaper.oversample = '4x';
+          const filter = c.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(layer.f0*6.0, c.currentTime);
+          filter.frequency.exponentialRampToValueAtTime(layer.f1*6.0*1.2, c.currentTime+dur);
+          osc.type = layer.type;
+          osc.frequency.setValueAtTime(layer.f0, c.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(layer.f1, c.currentTime+dur);
+          const lfo = c.createOscillator();
+          const lfoGain = c.createGain();
+          lfo.frequency.value = layer.vibHz;
+          lfoGain.gain.value = layer.f0*0.02;
+          lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
+          gain.gain.setValueAtTime(0.0001, c.currentTime);
+          gain.gain.linearRampToValueAtTime(layer.peak*vol, c.currentTime+0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+dur);
+          osc.connect(shaper); shaper.connect(filter); filter.connect(gain); gain.connect(c.destination);
+          lfo.start(c.currentTime); osc.start(c.currentTime);
+          lfo.stop(c.currentTime+dur+0.02); osc.stop(c.currentTime+dur+0.02);
+        });
+      },
       select(){ tone(300, 0, 0.06, 'sine', 0.045, 500, 'ui'); },
       deselect(){ tone(300, 0, 0.06, 'sine', 0.045, 500, 'ui'); },
       getSettings(){ return { uiOn: settings.uiOn, uiVol: settings.uiVol, gameOn: settings.gameOn, gameVol: settings.gameVol }; },
@@ -2344,7 +2414,7 @@
       buildChevrons(chevronsLeft); buildChevrons(chevronsRight);
       skipFinalBtn.style.display = '';
     } else {
-      notFoundBtn.textContent = "✗ Passer";
+      notFoundBtn.innerHTML = '<svg class="skip-icon-glow" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align:-2px; margin-right:5px;" aria-hidden="true"><polygon points="2,5 2,19 11,12"/><polygon points="11,5 11,19 20,12"/></svg>Passer';
       chevronsLeft.classList.remove('active'); chevronsRight.classList.remove('active');
       chevronsLeft.innerHTML = ""; chevronsRight.innerHTML = "";
       skipFinalBtn.style.display = 'none';
@@ -2790,7 +2860,7 @@
   });
 
   document.getElementById('btn-skip-final').addEventListener('click', () => {
-    SFX.wrong();
+    SFX.finalePass();
     state.wordsFailed.push(state.pool[0]);
     state.pool.shift();
     state.dotsLost += 1;
