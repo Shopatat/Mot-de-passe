@@ -1650,7 +1650,66 @@
     return {
       correct(){ tone(740, 0, 0.10, 'sine', 0.18, null, 'game'); tone(1108, 0.09, 0.16, 'sine', 0.18, null, 'game'); },
       wrong(){ tone(360, 0, 0.18, 'sine', 0.15, 240, 'game'); },
-      forbidden(){ bell(520, 0, 0.32, 0.20, 'game'); bell(520, 0.16, 0.45, 0.20, 'game'); },
+      // Interdit : deux coups identiques, violents et "dégueulasses" — double
+      // clic d'attaque, coup grave sous chaque coup, et une cloche FM aux
+      // harmoniques dissonantes qui tinte tout en restant brutale.
+      forbidden(){
+        if(!catOn('game')) return;
+        const vol = catVol('game');
+        const c = getCtx();
+        function click(start, peak, dur){
+          const t0 = c.currentTime + start;
+          const bufSize = Math.max(1, Math.floor(c.sampleRate * dur));
+          const buffer = c.createBuffer(1, bufSize, c.sampleRate);
+          const data = buffer.getChannelData(0);
+          for(let i=0;i<bufSize;i++){ data[i] = (Math.random()*2-1); }
+          const src = c.createBufferSource();
+          src.buffer = buffer;
+          const gain = c.createGain();
+          gain.gain.setValueAtTime(peak*vol, t0);
+          gain.gain.linearRampToValueAtTime(0.0001, t0+dur);
+          src.connect(gain); gain.connect(c.destination);
+          src.start(t0);
+        }
+        function thump(start, peak, f0, f1, dur){
+          const t0 = c.currentTime + start;
+          const osc = c.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f0, t0);
+          osc.frequency.exponentialRampToValueAtTime(f1, t0+dur);
+          const gain = c.createGain();
+          gain.gain.setValueAtTime(0.0001, t0);
+          gain.gain.linearRampToValueAtTime(peak*vol, t0+0.005);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+          osc.connect(gain); gain.connect(c.destination);
+          osc.start(t0); osc.stop(t0+dur+0.02);
+        }
+        function fmBell(start, freq, modRatio, indexStart, dur, peak){
+          const t0 = c.currentTime + start;
+          const carrier = c.createOscillator();
+          carrier.type = 'sine';
+          carrier.frequency.setValueAtTime(freq, t0);
+          const mod = c.createOscillator();
+          mod.frequency.setValueAtTime(freq*modRatio, t0);
+          const modGain = c.createGain();
+          modGain.gain.setValueAtTime(freq*indexStart, t0);
+          modGain.gain.exponentialRampToValueAtTime(freq*0.02, t0+dur);
+          mod.connect(modGain); modGain.connect(carrier.frequency);
+          const gain = c.createGain();
+          gain.gain.setValueAtTime(0.0001, t0);
+          gain.gain.linearRampToValueAtTime(peak*vol, t0+0.002);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+          carrier.connect(gain); gain.connect(c.destination);
+          carrier.start(t0); mod.start(t0);
+          carrier.stop(t0+dur+0.02); mod.stop(t0+dur+0.02);
+        }
+        [0, 0.16].forEach(t => {
+          click(t, 0.38, 0.005);
+          click(t+0.02, 0.34, 0.006);
+          thump(t, 0.45, 120, 28, 0.15);
+          fmBell(t, 600, 1.83, 10, 0.32, 0.44);
+        });
+      },
       timeUp(){ tone(520, 0, 0.14, 'triangle', 0.17, null, 'game'); tone(300, 0.13, 0.32, 'triangle', 0.17, null, 'game'); },
       palier(){ tone(523,0,0.10,'sine',0.15,null,'game'); tone(659,0.09,0.10,'sine',0.15,null,'game'); tone(784,0.18,0.10,'sine',0.15,null,'game'); tone(1047,0.27,0.22,'sine',0.17,null,'game'); },
       ladderTick(i){ const freqs=[659,740,831,932,1046]; tone(freqs[i]||1046, 0, 0.07, 'sine', 0.14, null, 'game'); },
