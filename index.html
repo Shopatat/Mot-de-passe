@@ -144,6 +144,33 @@
   .sound-toggle{ flex:0 0 auto; gap:6px; }
   .sound-toggle .toggle-btn{ flex:0 0 auto; padding:6px 12px; font-size:11px; min-width:0; }
   input[type="range"]{ width:100%; accent-color: var(--red); margin: 0 0 4px; }
+
+  /* ---- Personnalisation sonore (import de sons/musiques persos) ---- */
+  .custom-sound-row{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 0; border-bottom:1px solid var(--card-edge);
+  }
+  .custom-sound-row:last-child{ border-bottom:none; }
+  .custom-sound-info{ flex:1; min-width:0; }
+  .custom-sound-name{ font-size:13px; font-weight:700; color:var(--text); }
+  .custom-sound-status{ font-size:11px; color:var(--text-dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .custom-sound-status.is-custom{ color: var(--correct); }
+  .custom-sound-actions{ flex:0 0 auto; display:flex; gap:6px; }
+  .icon-action-btn{
+    width:30px; height:30px; flex:0 0 auto;
+    border-radius:50%; border:1px solid var(--card-edge);
+    background: linear-gradient(180deg, var(--bg-alt), #05070c);
+    color: var(--text-dim); font-size:13px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition: transform .15s ease, color .15s ease;
+  }
+  .icon-action-btn:active{ transform: scale(0.88); }
+  .icon-action-btn.reset-btn{ display:none; }
+  .custom-sound-row.has-custom .icon-action-btn.reset-btn{ display:flex; }
+  .custom-sound-group-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:1px; font-weight:800;
+    color: var(--gold-dim); margin: 12px 0 2px;
+  }
   .chip{
     padding: 8px 13px; border-radius: 999px;
     background: linear-gradient(180deg, var(--bg-alt), #05070c);
@@ -800,6 +827,12 @@
           <div class="toggle-btn" data-val="off">Désactivé</div>
         </div>
       </div>
+
+      <label class="field-label" style="margin-top:18px;">🎧 Personnalisation sonore</label>
+      <p class="marquee-sub" style="text-align:left; font-style:normal; margin:-4px 0 8px;">
+        Remplace n'importe quel son du jeu par un fichier audio importé depuis ton téléphone. Le fichier est copié dans le jeu — pas besoin de le garder dans tes fichiers.
+      </p>
+      <div id="custom-sound-list"></div>
 
       <button class="btn btn-gold" id="btn-close-settings" style="margin-top:16px; width:100%;">OK</button>
     </div>
@@ -1875,6 +1908,208 @@
       setGameVol(v){ settings.gameVol = v; save(); },
     };
   })();
+
+  // ---------- PERSONNALISATION SONORE (import de sons/musiques persos) ----------
+  // Stockage des fichiers audio importés par l'utilisateur (IndexedDB, adapté
+  // aux fichiers binaires contrairement à localStorage). Chaque "slot" ci-dessous
+  // est un point du jeu où un son peut être remplacé ; ajouter un slot plus tard
+  // (nouveau bruitage, musique de menu/manche...) ne demande qu'une ligne ici.
+  const SOUND_SLOTS = [
+    { key:'ui-click',    label:'Clic dans les menus',        kind:'sfx',   cat:'ui' },
+    { key:'correct',     label:'Bonne réponse',              kind:'sfx',   cat:'game' },
+    { key:'wrong',       label:'Mauvaise réponse',           kind:'sfx',   cat:'game' },
+    { key:'forbidden',   label:'Mot interdit prononcé',      kind:'sfx',   cat:'game' },
+    { key:'timeUp',      label:'Fin du temps',               kind:'sfx',   cat:'game' },
+    { key:'palier',      label:'Palier franchi (finale)',    kind:'sfx',   cat:'game' },
+    { key:'ladderTick',  label:'Animation de l\u2019échelle', kind:'sfx',   cat:'game' },
+    { key:'ladderLock',  label:'Échelle verrouillée',        kind:'sfx',   cat:'game' },
+    { key:'finalePass',  label:'Mot perdu en finale',        kind:'sfx',   cat:'game' },
+    { key:'music-menu',      label:'Musique — Menu principal',                kind:'music', cat:'game' }, // en boucle propre (fondu au raccord) : la piste dure ~2min mais le menu peut rester ouvert bien plus longtemps
+    { key:'music-handoff',   label:'Musique — Attente avant une manche',      kind:'music', cat:'game' },
+    { key:'music-round',     label:'Musique — Manche de qualification',       kind:'music', cat:'game' }, // pas une boucle : la piste dure exactement les 30s de la manche, synchro avec le chrono
+    { key:'music-summary',   label:'Musique — Fin de manche',                 kind:'music', cat:'game' },
+    { key:'music-final-1',   label:'Musique — Finale, paliers 1 à 3',         kind:'music', cat:'game' },
+    { key:'music-final-2',   label:'Musique — Finale, paliers 4 et 5',        kind:'music', cat:'game' },
+  ];
+  // Sons qui possèdent déjà une fonction SFX du même nom à "patcher" pour
+  // qu'elle joue le fichier importé au lieu du son synthétisé. Les slots
+  // musique n'ont pas encore de méthode équivalente : le déclenchement
+  // automatique en jeu (boucle, fondu, quand ça démarre/s'arrête selon l'écran)
+  // viendra une fois la liste complète et les comportements décidés.
+  const SOUND_SLOT_TO_METHODS = {
+    'ui-click':['select','deselect'], 'correct':['correct'], 'wrong':['wrong'], 'forbidden':['forbidden'],
+    'timeUp':['timeUp'], 'palier':['palier'], 'ladderTick':['ladderTick'],
+    'ladderLock':['ladderLock'], 'finalePass':['finalePass'],
+  };
+
+  const CUSTOM_AUDIO_DB = (function(){
+    const DB_NAME = 'mdp_custom_audio', STORE = 'sounds';
+    let dbPromise = null;
+    function openDB(){
+      if(dbPromise) return dbPromise;
+      dbPromise = new Promise((resolve, reject) => {
+        if(!window.indexedDB){ reject(new Error('IndexedDB indisponible')); return; }
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => { req.result.createObjectStore(STORE); };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      return dbPromise;
+    }
+    async function set(key, entry){
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).put(entry, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function remove(key){
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readwrite');
+        tx.objectStore(STORE).delete(key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function getAll(){
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, 'readonly');
+        const store = tx.objectStore(STORE);
+        const keysReq = store.getAllKeys();
+        const valsReq = store.getAll();
+        tx.oncomplete = () => {
+          const out = {};
+          keysReq.result.forEach((k, i) => { out[k] = valsReq.result[i]; });
+          resolve(out);
+        };
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    return { set, remove, getAll };
+  })();
+
+  const CUSTOM_SOUNDS = (function(){
+    const overrides = {}; // key -> { url, fileName }
+    let currentPreviewAudio = null;
+
+    function stopPreview(){
+      if(currentPreviewAudio){ currentPreviewAudio.pause(); currentPreviewAudio = null; }
+    }
+    function volumeFor(cat){
+      const s = SFX.getSettings();
+      return cat === 'ui' ? (s.uiOn ? s.uiVol : 0) : (s.gameOn ? s.gameVol : 0);
+    }
+    function playOverride(key){
+      const ov = overrides[key];
+      if(!ov) return;
+      const slot = SOUND_SLOTS.find(s => s.key === key);
+      const vol = volumeFor(slot ? slot.cat : 'game');
+      if(vol <= 0) return;
+      stopPreview();
+      const audio = new Audio(ov.url);
+      audio.volume = Math.max(0, Math.min(1, vol));
+      currentPreviewAudio = audio;
+      audio.play().catch(()=>{});
+    }
+    // Remplace (patch) les méthodes SFX existantes pour qu'elles jouent le
+    // fichier importé s'il y en a un, sinon le son synthétisé d'origine.
+    Object.entries(SOUND_SLOT_TO_METHODS).forEach(([key, methodNames]) => {
+      methodNames.forEach(methodName => {
+        const original = SFX[methodName].bind(SFX);
+        SFX[methodName] = function(...args){
+          if(overrides[key]){ playOverride(key); return; }
+          return original(...args);
+        };
+      });
+    });
+
+    async function importFile(key, file){
+      const url = URL.createObjectURL(file);
+      overrides[key] = { url, fileName: file.name };
+      try {
+        await CUSTOM_AUDIO_DB.set(key, { blob: file, fileName: file.name });
+      } catch(e){ /* stockage indispo : ça marche quand même pour la session en cours */ }
+      return overrides[key];
+    }
+    async function resetSlot(key){
+      const ov = overrides[key];
+      if(ov && ov.url) URL.revokeObjectURL(ov.url);
+      delete overrides[key];
+      try { await CUSTOM_AUDIO_DB.remove(key); } catch(e){}
+    }
+    function has(key){ return !!overrides[key]; }
+    function get(key){ return overrides[key] || null; }
+    async function loadFromDB(){
+      try {
+        const all = await CUSTOM_AUDIO_DB.getAll();
+        Object.entries(all).forEach(([key, entry]) => {
+          if(entry && entry.blob){
+            overrides[key] = { url: URL.createObjectURL(entry.blob), fileName: entry.fileName };
+          }
+        });
+      } catch(e){ /* pas grave, on retombe sur les sons par défaut */ }
+    }
+    function previewSlot(key){
+      const methodNames = SOUND_SLOT_TO_METHODS[key];
+      if(methodNames){ SFX[methodNames[0]](0); return; } // (0) inoffensif pour les méthodes sans argument
+      // Slots musique : pas encore de méthode dédiée, on joue le fichier importé tel quel.
+      if(overrides[key]){ playOverride(key); }
+    }
+    return { importFile, resetSlot, has, get, loadFromDB, previewSlot, stopPreview };
+  })();
+
+  function renderCustomSoundList(){
+    const container = document.getElementById('custom-sound-list');
+    if(!container) return;
+    container.innerHTML = '';
+    let lastKind = null;
+    SOUND_SLOTS.forEach(slot => {
+      if(slot.kind !== lastKind){
+        lastKind = slot.kind;
+        const groupLabel = document.createElement('div');
+        groupLabel.className = 'custom-sound-group-label';
+        groupLabel.textContent = slot.kind === 'music' ? 'Musiques (bientôt jouées automatiquement)' : 'Bruitages';
+        container.appendChild(groupLabel);
+      }
+      const has = CUSTOM_SOUNDS.has(slot.key);
+      const entry = CUSTOM_SOUNDS.get(slot.key);
+      const row = document.createElement('div');
+      row.className = 'custom-sound-row' + (has ? ' has-custom' : '');
+      row.dataset.key = slot.key;
+      row.innerHTML = `
+        <div class="custom-sound-info">
+          <div class="custom-sound-name">${slot.label}</div>
+          <div class="custom-sound-status ${has ? 'is-custom' : ''}">${has ? 'Importé : ' + entry.fileName : 'Son par défaut'}</div>
+        </div>
+        <div class="custom-sound-actions">
+          <button type="button" class="icon-action-btn preview-btn" title="Écouter">▶</button>
+          <button type="button" class="icon-action-btn import-btn" title="Importer un fichier">📁</button>
+          <button type="button" class="icon-action-btn reset-btn" title="Revenir au son par défaut">↺</button>
+        </div>
+        <input type="file" accept="audio/*" class="custom-sound-file-input" style="display:none;">
+      `;
+      container.appendChild(row);
+      const fileInput = row.querySelector('.custom-sound-file-input');
+      row.querySelector('.import-btn').addEventListener('click', () => { SFX.select(); fileInput.click(); });
+      row.querySelector('.preview-btn').addEventListener('click', () => { CUSTOM_SOUNDS.previewSlot(slot.key); });
+      row.querySelector('.reset-btn').addEventListener('click', async () => {
+        SFX.select();
+        await CUSTOM_SOUNDS.resetSlot(slot.key);
+        renderCustomSoundList();
+      });
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files && fileInput.files[0];
+        if(!file) return;
+        await CUSTOM_SOUNDS.importFile(slot.key, file);
+        renderCustomSoundList();
+      });
+    });
+  }
+  CUSTOM_SOUNDS.loadFromDB().then(renderCustomSoundList);
 
   // ---------- PRÉFÉRENCES UI ----------
   // Petites préférences d'affichage persistées, séparées des réglages sons.
