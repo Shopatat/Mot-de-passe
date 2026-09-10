@@ -123,8 +123,19 @@
     font-size: 15px; font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight:600;
   }
   input[type="text"]:focus{ outline:2px solid var(--red-dim); }
-  .field-pair{ display:flex; gap:8px; }
-  .field-pair > div{ flex:1; }
+  .field-pair{ display:flex; gap:8px; align-items:flex-end; }
+  .field-pair > div{ flex:1; min-width:0; }
+  .swap-btn{
+    flex:0 0 auto; width:34px; height:34px; margin-bottom:0;
+    border-radius:50%; border:1px solid var(--card-edge);
+    background: linear-gradient(180deg, var(--bg-alt), #05070c);
+    color: var(--text-dim); font-size:16px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition: transform .2s ease, color .15s ease, border-color .15s ease;
+  }
+  .swap-btn:active{ transform: scale(0.88); }
+  .swap-btn.spin{ animation: swapSpin .3s ease; }
+  @keyframes swapSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(180deg); } }
   .block-header{ display:flex; align-items:center; gap:8px; font-weight:800; font-size:14px; margin-bottom:4px; }
   .dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; }
 
@@ -1919,6 +1930,12 @@
       getTeamGuesser(t){ return data.names[2*t+1] || ''; },
       setTeamGiver(t, val){ data.names[2*t] = val; save(); },
       setTeamGuesser(t, val){ data.names[2*t+1] = val; save(); },
+      swapTeam(t){
+        const tmp = data.names[2*t];
+        data.names[2*t] = data.names[2*t+1];
+        data.names[2*t+1] = tmp;
+        save();
+      },
     };
   })();
 
@@ -2282,6 +2299,7 @@
               <label class="field-label">Fait deviner</label>
               <input type="text" id="team${t}-giver" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getTeamGiver(t))}">
             </div>
+            <button type="button" class="swap-btn" id="team${t}-swap" title="Échanger les rôles" aria-label="Échanger les rôles">⇄</button>
             <div>
               <label class="field-label">Devine</label>
               <input type="text" id="team${t}-guesser" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getTeamGuesser(t))}">
@@ -2290,8 +2308,19 @@
         container.appendChild(block);
         const giverInput = block.querySelector(`#team${t}-giver`);
         const guesserInput = block.querySelector(`#team${t}-guesser`);
+        const swapBtn = block.querySelector(`#team${t}-swap`);
         giverInput.addEventListener('input', () => PLAYERNAMES.setTeamGiver(t, giverInput.value.trim()));
         guesserInput.addEventListener('input', () => PLAYERNAMES.setTeamGuesser(t, guesserInput.value.trim()));
+        swapBtn.addEventListener('click', () => {
+          SFX.select();
+          PLAYERNAMES.swapTeam(t);
+          const tmp = giverInput.value;
+          giverInput.value = guesserInput.value;
+          guesserInput.value = tmp;
+          swapBtn.classList.remove('spin');
+          void swapBtn.offsetWidth; // relance l'animation même en cliquant plusieurs fois de suite
+          swapBtn.classList.add('spin');
+        });
       }
     } else {
       // équipes aléatoires, ou chacun pour soi : liste à plat de N noms
