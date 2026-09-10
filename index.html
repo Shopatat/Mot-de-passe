@@ -149,6 +149,16 @@
     color: #fff;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
   }
+  /* Tie-break buzz : le badge de l'équipe en train de jouer s'anime brièvement
+     dès qu'on passe la main (bouton "Pas trouvé"), pour signaler le changement
+     sans avoir besoin de le lire. */
+  @keyframes buzzHandoff{
+    0%{ transform:scale(1); }
+    35%{ transform:scale(1.08); }
+    100%{ transform:scale(1); }
+  }
+  .chip.buzz-switch{ animation: buzzHandoff .38s ease; }
+  #buzz-turn-label b{ color:inherit; }
 
   button.btn{
     border:none; border-radius: 999px; padding: 15px 20px;
@@ -893,6 +903,7 @@
 
     <!-- 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive -->
     <button class="btn btn-ghost" id="btn-debug-finale" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct en finale</button>
+    <button class="btn btn-ghost" id="btn-debug-buzz" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct au tie-break buzz</button>
   </section>
 
   <!-- HANDOFF -->
@@ -1012,6 +1023,68 @@
     <div class="controls-row">
       <button class="btn btn-gold" id="btn-choice-giver">Je fais deviner</button>
       <button class="btn btn-gold" id="btn-choice-guesser">Je devine</button>
+    </div>
+  </section>
+
+  <!-- TIE-BREAK BUZZ : ANNONCE -->
+  <section class="screen" id="screen-buzz-intro">
+    <div class="phase-tag">Égalité — Tie-break buzz</div>
+    <div class="card handoff-wrap">
+      <div class="summary-icon">⚡</div>
+      <div class="handoff-label">Un seul mot. Les équipes font deviner à tour de rôle, un indice à la fois. Premier·ère qui trouve marque le point.</div>
+      <div class="handoff-team" id="buzz-intro-teams" style="font-size:17px;"></div>
+      <div class="handoff-role">Première équipe à 2 points en finale.</div>
+    </div>
+    <button class="btn btn-gold" id="btn-buzz-ready">C'est parti</button>
+  </section>
+
+  <!-- TIE-BREAK BUZZ : JEU -->
+  <section class="screen" id="screen-buzz-play">
+    <div class="chip-group" id="buzz-points-row" style="justify-content:center; margin-bottom:4px;"></div>
+    <div class="word-row">
+      <div class="word-pill" id="buzz-word-pill">
+        <div class="word-wipe" id="buzz-word-wipe">
+          <div class="wipe-chevron-group left" id="buzz-wipe-left">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="wipe-chevron-group right" id="buzz-wipe-right">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="word-text" id="buzz-word"></div>
+      </div>
+    </div>
+    <p class="footer-note" id="buzz-turn-label" style="min-height:2.8em; line-height:1.4; font-size:14px;"></p>
+    <button class="btn btn-gold" id="btn-buzz-elim-continue" style="display:none;">C'est bon, on reprend</button>
+    <div class="controls-row">
+      <button class="btn btn-wrong" id="btn-buzz-not-found">✗ Pas trouvé</button>
+      <button class="btn btn-correct" id="btn-buzz-correct"><span class="check-glow">✓</span> Trouvé</button>
+    </div>
+    <div class="final-extra-row" style="justify-content:center;">
+      <button class="text-action" id="btn-buzz-interdit">
+        <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+          <defs>
+            <radialGradient id="voyantBezelBuzz" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#3a3a3a"/>
+              <stop offset="100%" stop-color="#0c0c0c"/>
+            </radialGradient>
+            <radialGradient id="voyantLampBuzz" cx="38%" cy="32%" r="70%">
+              <stop offset="0%" stop-color="#ffb199"/>
+              <stop offset="35%" stop-color="#ff3b30"/>
+              <stop offset="100%" stop-color="#7a1410"/>
+            </radialGradient>
+            <radialGradient id="voyantGlowBuzz" cx="50%" cy="50%" r="50%">
+              <stop offset="45%" stop-color="#ff3b30" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#ff3b30" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle class="voyant-halo" cx="16" cy="16" r="15.5" fill="url(#voyantGlowBuzz)"/>
+          <circle cx="16" cy="16" r="12" fill="url(#voyantBezelBuzz)"/>
+          <circle class="voyant-lamp" cx="16" cy="16" r="9" fill="url(#voyantLampBuzz)"/>
+          <ellipse cx="12.8" cy="12.6" rx="2.5" ry="1.6" fill="#fff" opacity="0.5"/>
+        </svg>
+        Interdit (éliminatoire)
+      </button>
     </div>
   </section>
 
@@ -1855,6 +1928,8 @@
   const QUALIF_WORDS = 5;
   const TIE_POOL = 3;
   const TIE_TIME = 20;
+  const BUZZ_TARGET = 2;      // points pour valider la qualif en tie-break buzz
+  const BUZZ_TIERS = [2,3];   // mots un peu plus techniques que la qualif classique
 
   const FINAL_TIME = 90;
   const FINAL_TARGET = 5;
@@ -1932,7 +2007,11 @@
     timeLeft: 0, timerHandle: null, turnStartTime: 0,
     dotsTotal: 0, dotsFound: 0, dotsLost: 0,
 
-    tieGroup: [], tieScores: {}, tieKind: null, // 'team' | 'giver' | 'guesser'
+    tieGroup: [], tieScores: {}, tieKind: null, // 'team' | 'giver' | 'guesser' (utilisé pour le tie-break solo)
+
+    // Tie-break buzz (mode équipe) : un seul mot, les équipes à égalité se
+    // relaient un indice à la fois, premier point marqué compte.
+    buzz: null, // { teams:[idx...], points:{idx:n}, startPos:0, turnPos:0, word:'' }
 
     finaleGiverName: '', finaleGuesserName: '', finaleColorIdx: 0,
     currentLevel: 0,
@@ -1951,6 +2030,8 @@
     summary: document.getElementById('screen-summary'),
     trainingSummary: document.getElementById('screen-training-summary'),
     roleChoice: document.getElementById('screen-role-choice'),
+    buzzIntro: document.getElementById('screen-buzz-intro'),
+    buzzPlay: document.getElementById('screen-buzz-play'),
     finalist: document.getElementById('screen-finalist'),
     decision: document.getElementById('screen-decision'),
     peek: document.getElementById('screen-peek'),
@@ -1961,7 +2042,7 @@
     screens[name].classList.add('active');
     document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
-      state.currentTurn && ['qualif','team_tiebreak','solo_tiebreak'].includes(state.currentTurn.kind);
+      state.currentTurn && ['qualif','solo_tiebreak'].includes(state.currentTurn.kind);
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
   }
   function renderScheduleOverlay(){
@@ -2256,7 +2337,7 @@
     state.finaleColorIdx = 0;
     // Ce raccourci de test doit amener à l'écran de découverte du premier palier
     // (comme en vraie partie), pas directement dans la manche.
-    document.getElementById('finalist-label').textContent = "Se qualifie pour la finale";
+    document.getElementById('finalist-label').textContent = "Se qualifient pour la finale";
     document.getElementById('finalist-name').textContent = `${state.finaleGiverName} et ${state.finaleGuesserName}`;
     document.getElementById('finalist-name').style.color = PLAYER_COLORS[state.finaleColorIdx];
     document.getElementById('finalist-detail').innerHTML = "Test — accès direct à la finale.";
@@ -2265,6 +2346,32 @@
     hideFinaleRoleChoice();
     showScreen('finalist');
   });
+
+  // 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive
+  document.getElementById('btn-debug-buzz').addEventListener('click', () => {
+    SFX.select();
+    // Le mode équipe (3 équipes, pour couvrir le cas à 3+ qui a motivé cette
+    // fonctionnalité) est forcé. On synchronise l'interface pour la même raison
+    // que le raccourci finale ci-dessus : éviter un retour au menu désynchronisé.
+    state.mode = 'full';
+    selectToggle('mode-group', 'full');
+    document.getElementById('full-mode-block').style.display = '';
+    document.getElementById('training-mode-block').style.display = 'none';
+    state.playerCount = 6;
+    selectToggle('playercount-group', '6');
+    state.subMode = 'team';
+    state.subModeForcedSolo = false;
+    selectToggle('submode-group', 'team');
+    document.getElementById('team-assignment-card').style.display = '';
+    renderPlayerFields();
+    state.teams = [
+      { giverName:'Alice', guesserName:'Bob', giverIdx:0, guesserIdx:1, score:5, colorIdx:0, giverNamePoints:3, guesserNamePoints:2 },
+      { giverName:'Chloé', guesserName:'Dan', giverIdx:2, guesserIdx:3, score:5, colorIdx:1, giverNamePoints:2, guesserNamePoints:3 },
+      { giverName:'Eve', guesserName:'Fred', giverIdx:4, guesserIdx:5, score:5, colorIdx:2, giverNamePoints:2, guesserNamePoints:3 }
+    ];
+    pushTeamTiebreak([0,1,2]);
+  });
+
 
   function startGame(){
     state.finalHistory = [];
@@ -2389,11 +2496,6 @@
     if(turn.kind === 'final'){
       tag.style.display = 'none';
       label.textContent = `Palier ${turn.level} — ${euro(PALIERS[turn.level-1].gain)}`;
-    } else if(turn.kind === 'team_tiebreak'){
-      tag.style.display = '';
-      tag.textContent = "Égalité — manche décisive";
-      tag.classList.remove('final');
-      label.textContent = "Qui trouvera le plus sur 3 ?";
     } else if(turn.kind === 'solo_tiebreak'){
       tag.style.display = '';
       tag.textContent = turn.role === 'giver' ? "Égalité — meilleur donneur" : "Égalité — meilleur devineur";
@@ -2758,8 +2860,9 @@
   // largeur d'écran et la largeur propre des lettres (III vs MMM).
   const WORD_SIZE_MAX = 34;
   const WORD_SIZE_MIN = 17;
-  function fitWordText(){
-    const el = document.getElementById('play-word');
+  function fitWordText(elId){
+    elId = elId || 'play-word';
+    const el = document.getElementById(elId);
     if(!el) return;
     const pill = el.closest('.word-pill');
     if(!pill) return;
@@ -2779,15 +2882,44 @@
     // on autorise le retour à la ligne plutôt que de laisser le mot dépasser.
     el.style.whiteSpace = (el.scrollWidth > avail) ? 'normal' : 'nowrap';
   }
-  function setWordText(txt){
-    const el = document.getElementById('play-word');
+  function setWordText(txt, elId){
+    elId = elId || 'play-word';
+    const el = document.getElementById(elId);
     if(!el) return;
     el.textContent = txt;
-    fitWordText();
+    fitWordText(elId);
   }
   // Réajuste en cas de rotation de l'écran ou de redimensionnement.
-  window.addEventListener('resize', fitWordText);
-  window.addEventListener('orientationchange', () => setTimeout(fitWordText, 120));
+  window.addEventListener('resize', () => { fitWordText('play-word'); fitWordText('buzz-word'); });
+  window.addEventListener('orientationchange', () => setTimeout(() => { fitWordText('play-word'); fitWordText('buzz-word'); }, 120));
+
+  // Transition chevron du tie-break buzz : même effet de balayage que la
+  // qualif classique, appliqué à la pastille dédiée du buzz.
+  function animateBuzzWordChange(nextWord){
+    const wipeLeft = document.getElementById('buzz-wipe-left');
+    const wipeRight = document.getElementById('buzz-wipe-right');
+    const pillEl = document.getElementById('buzz-word-pill');
+    const pillW = pillEl.getBoundingClientRect().width;
+    const dist = pillW + 20;
+    wipeLeft.style.opacity = '1';
+    wipeRight.style.opacity = '1';
+    wipeLeft.style.transform = `translateY(-50%) translateX(${dist}px)`;
+    wipeRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
+    waitForChevronCrossing(pillEl, wipeLeft, () => {
+      setWordText(nextWord.toUpperCase(), 'buzz-word');
+    });
+    setTimeout(() => {
+      wipeLeft.style.transition = 'none';
+      wipeRight.style.transition = 'none';
+      wipeLeft.style.opacity = '0';
+      wipeRight.style.opacity = '0';
+      wipeLeft.style.transform = 'translateY(-50%) translateX(0)';
+      wipeRight.style.transform = 'translateY(-50%) translateX(0)';
+      void wipeLeft.offsetWidth; // relance proprement pour le prochain mot
+      wipeLeft.style.transition = '';
+      wipeRight.style.transition = '';
+    }, 600);
+  }
 
   function loadNextWord(animate){
     if(state.pool.length === 0){ clearInterval(state.timerHandle); endTurn(); return; }
@@ -2988,9 +3120,6 @@
         state.soloStats[turn.guesserIdx].guesserTime += elapsed;
       }
       showTurnSummary(turn, `${state.foundCount} mot${state.foundCount>1?'s':''} sur ${QUALIF_WORDS}`);
-    } else if(turn.kind === 'team_tiebreak'){
-      state.tieScores[turn.teamIdx] = (state.tieScores[turn.teamIdx]||0) + state.foundCount;
-      showTurnSummary(turn, `${state.foundCount} mot${state.foundCount>1?'s':''} sur ${turn.poolSize}`);
     } else if(turn.kind === 'solo_tiebreak'){
       state.tieScores[turn.playerIdx] = (state.tieScores[turn.playerIdx]||0) + state.foundCount;
       showTurnSummary(turn, `${state.foundCount} mot${state.foundCount>1?'s':''} sur ${turn.poolSize}`);
@@ -3060,7 +3189,6 @@
 
   // ================= PHASE RESOLUTION (fin de qualification) =================
   function resolvePhase(){
-    if(state.tieKind === 'team'){ resolveTeamTiebreakResult(); return; }
     if(state.tieKind === 'giver' || state.tieKind === 'guesser'){ resolveSoloTiebreakResult(); return; }
     if(state.subMode === 'team'){ resolveTeamPhase(); }
     else { resolveSoloPhase(); }
@@ -3077,31 +3205,170 @@
       pushTeamTiebreak(tied);
     }
   }
-  function resolveTeamTiebreakResult(){
-    const scores = state.tieGroup.map(idx => ({ idx, score: state.tieScores[idx] || 0 }));
-    const maxScore = Math.max(...scores.map(s => s.score));
-    const stillTied = scores.filter(s => s.score === maxScore).map(s => s.idx);
-    state.tieKind = null;
-    if(stillTied.length > 1){
-      pushTeamTiebreak(stillTied); // toujours à égalité : on rejoue avec un nouveau lot de mots
+  // ---- Tie-break buzz (mode équipe) ----
+  function pushTeamTiebreak(tiedIdxs){
+    const points = {};
+    tiedIdxs.forEach(idx => { points[idx] = 0; });
+    state.buzz = { teams: tiedIdxs.slice(), points, startPos: 0, turnPos: 0, word: '' };
+    goToBuzzIntro();
+  }
+  function goToBuzzIntro(){
+    const b = state.buzz;
+    document.getElementById('buzz-intro-teams').innerHTML = b.teams.map(idx => {
+      const t = state.teams[idx];
+      return `<span style="color:${PLAYER_COLORS[t.colorIdx]};">${escapeHtml(t.giverName)} et ${escapeHtml(t.guesserName)}</span>`;
+    }).join(' <span style="color:var(--text-dim); font-weight:400;">vs</span> ');
+    showScreen('buzzIntro');
+  }
+  document.getElementById('btn-buzz-ready').addEventListener('click', () => {
+    SFX.select();
+    startBuzzRound(false);
+  });
+  function startBuzzRound(animate){
+    const b = state.buzz;
+    b.turnPos = b.startPos;
+    b.word = drawTieredWords(1, BUZZ_TIERS)[0];
+    renderBuzzPoints();
+    renderBuzzTurn();
+    showScreen('buzzPlay');
+    const pillEl = document.getElementById('buzz-word-pill');
+    const wordEl = document.getElementById('buzz-word');
+    pillEl.classList.remove('dematerialize');
+    wordEl.style.opacity = '';
+    wordEl.style.animation = '';
+    if(animate === false){
+      setWordText(b.word.toUpperCase(), 'buzz-word');
     } else {
-      announceTeamFinalist(stillTied[0]);
+      animateBuzzWordChange(b.word);
     }
   }
-  function pushTeamTiebreak(tiedIdxs){
-    state.tieGroup = tiedIdxs;
-    state.tieScores = {};
-    state.tieKind = 'team';
-    state.turnQueue = tiedIdxs.map(idx => ({
-      kind:'team_tiebreak', style:'cycle',
-      teamIdx: idx,
-      giverName: state.teams[idx].giverName, guesserName: state.teams[idx].guesserName,
-      colorIdx: state.teams[idx].colorIdx,
-      poolSize: TIE_POOL, target:null, time: TIE_TIME
-    }));
-    state.currentTurnIndex = 0;
-    goToHandoff();
+  function renderBuzzPoints(){
+    const b = state.buzz;
+    const row = document.getElementById('buzz-points-row');
+    row.innerHTML = "";
+    b.teams.forEach((idx, i) => {
+      const t = state.teams[idx];
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (i === b.turnPos ? ' selected' : '');
+      chip.id = `buzz-chip-${idx}`;
+      chip.innerHTML = `${escapeHtml(t.giverName)} & ${escapeHtml(t.guesserName)} — ${b.points[idx]}/${BUZZ_TARGET}`;
+      row.appendChild(chip);
+    });
   }
+  function renderBuzzTurn(){
+    const b = state.buzz;
+    const idx = b.teams[b.turnPos];
+    const t = state.teams[idx];
+    document.getElementById('buzz-turn-label').innerHTML =
+      `C'est à <b style="color:${PLAYER_COLORS[t.colorIdx]};">${escapeHtml(t.giverName)}</b> de faire deviner à <b style="color:${PLAYER_COLORS[t.colorIdx]};">${escapeHtml(t.guesserName)}</b>`;
+  }
+  document.getElementById('btn-buzz-correct').addEventListener('click', () => {
+    SFX.correct();
+    const b = state.buzz;
+    const idx = b.teams[b.turnPos];
+    b.points[idx] += 1;
+    if(b.points[idx] >= BUZZ_TARGET){
+      setBuzzControlsEnabled(false);
+      renderBuzzPoints();
+      playBuzzClosingTransition(() => {
+        state.buzz = null;
+        announceTeamFinalist(idx);
+      });
+      return;
+    }
+    // Nouveau mot : on fait tourner l'équipe qui démarre pour ne pas laisser
+    // toujours le même surplus d'indices "gratuits" à la même position.
+    b.startPos = (b.startPos + 1) % b.teams.length;
+    startBuzzRound();
+  });
+  // Fermeture du mot gagnant du tie-break buzz : même principe que la fermeture
+  // de manche classique (chevrons qui recouvrent le mot puis cadre qui s'éteint),
+  // avant de basculer sur l'annonce du finaliste.
+  function playBuzzClosingTransition(onDone){
+    const wipeLeft = document.getElementById('buzz-wipe-left');
+    const wipeRight = document.getElementById('buzz-wipe-right');
+    const pillEl = document.getElementById('buzz-word-pill');
+    const pillW = pillEl.getBoundingClientRect().width;
+    const dist = pillW + 20;
+    wipeLeft.style.opacity = '1';
+    wipeRight.style.opacity = '1';
+    wipeLeft.style.transform = `translateY(-50%) translateX(${dist}px)`;
+    wipeRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
+
+    waitForChevronCrossing(pillEl, wipeLeft, () => {
+      document.getElementById('buzz-word').style.opacity = '0';
+    });
+
+    setTimeout(() => {
+      wipeLeft.style.transition = 'none';
+      wipeRight.style.transition = 'none';
+      wipeLeft.style.opacity = '0';
+      wipeRight.style.opacity = '0';
+      wipeLeft.style.transform = 'translateY(-50%) translateX(0)';
+      wipeRight.style.transform = 'translateY(-50%) translateX(0)';
+      void wipeLeft.offsetWidth;
+      wipeLeft.style.transition = '';
+      wipeRight.style.transition = '';
+    }, 600);
+
+    setTimeout(() => {
+      pillEl.style.setProperty('--dematerialize-duration', '0.32s');
+      pillEl.classList.add('dematerialize');
+    }, 600);
+
+    setTimeout(onDone, 940);
+  }
+
+  document.getElementById('btn-buzz-not-found').addEventListener('click', () => {
+    SFX.wrong();
+    const b = state.buzz;
+    b.turnPos = (b.turnPos + 1) % b.teams.length;
+    renderBuzzPoints();
+    renderBuzzTurn();
+    const idx = b.teams[b.turnPos];
+    const chip = document.getElementById(`buzz-chip-${idx}`);
+    chip.classList.remove('buzz-switch');
+    void chip.offsetWidth; // relance l'animation même si c'est déjà la même équipe qui repasse
+    chip.classList.add('buzz-switch');
+  });
+  function setBuzzControlsEnabled(enabled){
+    ['btn-buzz-correct','btn-buzz-not-found','btn-buzz-interdit'].forEach(id => {
+      document.getElementById(id).disabled = !enabled;
+    });
+  }
+  let buzzMsgTimer = null;
+  document.getElementById('btn-buzz-interdit').addEventListener('click', () => {
+    SFX.forbidden();
+    const b = state.buzz;
+    const p = b.turnPos;
+    const eliminatedIdx = b.teams[p];
+    const elimTeam = state.teams[eliminatedIdx];
+    setBuzzControlsEnabled(false);
+    b.teams.splice(p, 1);
+    delete b.points[eliminatedIdx];
+    // Le mot a pu être compromis par l'indice interdit : on en tirera un nouveau
+    // pour les équipes restantes. La position de départ suivante correspond à
+    // celle qui suivait l'équipe éliminée dans l'ordre de passage.
+    b.startPos = p % b.teams.length;
+    b.turnPos = -1; // personne en jeu le temps que l'équipe éliminée s'écarte
+    renderBuzzPoints();
+    document.getElementById('buzz-turn-label').innerHTML =
+      `<b style="color:var(--wrong);">${escapeHtml(elimTeam.giverName)} et ${escapeHtml(elimTeam.guesserName)}</b> — interdit prononcé, équipe éliminée.`;
+    document.getElementById('btn-buzz-elim-continue').style.display = '';
+  });
+  document.getElementById('btn-buzz-elim-continue').addEventListener('click', () => {
+    SFX.select();
+    const b = state.buzz;
+    document.getElementById('btn-buzz-elim-continue').style.display = 'none';
+    setBuzzControlsEnabled(true);
+    if(b.teams.length === 1){
+      const winnerIdx = b.teams[0];
+      state.buzz = null;
+      announceTeamFinalist(winnerIdx);
+      return;
+    }
+    startBuzzRound();
+  });
 
   function renderFinaleRoleChoice(team){
     const block = document.getElementById('finalist-role-block');
@@ -3109,7 +3376,7 @@
     const el = document.getElementById('finalist-role-toggle');
     block.style.display = '';
     const gPts = team.giverNamePoints, pPts = team.guesserNamePoints;
-    statsEl.innerHTML = `En qualif : <b>${escapeHtml(team.giverName)}</b> a fait deviner ${gPts} mot${gPts>1?'s':''} · <b>${escapeHtml(team.guesserName)}</b> en a fait deviner ${pPts}${pPts>1?'s':''}`;
+    statsEl.innerHTML = `En qualif : <b>${escapeHtml(team.giverName)}</b> a fait deviner ${gPts} mot${gPts>1?'s':''}<br><b>${escapeHtml(team.guesserName)}</b> en a fait deviner ${pPts}`;
     // Le score de qualif ne fait ici que suggérer un défaut : le duo tranche.
     el.innerHTML = `
       <div class="chip${team.giverName===state.finaleGiverName ? ' selected':''}" id="finale-role-a">${escapeHtml(team.giverName)} fait deviner</div>
@@ -3143,7 +3410,7 @@
     state.finaleGiverName = giverIsBest ? team.giverName : team.guesserName;
     state.finaleGuesserName = giverIsBest ? team.guesserName : team.giverName;
     state.finaleColorIdx = team.colorIdx;
-    document.getElementById('finalist-label').textContent = "Se qualifie pour la finale";
+    document.getElementById('finalist-label').textContent = "Se qualifient pour la finale";
     document.getElementById('finalist-name').textContent = `${team.giverName} et ${team.guesserName}`;
     document.getElementById('finalist-name').style.color = PLAYER_COLORS[team.colorIdx];
     document.getElementById('finalist-detail').innerHTML = `${team.score} point${team.score>1?'s':''} en qualification.`;
