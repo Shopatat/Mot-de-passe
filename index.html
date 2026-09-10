@@ -70,21 +70,9 @@
     z-index:2;
   }
   */
-  .screen{ display:none; width:100%; max-width:480px; position:relative; z-index:1; }
+  .screen{ display:none; width:100%; max-width:480px; position:relative; z-index:1; animation: fadein .35s ease; }
   .screen.active{ display:flex; flex-direction:column; align-items:stretch; gap:14px; }
-  .screen-enter{ animation: screenZoomIn 0.42s cubic-bezier(0.32,0.72,0,1) both; }
-  .screen-exit{
-    position:absolute; top:0; z-index:0; margin:0; pointer-events:none;
-    animation: screenZoomOut 0.3s cubic-bezier(0.32,0.72,0,1) both;
-  }
-  @keyframes screenZoomIn{
-    from{ opacity:0; transform: scale(0.94); }
-    to{ opacity:1; transform: scale(1); }
-  }
-  @keyframes screenZoomOut{
-    from{ opacity:1; transform: scale(1); }
-    to{ opacity:0; transform: scale(0.92); }
-  }
+  @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
   .tile-row{
     display:flex; justify-content:center; align-items:center; gap:2px; flex-wrap:nowrap;
@@ -1968,33 +1956,9 @@
     peek: document.getElementById('screen-peek'),
     final: document.getElementById('screen-final'),
   };
-  let currentScreenEl = screens.setup;
   function showScreen(name){
-    const next = screens[name];
-    const prev = currentScreenEl;
-    if(prev === next) return;
-
-    if(prev){
-      // Fige la position de l'écran sortant pour qu'il reste visible pendant qu'il s'efface,
-      // pendant que le nouvel écran prend sa place dans le flux normal.
-      prev.style.top = prev.offsetTop + 'px';
-      prev.style.left = prev.offsetLeft + 'px';
-      prev.classList.add('screen-exit');
-      prev.addEventListener('animationend', function onExitEnd(){
-        prev.removeEventListener('animationend', onExitEnd);
-        prev.classList.remove('active', 'screen-exit');
-        prev.style.top = '';
-        prev.style.left = '';
-      }, { once:true });
-    }
-
-    next.classList.add('active', 'screen-enter');
-    next.addEventListener('animationend', function onEnterEnd(){
-      next.removeEventListener('animationend', onEnterEnd);
-      next.classList.remove('screen-enter');
-    }, { once:true });
-
-    currentScreenEl = next;
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
     document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && ['qualif','team_tiebreak','solo_tiebreak'].includes(state.currentTurn.kind);
