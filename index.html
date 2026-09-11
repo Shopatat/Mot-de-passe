@@ -1749,7 +1749,14 @@
     }
     function pause(){ if(audio) audio.pause(); }
     function resume(){ if(audio){ applyVolume(); audio.play().catch(()=>{}); } }
-    return { play, stop, pause, resume, applyVolume, setDuck, current(){ return currentKey; } };
+    // Permet de savoir quand la piste en cours se termine NATURELLEMENT (fin de
+    // fichier, ex: timeout des qualifs dont le son de fin est inclus dans la
+    // musique) — pas via un stop() manuel, qui ne déclenche jamais 'ended'.
+    function onEnded(cb){
+      if(!audio || audio.ended){ cb(); return; }
+      audio.addEventListener('ended', cb, { once:true });
+    }
+    return { play, stop, pause, resume, applyVolume, setDuck, onEnded, current(){ return currentKey; } };
   })();
 
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
@@ -1774,12 +1781,13 @@
     // de se chevaucher (ex: double-tap rapide) sans se couper l'une l'autre.
     return function playFileSfx(key){
       const s = SFX.getSettings();
-      if(!s.gameOn) return;
+      if(!s.gameOn) return null;
       const base = cache[key];
-      if(!base) return;
+      if(!base) return null;
       const node = base.cloneNode();
       node.volume = s.gameVol;
       node.play().catch(()=>{});
+      return node;
     };
   })();
 
@@ -1859,7 +1867,7 @@
       wrong(){ tone(360, 0, 0.18, 'sine', 0.15, 240, 'game'); },
       pass(){ FILE_SFX('pass'); },
       roundStart(){ FILE_SFX('roundStart'); },
-      roundWin(){ FILE_SFX('roundWin'); },
+      roundWin(){ return FILE_SFX('roundWin'); },
       qualifsEnd(){ FILE_SFX('qualifsEnd'); },
       wordReveal(){ FILE_SFX('wordReveal'); },
       jackpot(){ FILE_SFX('jackpot'); },
@@ -3363,6 +3371,20 @@
     return state.target && (state.foundCount + state.pool.length) < state.target;
   }
 
+  // Fin de manche de qualif AVANT l'écoulement du temps (tous les mots trouvés,
+  // ou pool épuisé à cause de mots interdits) : on coupe net la musique du
+  // chrono et on joue le jingle "fin de la manche" ; le retour à la musique du
+  // menu se cale sur la fin réelle du jingle, pas sur un délai fixe.
+  function playQualifRoundWinJingle(){
+    MUSIC.stop();
+    const node = SFX.roundWin();
+    if(node){
+      node.addEventListener('ended', () => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); }, { once:true });
+    } else {
+      MUSIC.play('menu', {loop:true}); // pas de jingle dispo (son coupé...) : retour immédiat
+    }
+  }
+
   document.getElementById('btn-correct').addEventListener('click', () => {
     if(inputLocked) return;
     SFX.correct();
@@ -3378,7 +3400,7 @@
       // Manche de qualif finie avant la fin des 30s : son de victoire dédié.
       // Si le temps est déjà écoulé pile à ce moment, la musique du timer
       // couvre déjà la fin (pas besoin de son en plus).
-      if(turn.kind === 'qualif' && state.timeLeft > 0) SFX.roundWin();
+      if(turn.kind === 'qualif' && state.timeLeft > 0) playQualifRoundWinJingle();
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
@@ -3431,6 +3453,7 @@
     const roundOver = state.pool.length === 0 || (turn.style === 'clues' && isObjectiveImpossible());
     if(roundOver){
       lockInput();
+      if(turn.kind === 'qualif' && state.timeLeft > 0) playQualifRoundWinJingle();
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
@@ -3460,13 +3483,23 @@
 
   // ---- End of turn ----
   function endTurn(){
-    MUSIC.stop(); // coupe la musique du timer, quelle que soit la façon dont la manche s'est terminée
     const turn = state.currentTurn;
-    // Petit silence avant de reprendre la musique du menu, pour laisser la fin de
-    // manche respirer plutôt que d'enchaîner instantanément. La finale gère sa
-    // propre ambiance (finaleAmbient) via l'écran de décision, pas de délai ici.
-    if(turn.kind !== 'final'){
+    if(turn.kind === 'qualif'){
+      // Fin par timeout : la musique du chrono inclut le son de fin de temps,
+      // on la laisse jouer jusqu'au bout — c'est son 'ended' naturel qui relance
+      // la musique du menu. Fin avant le timeout : déjà géré par
+      // playQualifRoundWinJingle() (coupe nette + jingle + retour au menu à la
+      // fin du jingle), rien à faire ici.
+      if(state.timeLeft <= 0){
+        MUSIC.onEnded(() => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); });
+      }
+    } else if(turn.kind !== 'final'){
+      MUSIC.stop(); // coupe la musique en cours (menu), quelle que soit la façon dont la manche s'est terminée
+      // Petit silence avant de reprendre la musique du menu, pour laisser la fin de
+      // manche respirer plutôt que d'enchaîner instantanément.
       setTimeout(() => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); }, 1000);
+    } else {
+      MUSIC.stop(); // finale : l'écran de décision gère sa propre ambiance immédiatement
     }
     const elapsed = turn.chrono ? state.timeLeft : (state.turnStartTime - state.timeLeft);
 
