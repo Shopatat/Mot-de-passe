@@ -4173,7 +4173,11 @@
   // premier clic/tap n'importe où sur la page.
   updateBackgroundMusic('setup');
   function retryMusicOnFirstInteraction(){
-    if(!MUSIC.current()) updateBackgroundMusic(Object.keys(screens).find(k => screens[k].classList.contains('active')) || 'setup');
+    // On ne peut pas se fier à MUSIC.current() ici : il est déjà renseigné dès
+    // l'appel à play(), avant même de savoir si audio.play() a réussi ou pas
+    // (promesse async). On relance donc systématiquement au premier clic/tap ;
+    // play() se charge lui-même de ne rien faire si une musique tourne déjà pour de vrai.
+    updateBackgroundMusic(Object.keys(screens).find(k => screens[k].classList.contains('active')) || 'setup');
     document.removeEventListener('click', retryMusicOnFirstInteraction);
     document.removeEventListener('touchstart', retryMusicOnFirstInteraction);
   }
