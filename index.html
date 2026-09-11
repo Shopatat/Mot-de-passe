@@ -1795,10 +1795,10 @@
     wordReveal:  'sounds/sfx-word-reveal.wav',
     jackpot:     'sounds/sfx-jackpot.mp3',
   };
-  // Boost de volume pour les sons trop faibles à la source : un <audio>
-  // classique plafonne à 100% (node.volume max = 1), donc si le fichier est
-  // enregistré bas on ne peut pas compenser avec le curseur seul. On route ce
-  // son via un gain node Web Audio pour l'amplifier au-delà de 100%.
+  // Boost de volume pour les sons trop faibles à la source : un GainNode Web
+  // Audio n'est pas plafonné à 100% comme le volume natif d'un <audio>, donc
+  // on peut amplifier un fichier enregistré trop bas au-delà de son volume
+  // d'origine.
   let audioCtx = null;
   function getAudioCtx(){
     if(!audioCtx){
@@ -1808,21 +1808,32 @@
     return audioCtx;
   }
   const GAIN_BOOST = { indice: 1.6 }; // ajuster ici si besoin de plus/moins de punch
+
+  // Lecture des bruitages via des buffers Web Audio décodés en mémoire à
+  // l'avance, plutôt que des balises <audio> : élimine le petit délai de
+  // démarrage perceptible sur mobile (le navigateur n'a plus besoin de
+  // recharger/décoder quoi que ce soit au moment du tap, tout est déjà prêt
+  // en RAM). Chaque appel crée un nouveau "lecteur" jetable (AudioBufferSourceNode) :
+  // deux occurrences du même son peuvent donc se chevaucher nativement sans
+  // aucun bricolage. Tant qu'un fichier n'est pas encore décodé (juste après
+  // l'ouverture de la page), on retombe sur une balise <audio> classique le
+  // temps que ce soit prêt.
   const FILE_SFX = (function(){
-    const cache = {};
+    const buffers = {};     // key -> AudioBuffer une fois décodé
+    const fallbackEls = {}; // key -> <audio> de secours utilisé pendant le décodage
+    const ctx = getAudioCtx();
     Object.keys(FILE_SFX_SOURCES).forEach(key => {
       const el = new Audio(FILE_SFX_SOURCES[key]);
       el.preload = 'auto';
-      cache[key] = el;
+      fallbackEls[key] = el;
+      if(ctx){
+        fetch(FILE_SFX_SOURCES[key])
+          .then(r => r.arrayBuffer())
+          .then(data => ctx.decodeAudioData(data))
+          .then(buf => { buffers[key] = buf; })
+          .catch(() => { /* pas grave : le repli <audio> prend le relais */ });
+      }
     });
-    // Réutilise l'élément déjà chargé (donc prêt à jouer instantanément) tant
-    // qu'il n'est pas déjà en train de jouer. Cloner un <audio> forçait le
-    // navigateur à recharger/redécoder le fichier depuis zéro à chaque appel
-    // — imperceptible sur PC mais un vrai délai (~0.25s) sur mobile. On ne
-    // clone donc plus que dans le cas rare d'un vrai chevauchement (le même
-    // son redéclenché alors que le précédent joue encore), ou pour les sons
-    // "boostés" en volume (le graphe Web Audio ne peut être branché qu'une
-    // fois par élément, donc pas réutilisable en boucle).
     // slotKey : clé du réglage de volume perso à appliquer (SOUND_SLOTS) —
     // par défaut la même que la clé de fichier, sauf pour les sons qui
     // partagent un fichier avec un autre slot (ex: 'palier' réutilise le
@@ -1830,25 +1841,26 @@
     return function playFileSfx(key, slotKey){
       const s = SFX.getSettings();
       if(!s.gameOn) return null;
-      const base = cache[key];
-      if(!base) return null;
-      const boost = GAIN_BOOST[key];
-      const node = (base.paused && !boost) ? base : base.cloneNode();
-      if(node === base) node.currentTime = 0;
-      const vol = s.gameVol * SLOT_VOLUMES.get(slotKey || key);
-      if(boost){
-        try {
-          const ctx = getAudioCtx();
-          if(ctx.state === 'suspended') ctx.resume();
-          const source = ctx.createMediaElementSource(node);
-          const gainNode = ctx.createGain();
-          gainNode.gain.value = vol * boost;
-          source.connect(gainNode).connect(ctx.destination);
-          node.play().catch(()=>{});
-          return node;
-        } catch(e){ /* Web Audio indispo : on retombe sur le volume normal */ }
+      const vol = s.gameVol * SLOT_VOLUMES.get(slotKey || key) * (GAIN_BOOST[key] || 1);
+      // Cas normal : le buffer est prêt, lecture Web Audio quasi instantanée.
+      if(ctx && buffers[key]){
+        if(ctx.state === 'suspended') ctx.resume();
+        const source = ctx.createBufferSource();
+        source.buffer = buffers[key];
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = vol;
+        source.connect(gainNode).connect(ctx.destination);
+        source.start(0);
+        return source; // expose addEventListener('ended', ...) comme un <audio>
       }
-      node.volume = vol;
+      // Repli : buffer pas encore décodé (tout début de partie) ou Web Audio
+      // indisponible. Même logique de réutilisation qu'avant pour éviter le
+      // rechargement complet d'un clone.
+      const base = fallbackEls[key];
+      if(!base) return null;
+      const node = base.paused ? base : base.cloneNode();
+      if(node === base) node.currentTime = 0;
+      node.volume = Math.max(0, Math.min(1, vol));
       node.play().catch(()=>{});
       return node;
     };
