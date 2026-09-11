@@ -1735,7 +1735,6 @@
   const MUSIC_FILES = {
     menu:          'sounds/music-menu.mp3',
     qualif:        'sounds/music-qualif.mp3',
-    qualifAlt:     'sounds/music-qualif-alt.mp3',
     finaleAmbient: 'sounds/music-finale-ambient.mp3',
     finaleEarly:   'sounds/music-finale-early.mp3',
     finaleLate:    'sounds/music-finale-late.mp3',
@@ -1896,15 +1895,14 @@
     { key:'palier',      label:'Palier franchi (finale)',    kind:'sfx',   cat:'game' },
     { key:'jackpot',     label:'Victoire finale (5 paliers)',kind:'sfx',   cat:'game' },
     { key:'music-menu',           label:'Musique — Menu principal',            kind:'music', cat:'game' }, // en boucle propre (fondu au raccord) : la piste dure ~2min mais le menu peut rester ouvert bien plus longtemps
-    { key:'music-qualif',         label:'Musique — Qualifications',            kind:'music', cat:'game' }, // pas une boucle : la piste dure exactement les 30s de la manche, synchro avec le chrono (2 variantes tirées au sort, même volume pour les deux)
+    { key:'music-qualif',         label:'Musique — Qualifications',            kind:'music', cat:'game' }, // pas une boucle : la piste dure exactement les 30s de la manche, synchro avec le chrono
     { key:'music-finale-ambient', label:'Musique — Attente en finale',         kind:'music', cat:'game' },
     { key:'music-finale-early',   label:'Musique — Finale, paliers 1 à 3',     kind:'music', cat:'game' },
     { key:'music-finale-late',    label:'Musique — Finale, paliers 4 et 5',    kind:'music', cat:'game' },
   ];
-  // Piste MUSIC (voir MUSIC_FILES) -> slot de réglage volume ci-dessus. Les deux
-  // variantes de qualif tirées au sort partagent le même curseur.
+  // Piste MUSIC (voir MUSIC_FILES) -> slot de réglage volume ci-dessus.
   const MUSIC_KEY_TO_SLOT = {
-    menu: 'music-menu', qualif: 'music-qualif', qualifAlt: 'music-qualif',
+    menu: 'music-menu', qualif: 'music-qualif',
     finaleAmbient: 'music-finale-ambient', finaleEarly: 'music-finale-early', finaleLate: 'music-finale-late',
   };
   // Volume individuel par piste (son ou musique), réglable dans le menu de
@@ -3024,7 +3022,7 @@
         // 100% tant qu'on n'est pas revenu au menu principal).
         if(turn.kind === 'qualif'){
           MUSIC.setDuck(1);
-          MUSIC.play(Math.random() < 0.5 ? 'qualif' : 'qualifAlt', {loop:false});
+          MUSIC.play('qualif', {loop:false});
         } else if(turn.kind === 'final'){
           MUSIC.setDuck(1);
           setTimeout(() => SFX.wordReveal(), 150);
