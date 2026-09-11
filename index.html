@@ -965,6 +965,7 @@
       <div class="handoff-target" id="handoff-target"></div>
     </div>
     <button class="btn btn-gold" id="btn-ready">C'est parti</button>
+    <button class="btn btn-ghost" id="btn-back-to-setup" style="display:none; margin-top:8px;">‹ Retour</button>
   </section>
 
   <!-- PLAY -->
@@ -2789,8 +2790,14 @@
       document.getElementById('handoff-scorebar').style.display = '';
       renderScorebar('handoff-scorebar', turn.colorIdx);
     }
+    // "Retour" vers le setup : uniquement au tout premier "Prêt ?" de la partie
+    // (rien n'a encore été joué, donc rien à perdre) — pas sur les suivants,
+    // qui abandonneraient un score/tournoi en cours (c'est déjà le rôle du ✕).
+    document.getElementById('btn-back-to-setup').style.display = (state.currentTurnIndex === 0) ? '' : 'none';
     showScreen('handoff');
   }
+
+  document.getElementById('btn-back-to-setup').addEventListener('click', () => { SFX.select(); showScreen('setup'); });
 
   document.getElementById('btn-ready').addEventListener('click', () => {
     SFX.select();
