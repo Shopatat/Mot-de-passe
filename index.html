@@ -231,6 +231,13 @@
     text-shadow: 0 1px 3px rgba(48,10,0,0.55), 0 0 8px rgba(255,220,210,0.4);
   }
   .btn-wrong:active{ box-shadow: 0 1px 0 #8a3324, inset 0 1px 0 rgba(255,255,255,0.25); }
+  .btn-indice{
+    background: linear-gradient(180deg, #8cc4ee 0%, var(--blue) 55%, #3a7fb8 100%);
+    color: #fff; border-radius:999px;
+    box-shadow: 0 3px 0 #2c5e85, 0 5px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.35);
+    text-shadow: 0 1px 3px rgba(6,20,40,0.55), 0 0 8px rgba(210,235,255,0.4);
+  }
+  .btn-indice:active{ box-shadow: 0 1px 0 #2c5e85, inset 0 1px 0 rgba(255,255,255,0.25); }
   .check-glow{
     color:#e8ffee;
     text-shadow: 0 0 4px #baffcf, 0 0 10px rgba(80,255,140,0.85), 0 0 18px rgba(60,220,110,0.6);
@@ -1769,7 +1776,7 @@
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
   const FILE_SFX_SOURCES = {
     correct:     'sounds/sfx-correct.wav',
-    correctAlt:  'sounds/sfx-reserve-br3.wav',
+    indice:      'sounds/sfx-reserve-br3.wav',
     forbidden:   'sounds/sfx-forbidden.wav',
     pass:        'sounds/sfx-pass.wav',
     roundStart:  'sounds/sfx-round-start.wav',
@@ -1816,10 +1823,8 @@
       try { localStorage.setItem('mdp_sound_settings', JSON.stringify(settings)); } catch(e){}
     }
     return {
-      correct(){ FILE_SFX(Math.random() < 0.5 ? 'correct' : 'correctAlt', 'correct'); },
-      // Pas encore de fichier dédié pour "mauvaise réponse" / "clic menu" /
-      // "échelle" — Fabien dira quand il en aura choisi un.
-      wrong(){},
+      correct(){ FILE_SFX('correct'); },
+      indice(){ FILE_SFX('indice'); },
       pass(){ FILE_SFX('pass'); },
       roundStart(){ FILE_SFX('roundStart'); },
       roundWin(){ return FILE_SFX('roundWin'); },
@@ -1828,10 +1833,6 @@
       jackpot(){ FILE_SFX('jackpot'); },
       forbidden(){ FILE_SFX('forbidden'); },
       palier(){ FILE_SFX('roundWin', 'palier'); },
-      ladderTick(i){},
-      ladderLock(){},
-      select(){},
-      deselect(){},
       getSettings(){ return { uiOn: settings.uiOn, uiVol: settings.uiVol, gameOn: settings.gameOn, gameVol: settings.gameVol }; },
       setUiOn(v){ settings.uiOn = v; save(); },
       setGameOn(v){ settings.gameOn = v; save(); },
@@ -1847,6 +1848,7 @@
   // (nouveau bruitage, musique de menu/manche...) ne demande qu'une ligne ici.
   const SOUND_SLOTS = [
     { key:'correct',     label:'Bonne réponse',              kind:'sfx',   cat:'game' },
+    { key:'indice',      label:'Indice donné (finale)',      kind:'sfx',   cat:'game' },
     { key:'forbidden',   label:'Mot interdit prononcé',      kind:'sfx',   cat:'game' },
     { key:'pass',        label:'Passer un mot',              kind:'sfx',   cat:'game' },
     { key:'roundStart',  label:'Lancement d\u2019une manche',       kind:'sfx',   cat:'game' },
@@ -1886,7 +1888,7 @@
   // automatique en jeu (boucle, fondu, quand ça démarre/s'arrête selon l'écran)
   // viendra une fois la liste complète et les comportements décidés.
   const SOUND_SLOT_TO_METHODS = {
-    'correct':['correct'], 'forbidden':['forbidden'],
+    'correct':['correct'], 'indice':['indice'], 'forbidden':['forbidden'],
     'pass':['pass'], 'roundStart':['roundStart'], 'roundWin':['roundWin'],
     'qualifsEnd':['qualifsEnd'], 'wordReveal':['wordReveal'], 'palier':['palier'], 'jackpot':['jackpot'],
   };
@@ -2051,10 +2053,9 @@
       `;
       container.appendChild(row);
       const fileInput = row.querySelector('.custom-sound-file-input');
-      row.querySelector('.import-btn').addEventListener('click', () => { SFX.select(); fileInput.click(); });
+      row.querySelector('.import-btn').addEventListener('click', () => { fileInput.click(); });
       row.querySelector('.preview-btn').addEventListener('click', () => { CUSTOM_SOUNDS.previewSlot(slot.key); });
       row.querySelector('.reset-btn').addEventListener('click', async () => {
-        SFX.select();
         await CUSTOM_SOUNDS.resetSlot(slot.key);
         renderCustomSoundList();
       });
@@ -2302,24 +2303,19 @@
     });
   }
   document.getElementById('btn-schedule').addEventListener('click', () => {
-    SFX.select();
     renderScheduleOverlay();
     document.getElementById('schedule-overlay').classList.add('visible');
   });
   document.getElementById('btn-close-schedule').addEventListener('click', () => {
-    SFX.select();
     document.getElementById('schedule-overlay').classList.remove('visible');
   });
   document.getElementById('btn-quit-game').addEventListener('click', () => {
-    SFX.select();
     document.getElementById('quit-confirm-overlay').classList.add('visible');
   });
   document.getElementById('btn-quit-cancel').addEventListener('click', () => {
-    SFX.select();
     document.getElementById('quit-confirm-overlay').classList.remove('visible');
   });
   document.getElementById('btn-quit-confirm').addEventListener('click', () => {
-    SFX.select();
     document.getElementById('quit-confirm-overlay').classList.remove('visible');
     clearInterval(state.timerHandle);
     showScreen('setup');
@@ -2407,18 +2403,15 @@
   document.getElementById('ui-volume-slider').addEventListener('input', e => {
     SFX.setUiVol(Number(e.target.value) / 100);
   });
-  document.getElementById('ui-volume-slider').addEventListener('change', () => SFX.select());
   document.getElementById('game-volume-slider').addEventListener('input', e => {
     SFX.setGameVol(Number(e.target.value) / 100);
     MUSIC.applyVolume();
   });
-  document.getElementById('game-volume-slider').addEventListener('change', () => SFX.wrong());
 
   document.getElementById('btn-open-settings').addEventListener('click', () => {
     document.getElementById('settings-overlay').classList.add('visible');
   });
   document.getElementById('btn-close-settings').addEventListener('click', () => {
-    SFX.select();
     document.getElementById('settings-overlay').classList.remove('visible');
   });
 
@@ -2457,7 +2450,6 @@
       btn.addEventListener('click', () => {
         if(btn.classList.contains('disabled')) return;
         if(btn.classList.contains('selected')) return;
-        SFX.select();
         group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         onPick(btn.dataset.val);
@@ -2539,7 +2531,6 @@
         giverInput.addEventListener('input', () => PLAYERNAMES.setTeamGiver(t, giverInput.value.trim()));
         guesserInput.addEventListener('input', () => PLAYERNAMES.setTeamGuesser(t, guesserInput.value.trim()));
         swapBtn.addEventListener('click', () => {
-          SFX.select();
           PLAYERNAMES.swapTeam(t);
           const tmp = giverInput.value;
           giverInput.value = guesserInput.value;
@@ -2569,11 +2560,10 @@
   renderPlayerFields();
 
   // ---- Game start ----
-  document.getElementById('btn-start-game').addEventListener('click', () => { SFX.select(); startGame(); });
+  document.getElementById('btn-start-game').addEventListener('click', () => { startGame(); });
 
   // 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive
   document.getElementById('btn-debug-finale').addEventListener('click', () => {
-    SFX.select();
     state.finalHistory = [];
     state.bank = 0; state.safeBank = 0;
     state.jokerAvailable = false; state.jokerUsed = false;
@@ -2606,7 +2596,6 @@
 
   // 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive
   document.getElementById('btn-debug-buzz').addEventListener('click', () => {
-    SFX.select();
     // Le mode équipe (3 équipes, pour couvrir le cas à 3+ qui a motivé cette
     // fonctionnalité) est forcé. On synchronise l'interface pour la même raison
     // que le raccourci finale ci-dessus : éviter un retour au menu désynchronisé.
@@ -2797,10 +2786,9 @@
     showScreen('handoff');
   }
 
-  document.getElementById('btn-back-to-setup').addEventListener('click', () => { SFX.select(); showScreen('setup'); });
+  document.getElementById('btn-back-to-setup').addEventListener('click', () => { showScreen('setup'); });
 
   document.getElementById('btn-ready').addEventListener('click', () => {
-    SFX.select();
     // Son de lancement de la partie déclenché ici, au moment où le joueur valide
     // "C'est parti !" — pas au tap sur le mot (qui, lui, ne fait que démarrer le chrono).
     const turn = state.currentTurn;
@@ -2848,13 +2836,14 @@
     const chevronsRight = document.getElementById('chevrons-right');
     const skipFinalBtn = document.getElementById('btn-skip-final');
     if(turn.style === 'clues'){
-      notFoundBtn.textContent = "✗ Pas trouvé";
       chevronsLeft.classList.add('active'); chevronsRight.classList.add('active');
       chevronsLeft.style.opacity = '1'; chevronsRight.style.opacity = '1';
       buildChevrons(chevronsLeft); buildChevrons(chevronsRight);
       skipFinalBtn.style.display = '';
     } else {
       notFoundBtn.innerHTML = '<svg class="skip-icon-glow" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align:-2px; margin-right:5px;" aria-hidden="true"><polygon points="2,5 2,19 11,12"/><polygon points="11,5 11,19 20,12"/></svg>Passer';
+      notFoundBtn.classList.remove('btn-indice');
+      notFoundBtn.classList.add('btn-wrong');
       chevronsLeft.classList.remove('active'); chevronsRight.classList.remove('active');
       chevronsLeft.innerHTML = ""; chevronsRight.innerHTML = "";
       skipFinalBtn.style.display = 'none';
@@ -2898,7 +2887,6 @@
   function unlockInput(){ inputLocked = false; setPlayControlsEnabled(true); }
 
   document.getElementById('word-pill').addEventListener('click', () => {
-    SFX.select();
     if(state.running){
       // pause
       state.running = false;
@@ -2944,8 +2932,26 @@
     container.innerHTML = "";
     for(let i=0;i<MAX_CLUES;i++) container.appendChild(document.createElement('span'));
   }
+  // Le bouton "indice" de la finale évolue à chaque appui : 1er indice → 2ème
+  // → 3ème → puis seulement là il se transforme en "Pas trouvé" (le vrai
+  // abandon du mot). MAX_CLUES = 3 indices, donc clueCount va de 1 à 4.
+  const CLUE_LABELS = ['1er indice', '2ème indice', '3ème indice'];
+  function updateNotFoundBtnState(){
+    if(state.currentTurn.style !== 'clues') return;
+    const notFoundBtn = document.getElementById('btn-not-found');
+    if(state.clueCount <= MAX_CLUES){
+      notFoundBtn.textContent = CLUE_LABELS[state.clueCount - 1];
+      notFoundBtn.classList.remove('btn-wrong');
+      notFoundBtn.classList.add('btn-indice');
+    } else {
+      notFoundBtn.textContent = "✗ Pas trouvé";
+      notFoundBtn.classList.remove('btn-indice');
+      notFoundBtn.classList.add('btn-wrong');
+    }
+  }
   function renderChevrons(){
     if(state.currentTurn.style !== 'clues') return;
+    updateNotFoundBtnState();
     const lit = MAX_CLUES - (state.clueCount - 1);
     // Gauche : la flèche adjacente au mot est la dernière (index le plus élevé).
     const leftSpans = document.getElementById('chevrons-left').querySelectorAll('span');
@@ -3351,11 +3357,12 @@
       lockInput();
       const w = state.pool.shift(); state.pool.push(w); loadNextWord(); return;
     }
-    SFX.wrong();
-    if(state.clueCount < MAX_CLUES){
+    if(state.clueCount <= MAX_CLUES){
+      SFX.indice();
       state.clueCount += 1;
       renderChevrons();
     } else {
+      SFX.pass();
       state.wordsFailed.push(state.pool[0]);
       state.pool.shift();
       state.dotsLost += 1;
@@ -3482,7 +3489,6 @@
   }
 
   document.getElementById('btn-next-turn').addEventListener('click', () => {
-    SFX.select();
     document.getElementById('summary-scorebar').style.display = '';
     state.currentTurnIndex += 1;
     if(state.currentTurnIndex < state.turnQueue.length){ goToHandoff(); return; }
@@ -3510,11 +3516,9 @@
     showScreen('trainingSummary');
   }
   document.getElementById('btn-training-next').addEventListener('click', () => {
-    SFX.select();
     goToPlay();
   });
   document.getElementById('btn-training-stop').addEventListener('click', () => {
-    SFX.select();
     showScreen('setup');
   });
 
@@ -3552,7 +3556,6 @@
     showScreen('buzzIntro');
   }
   document.getElementById('btn-buzz-ready').addEventListener('click', () => {
-    SFX.select();
     startBuzzRound(false);
   });
   function startBuzzRound(animate){
@@ -3651,7 +3654,6 @@
   }
 
   document.getElementById('btn-buzz-not-found').addEventListener('click', () => {
-    SFX.wrong();
     const b = state.buzz;
     b.turnPos = (b.turnPos + 1) % b.teams.length;
     renderBuzzPoints();
@@ -3688,7 +3690,6 @@
     document.getElementById('btn-buzz-elim-continue').style.display = '';
   });
   document.getElementById('btn-buzz-elim-continue').addEventListener('click', () => {
-    SFX.select();
     const b = state.buzz;
     document.getElementById('btn-buzz-elim-continue').style.display = 'none';
     setBuzzControlsEnabled(true);
@@ -3715,14 +3716,12 @@
     `;
     document.getElementById('finale-role-a').addEventListener('click', () => {
       if(document.getElementById('finale-role-a').classList.contains('selected')) return;
-      SFX.select();
       state.finaleGiverName = team.giverName; state.finaleGuesserName = team.guesserName;
       document.getElementById('finale-role-a').classList.add('selected');
       document.getElementById('finale-role-b').classList.remove('selected');
     });
     document.getElementById('finale-role-b').addEventListener('click', () => {
       if(document.getElementById('finale-role-b').classList.contains('selected')) return;
-      SFX.select();
       state.finaleGiverName = team.guesserName; state.finaleGuesserName = team.giverName;
       document.getElementById('finale-role-b').classList.add('selected');
       document.getElementById('finale-role-a').classList.remove('selected');
@@ -3829,13 +3828,11 @@
     showScreen('roleChoice');
   }
   document.getElementById('btn-choice-giver').addEventListener('click', () => {
-    SFX.select();
     const idx = state._roleChoicePlayer;
     const nextGuesser = state._pendingGuessers.find(g => g.idx !== idx).idx;
     finalizeSoloFinalists(idx, nextGuesser);
   });
   document.getElementById('btn-choice-guesser').addEventListener('click', () => {
-    SFX.select();
     const idx = state._roleChoicePlayer;
     const nextGiver = state._pendingGivers.find(g => g.idx !== idx).idx;
     finalizeSoloFinalists(nextGiver, idx);
@@ -3981,7 +3978,6 @@
               dots.style.opacity = '0';
               face.style.opacity = '1';
             }, () => {
-              SFX.ladderLock();
               dots.remove();
               if(onDone) onDone();
             });
@@ -3992,7 +3988,6 @@
   }
 
   document.getElementById('btn-start-final').addEventListener('click', () => {
-    SFX.select();
     const btn = document.getElementById('btn-start-final');
     btn.disabled = true;
     playLadderReveal('finalist-ladder', 1, () => {
@@ -4056,7 +4051,7 @@
       btn.className = 'btn btn-ghost';
       btn.style.width = '100%';
       btn.textContent = "🃏 Utiliser le joker (voir les 5 premiers mots)";
-      btn.addEventListener('click', () => { SFX.select(); usePeek(turn.level + 1); });
+      btn.addEventListener('click', () => { usePeek(turn.level + 1); });
       jokerZone.appendChild(btn);
     }
 
@@ -4075,7 +4070,6 @@
   }
 
   document.getElementById('btn-continue-final').addEventListener('click', () => {
-    SFX.select();
     const nextLevel = state.currentLevel + 1;
     const btnContinue = document.getElementById('btn-continue-final');
     const btnStop = document.getElementById('btn-stop-final');
@@ -4084,7 +4078,6 @@
     startPalier(nextLevel);
   });
   document.getElementById('btn-stop-final').addEventListener('click', () => {
-    SFX.select();
     state.endedByStop = true;
     endFinal(false);
   });
@@ -4154,7 +4147,7 @@
     showScreen('final');
   }
 
-  document.getElementById('btn-replay').addEventListener('click', () => { SFX.select(); showScreen('setup'); });
+  document.getElementById('btn-replay').addEventListener('click', () => { showScreen('setup'); });
 
   // L'écran d'accueil est actif par défaut dans le HTML (pas de showScreen()
   // appelé au tout premier chargement), donc la musique de menu ne se
