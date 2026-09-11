@@ -1785,6 +1785,19 @@
     wordReveal:  'sounds/sfx-word-reveal.wav',
     jackpot:     'sounds/sfx-jackpot.mp3',
   };
+  // Boost de volume pour les sons trop faibles à la source : un <audio>
+  // classique plafonne à 100% (node.volume max = 1), donc si le fichier est
+  // enregistré bas on ne peut pas compenser avec le curseur seul. On route ce
+  // son via un gain node Web Audio pour l'amplifier au-delà de 100%.
+  let audioCtx = null;
+  function getAudioCtx(){
+    if(!audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = AC ? new AC() : null;
+    }
+    return audioCtx;
+  }
+  const GAIN_BOOST = { indice: 1.6 }; // ajuster ici si besoin de plus/moins de punch
   const FILE_SFX = (function(){
     const cache = {};
     Object.keys(FILE_SFX_SOURCES).forEach(key => {
@@ -1804,7 +1817,21 @@
       const base = cache[key];
       if(!base) return null;
       const node = base.cloneNode();
-      node.volume = s.gameVol * SLOT_VOLUMES.get(slotKey || key);
+      const vol = s.gameVol * SLOT_VOLUMES.get(slotKey || key);
+      const boost = GAIN_BOOST[key];
+      if(boost){
+        try {
+          const ctx = getAudioCtx();
+          if(ctx.state === 'suspended') ctx.resume();
+          const source = ctx.createMediaElementSource(node);
+          const gainNode = ctx.createGain();
+          gainNode.gain.value = vol * boost;
+          source.connect(gainNode).connect(ctx.destination);
+          node.play().catch(()=>{});
+          return node;
+        } catch(e){ /* Web Audio indispo : on retombe sur le volume normal */ }
+      }
+      node.volume = vol;
       node.play().catch(()=>{});
       return node;
     };
@@ -3654,6 +3681,7 @@
   }
 
   document.getElementById('btn-buzz-not-found').addEventListener('click', () => {
+    SFX.forbidden();
     const b = state.buzz;
     b.turnPos = (b.turnPos + 1) % b.teams.length;
     renderBuzzPoints();
