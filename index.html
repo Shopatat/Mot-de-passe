@@ -2331,10 +2331,10 @@
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && ['qualif','solo_tiebreak'].includes(state.currentTurn.kind);
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
-    // Baisse la musique pendant l'attente "Prêt ?" (le temps de passer l'appareil,
-    // lire les instructions) pour laisser le joueur se concentrer ; remontée dès
-    // qu'on quitte cet écran, quelle que soit la direction.
-    MUSIC.setDuck(name === 'handoff' ? 0.25 : 1);
+    // Baisse la musique pendant l'attente "Prêt ?" (handoff) et pendant l'attente
+    // du tap sur le mot (play, avant que le chrono ne démarre) — remontée dès
+    // qu'on quitte ces écrans ou qu'on tape sur le mot.
+    MUSIC.setDuck(name === 'handoff' || name === 'play' ? 0.25 : 1);
     updateBackgroundMusic(name);
   }
   // Musique de fond "ambiante" selon l'écran affiché. Le "play" n'est PAS géré
@@ -2860,7 +2860,14 @@
     showScreen('handoff');
   }
 
-  document.getElementById('btn-ready').addEventListener('click', () => { SFX.select(); goToPlay(); });
+  document.getElementById('btn-ready').addEventListener('click', () => {
+    SFX.select();
+    // Son de lancement de la partie déclenché ici, au moment où le joueur valide
+    // "C'est parti !" — pas au tap sur le mot (qui, lui, ne fait que démarrer le chrono).
+    const turn = state.currentTurn;
+    if(turn.kind === 'qualif' || turn.kind === 'final') SFX.roundStart();
+    goToPlay();
+  });
 
   // ---- Play ----
   function goToPlay(){
@@ -2974,14 +2981,15 @@
       state.timerHandle = setInterval(tick, 1000);
       if(isFreshStart){
         state.turnMusicStarted = true;
-        // Jingle de lancement, superposé par-dessus la musique d'ambiance en
-        // cours (menu ou finale) — puis bascule vers la musique du timer,
-        // uniquement pour les qualifs et la finale (pas l'entraînement/tie-break).
+        // La musique du menu n'est plus baissée une fois le chrono lancé, quel
+        // que soit le type de manche (le son de lancement, lui, a déjà été joué
+        // au clic sur "C'est parti !").
+        MUSIC.setDuck(1);
+        // Bascule vers la musique du timer, uniquement pour les qualifs et la
+        // finale (pas l'entraînement/tie-break, qui restent sur la musique de menu).
         if(turn.kind === 'qualif'){
-          SFX.roundStart();
           MUSIC.play('qualif', {loop:false});
         } else if(turn.kind === 'final'){
-          SFX.roundStart();
           setTimeout(() => SFX.wordReveal(), 150);
           MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
         }
