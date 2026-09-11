@@ -1719,11 +1719,16 @@
   const MUSIC = (function(){
     let audio = null;
     let currentKey = null;
+    let duckFactor = 1; // baisse temporaire de volume (ex: écran d'attente "Prêt ?"), 1 = normal
     function applyVolume(){
       if(!audio) return;
       const s = SFX.getSettings();
-      audio.volume = s.gameVol;
+      audio.volume = s.gameVol * duckFactor;
       audio.muted = !s.gameOn;
+    }
+    function setDuck(factor){
+      duckFactor = factor;
+      applyVolume();
     }
     function play(key, opts){
       opts = opts || {};
@@ -1744,7 +1749,7 @@
     }
     function pause(){ if(audio) audio.pause(); }
     function resume(){ if(audio){ applyVolume(); audio.play().catch(()=>{}); } }
-    return { play, stop, pause, resume, applyVolume, current(){ return currentKey; } };
+    return { play, stop, pause, resume, applyVolume, setDuck, current(){ return currentKey; } };
   })();
 
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
@@ -2326,6 +2331,10 @@
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && ['qualif','solo_tiebreak'].includes(state.currentTurn.kind);
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
+    // Baisse la musique pendant l'attente "Prêt ?" (le temps de passer l'appareil,
+    // lire les instructions) pour laisser le joueur se concentrer ; remontée dès
+    // qu'on quitte cet écran, quelle que soit la direction.
+    MUSIC.setDuck(name === 'handoff' ? 0.25 : 1);
     updateBackgroundMusic(name);
   }
   // Musique de fond "ambiante" selon l'écran affiché. Le "play" n'est PAS géré
@@ -2336,7 +2345,9 @@
   // où la manche se termine, pour un enchaînement propre.
   function updateBackgroundMusic(name){
     const turn = state.currentTurn;
-    if(name === 'play' || name === 'final') return;
+    // 'summary'/'trainingSummary' : la reprise de la musique est gérée avec un
+    // petit délai depuis endTurn() (silence d'1s), pas ici instantanément.
+    if(name === 'play' || name === 'final' || name === 'summary' || name === 'trainingSummary') return;
     if(name === 'setup'){ state.inFinale = false; MUSIC.play('menu', {loop:true}); return; }
     if(state.inFinale && ['finalist','handoff','decision','peek'].includes(name)){
       MUSIC.play('finaleAmbient', {loop:true});
@@ -3036,7 +3047,7 @@
     } else {
       state.timeLeft -= 1;
       updateTimerUI();
-      if(state.timeLeft <= 0){ clearInterval(state.timerHandle); SFX.timeUp(); endTurn(); }
+      if(state.timeLeft <= 0){ clearInterval(state.timerHandle); endTurn(); }
     }
   }
   // Rejoue la traversée des chevrons comme un changement de mot normal, mais sans
@@ -3443,6 +3454,12 @@
   function endTurn(){
     MUSIC.stop(); // coupe la musique du timer, quelle que soit la façon dont la manche s'est terminée
     const turn = state.currentTurn;
+    // Petit silence avant de reprendre la musique du menu, pour laisser la fin de
+    // manche respirer plutôt que d'enchaîner instantanément. La finale gère sa
+    // propre ambiance (finaleAmbient) via l'écran de décision, pas de délai ici.
+    if(turn.kind !== 'final'){
+      setTimeout(() => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); }, 1000);
+    }
     const elapsed = turn.chrono ? state.timeLeft : (state.turnStartTime - state.timeLeft);
 
     if(turn.kind === 'qualif'){
