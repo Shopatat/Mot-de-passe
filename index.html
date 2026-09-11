@@ -147,15 +147,19 @@
 
   /* ---- Personnalisation sonore (import de sons/musiques persos) ---- */
   .custom-sound-row{
-    display:flex; align-items:center; gap:10px;
+    display:flex; flex-direction:column; gap:6px;
     padding:9px 0; border-bottom:1px solid var(--card-edge);
   }
   .custom-sound-row:last-child{ border-bottom:none; }
+  .custom-sound-top{ display:flex; align-items:center; gap:10px; }
   .custom-sound-info{ flex:1; min-width:0; }
   .custom-sound-name{ font-size:13px; font-weight:700; color:var(--text); }
   .custom-sound-status{ font-size:11px; color:var(--text-dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .custom-sound-status.is-custom{ color: var(--correct); }
   .custom-sound-actions{ flex:0 0 auto; display:flex; gap:6px; }
+  .custom-sound-volume{ display:flex; align-items:center; gap:8px; }
+  .custom-sound-volume input[type="range"]{ margin:0; }
+  .custom-sound-volume .volume-pct{ font-size:11px; color:var(--text-dim); width:32px; flex:0 0 auto; text-align:right; }
   .icon-action-btn{
     width:30px; height:30px; flex:0 0 auto;
     border-radius:50%; border:1px solid var(--card-edge);
@@ -1712,6 +1716,7 @@
   const MUSIC_FILES = {
     menu:          'sounds/music-menu.mp3',
     qualif:        'sounds/music-qualif.mp3',
+    qualifAlt:     'sounds/music-qualif-alt.mp3',
     finaleAmbient: 'sounds/music-finale-ambient.mp3',
     finaleEarly:   'sounds/music-finale-early.mp3',
     finaleLate:    'sounds/music-finale-late.mp3',
@@ -1723,7 +1728,8 @@
     function applyVolume(){
       if(!audio) return;
       const s = SFX.getSettings();
-      audio.volume = s.gameVol * duckFactor;
+      const slotKey = MUSIC_KEY_TO_SLOT[currentKey] || currentKey;
+      audio.volume = s.gameVol * duckFactor * SLOT_VOLUMES.get(slotKey);
       audio.muted = !s.gameOn;
     }
     function setDuck(factor){
@@ -1762,6 +1768,7 @@
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
   const FILE_SFX_SOURCES = {
     correct:     'sounds/sfx-correct.wav',
+    correctAlt:  'sounds/sfx-reserve-br3.wav',
     forbidden:   'sounds/sfx-forbidden.wav',
     pass:        'sounds/sfx-pass.wav',
     roundStart:  'sounds/sfx-round-start.wav',
@@ -1779,22 +1786,26 @@
     });
     // clone le <audio> à chaque appel : permet à deux occurrences du même son
     // de se chevaucher (ex: double-tap rapide) sans se couper l'une l'autre.
-    return function playFileSfx(key){
+    // slotKey : clé du réglage de volume perso à appliquer (SOUND_SLOTS) —
+    // par défaut la même que la clé de fichier, sauf pour les sons qui
+    // partagent un fichier avec un autre slot (ex: 'palier' réutilise le
+    // fichier 'roundWin' mais garde son propre curseur de volume).
+    return function playFileSfx(key, slotKey){
       const s = SFX.getSettings();
       if(!s.gameOn) return null;
       const base = cache[key];
       if(!base) return null;
       const node = base.cloneNode();
-      node.volume = s.gameVol;
+      node.volume = s.gameVol * SLOT_VOLUMES.get(slotKey || key);
       node.play().catch(()=>{});
       return node;
     };
   })();
 
   // ---------- SOUND ENGINE ----------
-  // Sons courts générés à la volée (Web Audio API), aucun fichier audio à héberger.
+  // Sons courts : uniquement des fichiers (FILE_SFX ci-dessus). Plus aucune
+  // synthèse Web Audio — tout est passé aux vrais fichiers de Fabien.
   const SFX = (function(){
-    let ctx = null;
     const settings = { uiOn:true, uiVol:1, gameOn:true, gameVol:1 };
     try {
       const saved = JSON.parse(localStorage.getItem('mdp_sound_settings') || 'null');
@@ -1803,68 +1814,11 @@
     function save(){
       try { localStorage.setItem('mdp_sound_settings', JSON.stringify(settings)); } catch(e){}
     }
-    function getCtx(){
-      if(!ctx || ctx.state === 'closed'){
-        ctx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if(ctx.state !== 'running'){ ctx.resume().catch(()=>{}); }
-      return ctx;
-    }
-    // iOS coupe/suspend l'audio quand l'écran se verrouille, que l'app passe en
-    // arrière-plan, ou même juste quand on tape à côté (état 'interrupted' sur Safari).
-    // On tente de relancer le contexte sur TOUS les signaux de retour possibles,
-    // et pas seulement au premier son joué, pour ne plus jamais avoir besoin de recharger.
-    function tryResume(){
-      if(ctx && ctx.state !== 'running'){ ctx.resume().catch(()=>{}); }
-    }
-    document.addEventListener('visibilitychange', tryResume);
-    window.addEventListener('pageshow', tryResume);
-    window.addEventListener('focus', tryResume);
-    // Réactivation sur toute interaction tactile/clic : filet de sécurité si le
-    // navigateur a complètement fermé le contexte pendant la mise en veille.
-    ['touchstart','touchend','pointerdown','click'].forEach(evt=>{
-      document.addEventListener(evt, tryResume, { passive:true });
-    });
-    function catOn(cat){ return cat === 'ui' ? settings.uiOn : settings.gameOn; }
-    function catVol(cat){ return cat === 'ui' ? settings.uiVol : settings.gameVol; }
-    function tone(freq, start, dur, type, gainPeak, glideTo, cat){
-      cat = cat || 'game';
-      if(!catOn(cat)) return;
-      const vol = catVol(cat);
-      const c = getCtx();
-      const osc = c.createOscillator();
-      const gain = c.createGain();
-      osc.type = type || 'sine';
-      osc.frequency.setValueAtTime(freq, c.currentTime + start);
-      if(glideTo) osc.frequency.linearRampToValueAtTime(glideTo, c.currentTime + start + dur);
-      gain.gain.setValueAtTime(0.0001, c.currentTime + start);
-      gain.gain.linearRampToValueAtTime((gainPeak || 0.18) * vol, c.currentTime + start + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
-      osc.connect(gain); gain.connect(c.destination);
-      osc.start(c.currentTime + start);
-      osc.stop(c.currentTime + start + dur + 0.02);
-    }
-    function bell(freq, start, dur, gainPeak, cat){
-      cat = cat || 'game';
-      if(!catOn(cat)) return;
-      const vol = catVol(cat);
-      const c = getCtx();
-      [[1,1],[2.4,0.35]].forEach(([mult,weight])=>{
-        const osc = c.createOscillator();
-        const gain = c.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq*mult, c.currentTime + start);
-        gain.gain.setValueAtTime(0.0001, c.currentTime + start);
-        gain.gain.linearRampToValueAtTime(gainPeak*weight*vol, c.currentTime + start + 0.006);
-        gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
-        osc.connect(gain); gain.connect(c.destination);
-        osc.start(c.currentTime + start);
-        osc.stop(c.currentTime + start + dur + 0.02);
-      });
-    }
     return {
-      correct(){ FILE_SFX('correct'); },
-      wrong(){ tone(360, 0, 0.18, 'sine', 0.15, 240, 'game'); },
+      correct(){ FILE_SFX(Math.random() < 0.5 ? 'correct' : 'correctAlt', 'correct'); },
+      // Pas encore de fichier dédié pour "mauvaise réponse" / "clic menu" /
+      // "échelle" — Fabien dira quand il en aura choisi un.
+      wrong(){},
       pass(){ FILE_SFX('pass'); },
       roundStart(){ FILE_SFX('roundStart'); },
       roundWin(){ return FILE_SFX('roundWin'); },
@@ -1872,71 +1826,11 @@
       wordReveal(){ FILE_SFX('wordReveal'); },
       jackpot(){ FILE_SFX('jackpot'); },
       forbidden(){ FILE_SFX('forbidden'); },
-      timeUp(){ tone(520, 0, 0.14, 'triangle', 0.17, null, 'game'); tone(300, 0.13, 0.32, 'triangle', 0.17, null, 'game'); },
-      palier(){ FILE_SFX('roundWin'); },
-      ladderTick(i){ const freqs=[659,740,831,932,1046]; tone(freqs[i]||1046, 0, 0.07, 'sine', 0.14, null, 'game'); },
-      ladderLock(){ tone(392,0,0.09,'sine',0.16,null,'game'); tone(523,0.08,0.16,'sine',0.19,null,'game'); },
-      // Non utilisé actuellement : le "passer" en finale réutilise SFX.pass()
-      // (même son qu'en qualifs, décision prise en session), gardée au cas où.
-      finalePass(){
-        if(!catOn('game')) return;
-        const vol = catVol('game');
-        const c = getCtx();
-        const dur = 0.9;
-        function distortionCurve(amount){
-          const n = 4096;
-          const curve = new Float32Array(n);
-          for(let i=0;i<n;i++){
-            const x = i*2/n - 1;
-            curve[i] = (3+amount)*x*20*(Math.PI/180)/(Math.PI+amount*Math.abs(x));
-          }
-          return curve;
-        }
-        // Petit grain de bruit au tout début, pour donner du corps au "départ du tir".
-        const noiseDur = 0.03;
-        const bufSize = Math.max(1, Math.floor(c.sampleRate * noiseDur));
-        const buffer = c.createBuffer(1, bufSize, c.sampleRate);
-        const data = buffer.getChannelData(0);
-        for(let i=0;i<bufSize;i++){ data[i] = (Math.random()*2-1) * (1 - i/bufSize); }
-        const noise = c.createBufferSource();
-        noise.buffer = buffer;
-        const noiseGain = c.createGain();
-        noiseGain.gain.setValueAtTime(0.22*vol, c.currentTime);
-        noiseGain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+noiseDur);
-        noise.connect(noiseGain); noiseGain.connect(c.destination);
-        noise.start(c.currentTime);
-        // Deux couches désaccordées qui plongent ensemble sur une plage large
-        // (aigu vers grave), chacune saturée puis filtrée juste assez pour ne
-        // pas devenir criarde tout en gardant le grain.
-        [ {type:'sawtooth', f0:1900, f1:210, peak:0.17, vibHz:22, distortion:380},
-          {type:'square',   f0:1300, f1:150, peak:0.10, vibHz:15, distortion:190} ].forEach(layer => {
-          const osc = c.createOscillator();
-          const gain = c.createGain();
-          const shaper = c.createWaveShaper();
-          shaper.curve = distortionCurve(layer.distortion);
-          shaper.oversample = '4x';
-          const filter = c.createBiquadFilter();
-          filter.type = 'lowpass';
-          filter.frequency.setValueAtTime(layer.f0*6.0, c.currentTime);
-          filter.frequency.exponentialRampToValueAtTime(layer.f1*6.0*1.2, c.currentTime+dur);
-          osc.type = layer.type;
-          osc.frequency.setValueAtTime(layer.f0, c.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(layer.f1, c.currentTime+dur);
-          const lfo = c.createOscillator();
-          const lfoGain = c.createGain();
-          lfo.frequency.value = layer.vibHz;
-          lfoGain.gain.value = layer.f0*0.02;
-          lfo.connect(lfoGain); lfoGain.connect(osc.frequency);
-          gain.gain.setValueAtTime(0.0001, c.currentTime);
-          gain.gain.linearRampToValueAtTime(layer.peak*vol, c.currentTime+0.012);
-          gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+dur);
-          osc.connect(shaper); shaper.connect(filter); filter.connect(gain); gain.connect(c.destination);
-          lfo.start(c.currentTime); osc.start(c.currentTime);
-          lfo.stop(c.currentTime+dur+0.02); osc.stop(c.currentTime+dur+0.02);
-        });
-      },
-      select(){ tone(300, 0, 0.06, 'sine', 0.045, 500, 'ui'); },
-      deselect(){ tone(300, 0, 0.06, 'sine', 0.045, 500, 'ui'); },
+      palier(){ FILE_SFX('roundWin', 'palier'); },
+      ladderTick(i){},
+      ladderLock(){},
+      select(){},
+      deselect(){},
       getSettings(){ return { uiOn: settings.uiOn, uiVol: settings.uiVol, gameOn: settings.gameOn, gameVol: settings.gameVol }; },
       setUiOn(v){ settings.uiOn = v; save(); },
       setGameOn(v){ settings.gameOn = v; save(); },
@@ -1951,37 +1845,49 @@
   // est un point du jeu où un son peut être remplacé ; ajouter un slot plus tard
   // (nouveau bruitage, musique de menu/manche...) ne demande qu'une ligne ici.
   const SOUND_SLOTS = [
-    { key:'ui-click',    label:'Clic dans les menus',        kind:'sfx',   cat:'ui' },
     { key:'correct',     label:'Bonne réponse',              kind:'sfx',   cat:'game' },
-    { key:'wrong',       label:'Mauvaise réponse',           kind:'sfx',   cat:'game' },
     { key:'forbidden',   label:'Mot interdit prononcé',      kind:'sfx',   cat:'game' },
     { key:'pass',        label:'Passer un mot',              kind:'sfx',   cat:'game' },
-    { key:'timeUp',      label:'Fin du temps',               kind:'sfx',   cat:'game' },
     { key:'roundStart',  label:'Lancement d\u2019une manche',       kind:'sfx',   cat:'game' },
     { key:'roundWin',    label:'Victoire avant la fin du temps',    kind:'sfx',   cat:'game' },
     { key:'qualifsEnd',  label:'Fin des qualifications',            kind:'sfx',   cat:'game' },
     { key:'wordReveal',  label:'Affichage du 1er mot d\u2019un palier', kind:'sfx', cat:'game' },
     { key:'palier',      label:'Palier franchi (finale)',    kind:'sfx',   cat:'game' },
     { key:'jackpot',     label:'Victoire finale (5 paliers)',kind:'sfx',   cat:'game' },
-    { key:'ladderTick',  label:'Animation de l\u2019échelle', kind:'sfx',   cat:'game' },
-    { key:'ladderLock',  label:'Échelle verrouillée',        kind:'sfx',   cat:'game' },
-    { key:'music-menu',      label:'Musique — Menu principal',                kind:'music', cat:'game' }, // en boucle propre (fondu au raccord) : la piste dure ~2min mais le menu peut rester ouvert bien plus longtemps
-    { key:'music-handoff',   label:'Musique — Attente avant une manche',      kind:'music', cat:'game' },
-    { key:'music-round',     label:'Musique — Manche de qualification',       kind:'music', cat:'game' }, // pas une boucle : la piste dure exactement les 30s de la manche, synchro avec le chrono
-    { key:'music-summary',   label:'Musique — Fin de manche',                 kind:'music', cat:'game' },
-    { key:'music-final-1',   label:'Musique — Finale, paliers 1 à 3',         kind:'music', cat:'game' },
-    { key:'music-final-2',   label:'Musique — Finale, paliers 4 et 5',        kind:'music', cat:'game' },
+    { key:'music-menu',           label:'Musique — Menu principal',            kind:'music', cat:'game' }, // en boucle propre (fondu au raccord) : la piste dure ~2min mais le menu peut rester ouvert bien plus longtemps
+    { key:'music-qualif',         label:'Musique — Qualifications',            kind:'music', cat:'game' }, // pas une boucle : la piste dure exactement les 30s de la manche, synchro avec le chrono (2 variantes tirées au sort, même volume pour les deux)
+    { key:'music-finale-ambient', label:'Musique — Attente en finale',         kind:'music', cat:'game' },
+    { key:'music-finale-early',   label:'Musique — Finale, paliers 1 à 3',     kind:'music', cat:'game' },
+    { key:'music-finale-late',    label:'Musique — Finale, paliers 4 et 5',    kind:'music', cat:'game' },
   ];
+  // Piste MUSIC (voir MUSIC_FILES) -> slot de réglage volume ci-dessus. Les deux
+  // variantes de qualif tirées au sort partagent le même curseur.
+  const MUSIC_KEY_TO_SLOT = {
+    menu: 'music-menu', qualif: 'music-qualif', qualifAlt: 'music-qualif',
+    finaleAmbient: 'music-finale-ambient', finaleEarly: 'music-finale-early', finaleLate: 'music-finale-late',
+  };
+  // Volume individuel par piste (son ou musique), réglable dans le menu de
+  // personnalisation et persisté — un "fader" par piste, multiplié avec le
+  // volume "jeu" global (comme une console de mixage : master + tranches).
+  const SLOT_VOLUMES = (function(){
+    let vols = {};
+    try { vols = JSON.parse(localStorage.getItem('mdp_slot_volumes') || '{}'); } catch(e){}
+    function save(){ try { localStorage.setItem('mdp_slot_volumes', JSON.stringify(vols)); } catch(e){} }
+    return {
+      get(key){ const v = vols[key]; return (typeof v === 'number') ? v : 1; },
+      set(key, v){ vols[key] = Math.max(0, Math.min(1, v)); save(); },
+    };
+  })();
+
   // Sons qui possèdent déjà une fonction SFX du même nom à "patcher" pour
   // qu'elle joue le fichier importé au lieu du son synthétisé. Les slots
   // musique n'ont pas encore de méthode équivalente : le déclenchement
   // automatique en jeu (boucle, fondu, quand ça démarre/s'arrête selon l'écran)
   // viendra une fois la liste complète et les comportements décidés.
   const SOUND_SLOT_TO_METHODS = {
-    'ui-click':['select','deselect'], 'correct':['correct'], 'wrong':['wrong'], 'forbidden':['forbidden'],
-    'pass':['pass'], 'timeUp':['timeUp'], 'roundStart':['roundStart'], 'roundWin':['roundWin'],
+    'correct':['correct'], 'forbidden':['forbidden'],
+    'pass':['pass'], 'roundStart':['roundStart'], 'roundWin':['roundWin'],
     'qualifsEnd':['qualifsEnd'], 'wordReveal':['wordReveal'], 'palier':['palier'], 'jackpot':['jackpot'],
-    'ladderTick':['ladderTick'], 'ladderLock':['ladderLock'],
   };
 
   const CUSTOM_AUDIO_DB = (function(){
@@ -2041,15 +1947,16 @@
     function stopPreview(){
       if(currentPreviewAudio){ currentPreviewAudio.pause(); currentPreviewAudio = null; }
     }
-    function volumeFor(cat){
+    function volumeFor(cat, key){
       const s = SFX.getSettings();
-      return cat === 'ui' ? (s.uiOn ? s.uiVol : 0) : (s.gameOn ? s.gameVol : 0);
+      const base = cat === 'ui' ? (s.uiOn ? s.uiVol : 0) : (s.gameOn ? s.gameVol : 0);
+      return base * SLOT_VOLUMES.get(key);
     }
     function playOverride(key){
       const ov = overrides[key];
       if(!ov) return;
       const slot = SOUND_SLOTS.find(s => s.key === key);
-      const vol = volumeFor(slot ? slot.cat : 'game');
+      const vol = volumeFor(slot ? slot.cat : 'game', key);
       if(vol <= 0) return;
       stopPreview();
       const audio = new Audio(ov.url);
@@ -2114,23 +2021,30 @@
         lastKind = slot.kind;
         const groupLabel = document.createElement('div');
         groupLabel.className = 'custom-sound-group-label';
-        groupLabel.textContent = slot.kind === 'music' ? 'Musiques (bientôt jouées automatiquement)' : 'Bruitages';
+        groupLabel.textContent = slot.kind === 'music' ? 'Musiques' : 'Bruitages';
         container.appendChild(groupLabel);
       }
       const has = CUSTOM_SOUNDS.has(slot.key);
       const entry = CUSTOM_SOUNDS.get(slot.key);
+      const vol = SLOT_VOLUMES.get(slot.key);
       const row = document.createElement('div');
       row.className = 'custom-sound-row' + (has ? ' has-custom' : '');
       row.dataset.key = slot.key;
       row.innerHTML = `
-        <div class="custom-sound-info">
-          <div class="custom-sound-name">${slot.label}</div>
-          <div class="custom-sound-status ${has ? 'is-custom' : ''}">${has ? 'Importé : ' + entry.fileName : 'Son par défaut'}</div>
+        <div class="custom-sound-top">
+          <div class="custom-sound-info">
+            <div class="custom-sound-name">${slot.label}</div>
+            <div class="custom-sound-status ${has ? 'is-custom' : ''}">${has ? 'Importé : ' + entry.fileName : 'Son par défaut'}</div>
+          </div>
+          <div class="custom-sound-actions">
+            <button type="button" class="icon-action-btn preview-btn" title="Écouter">▶</button>
+            <button type="button" class="icon-action-btn import-btn" title="Importer un fichier">📁</button>
+            <button type="button" class="icon-action-btn reset-btn" title="Revenir au son par défaut">↺</button>
+          </div>
         </div>
-        <div class="custom-sound-actions">
-          <button type="button" class="icon-action-btn preview-btn" title="Écouter">▶</button>
-          <button type="button" class="icon-action-btn import-btn" title="Importer un fichier">📁</button>
-          <button type="button" class="icon-action-btn reset-btn" title="Revenir au son par défaut">↺</button>
+        <div class="custom-sound-volume">
+          <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="${vol}">
+          <span class="volume-pct">${Math.round(vol*100)}%</span>
         </div>
         <input type="file" accept="audio/*" class="custom-sound-file-input" style="display:none;">
       `;
@@ -2148,6 +2062,16 @@
         if(!file) return;
         await CUSTOM_SOUNDS.importFile(slot.key, file);
         renderCustomSoundList();
+      });
+      const volumeSlider = row.querySelector('.volume-slider');
+      const volumePct = row.querySelector('.volume-pct');
+      volumeSlider.addEventListener('input', () => {
+        const v = parseFloat(volumeSlider.value);
+        SLOT_VOLUMES.set(slot.key, v);
+        volumePct.textContent = Math.round(v*100) + '%';
+        // Musique en cours de lecture : on répercute le changement tout de
+        // suite, sans attendre la prochaine piste.
+        if(slot.kind === 'music' && MUSIC_KEY_TO_SLOT[MUSIC.current()] === slot.key) MUSIC.applyVolume();
       });
     });
   }
@@ -2339,9 +2263,9 @@
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && ['qualif','solo_tiebreak'].includes(state.currentTurn.kind);
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
-    // Baisse la musique pendant l'attente "Prêt ?" (handoff) et pendant l'attente
-    // du tap sur le mot (play, avant que le chrono ne démarre) — remontée dès
-    // qu'on quitte ces écrans ou qu'on tape sur le mot.
+    // Volume de la musique d'ambiance (menu + ambiante finale) : normal partout,
+    // sauf "handoff" / "play" (avant de taper sur le mot) où on baisse fort (25%)
+    // pour laisser la concentration au moment de passer l'appareil / lire le mot.
     MUSIC.setDuck(name === 'handoff' || name === 'play' ? 0.25 : 1);
     updateBackgroundMusic(name);
   }
@@ -2989,17 +2913,19 @@
       state.timerHandle = setInterval(tick, 1000);
       if(isFreshStart){
         state.turnMusicStarted = true;
-        // La musique du menu n'est plus baissée une fois le chrono lancé, quel
-        // que soit le type de manche (le son de lancement, lui, a déjà été joué
-        // au clic sur "C'est parti !").
-        MUSIC.setDuck(1);
         // Bascule vers la musique du timer, uniquement pour les qualifs et la
-        // finale (pas l'entraînement/tie-break, qui restent sur la musique de menu).
+        // finale (pas l'entraînement/tie-break, qui restent sur la musique de
+        // menu — dans ce cas on garde le duck ambiant "en partie" à 75%, jamais
+        // 100% tant qu'on n'est pas revenu au menu principal).
         if(turn.kind === 'qualif'){
-          MUSIC.play('qualif', {loop:false});
+          MUSIC.setDuck(1);
+          MUSIC.play(Math.random() < 0.5 ? 'qualif' : 'qualifAlt', {loop:false});
         } else if(turn.kind === 'final'){
+          MUSIC.setDuck(1);
           setTimeout(() => SFX.wordReveal(), 150);
           MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
+        } else {
+          MUSIC.setDuck(1);
         }
       } else {
         MUSIC.resume();
