@@ -1701,6 +1701,83 @@
   }
 
 
+  // ---------- MUSIQUES DE FOND (vrais fichiers, dossier sounds/) ----------
+  // Contrairement aux SFX synthétisés ci-dessous, les musiques sont de vrais
+  // fichiers audio hébergés dans un dossier sounds/ à côté d'index.html.
+  // Un seul morceau de musique joue à la fois ; les SFX (plus bas) se
+  // superposent toujours par-dessus sans jamais la couper.
+  // NB : ces musiques ne sont pas encore personnalisables (contrairement aux
+  // SFX ci-dessous) — l'import de musique perso dans les réglages existe déjà
+  // niveau interface mais n'est pas encore branché sur cette lecture.
+  const MUSIC_FILES = {
+    menu:          'sounds/music-menu.mp3',
+    qualif:        'sounds/music-qualif.mp3',
+    finaleAmbient: 'sounds/music-finale-ambient.mp3',
+    finaleEarly:   'sounds/music-finale-early.mp3',
+    finaleLate:    'sounds/music-finale-late.mp3',
+  };
+  const MUSIC = (function(){
+    let audio = null;
+    let currentKey = null;
+    function applyVolume(){
+      if(!audio) return;
+      const s = SFX.getSettings();
+      audio.volume = s.gameVol;
+      audio.muted = !s.gameOn;
+    }
+    function play(key, opts){
+      opts = opts || {};
+      if(currentKey === key && audio && !audio.paused) return; // déjà en cours, on ne relance pas
+      stop();
+      const url = MUSIC_FILES[key];
+      if(!url) return;
+      audio = new Audio(url);
+      audio.loop = !!opts.loop;
+      currentKey = key;
+      applyVolume();
+      audio.play().catch(()=>{}); // le navigateur peut refuser avant une interaction utilisateur, sans gravité
+    }
+    function stop(){
+      if(audio){ audio.pause(); audio.currentTime = 0; }
+      audio = null;
+      currentKey = null;
+    }
+    function pause(){ if(audio) audio.pause(); }
+    function resume(){ if(audio){ applyVolume(); audio.play().catch(()=>{}); } }
+    return { play, stop, pause, resume, applyVolume, current(){ return currentKey; } };
+  })();
+
+  // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
+  const FILE_SFX_SOURCES = {
+    correct:     'sounds/sfx-correct.wav',
+    forbidden:   'sounds/sfx-forbidden.wav',
+    pass:        'sounds/sfx-pass.wav',
+    roundStart:  'sounds/sfx-round-start.wav',
+    roundWin:    'sounds/sfx-round-win.wav',
+    qualifsEnd:  'sounds/sfx-qualifs-end.wav',
+    wordReveal:  'sounds/sfx-word-reveal.wav',
+    jackpot:     'sounds/sfx-jackpot.mp3',
+  };
+  const FILE_SFX = (function(){
+    const cache = {};
+    Object.keys(FILE_SFX_SOURCES).forEach(key => {
+      const el = new Audio(FILE_SFX_SOURCES[key]);
+      el.preload = 'auto';
+      cache[key] = el;
+    });
+    // clone le <audio> à chaque appel : permet à deux occurrences du même son
+    // de se chevaucher (ex: double-tap rapide) sans se couper l'une l'autre.
+    return function playFileSfx(key){
+      const s = SFX.getSettings();
+      if(!s.gameOn) return;
+      const base = cache[key];
+      if(!base) return;
+      const node = base.cloneNode();
+      node.volume = s.gameVol;
+      node.play().catch(()=>{});
+    };
+  })();
+
   // ---------- SOUND ENGINE ----------
   // Sons courts générés à la volée (Web Audio API), aucun fichier audio à héberger.
   const SFX = (function(){
@@ -1773,75 +1850,21 @@
       });
     }
     return {
-      correct(){ tone(740, 0, 0.10, 'sine', 0.18, null, 'game'); tone(1108, 0.09, 0.16, 'sine', 0.18, null, 'game'); },
+      correct(){ FILE_SFX('correct'); },
       wrong(){ tone(360, 0, 0.18, 'sine', 0.15, 240, 'game'); },
-      // Interdit : deux coups identiques, violents et "dégueulasses" — double
-      // clic d'attaque, coup grave sous chaque coup, et une cloche FM aux
-      // harmoniques dissonantes qui tinte tout en restant brutale.
-      forbidden(){
-        if(!catOn('game')) return;
-        const vol = catVol('game');
-        const c = getCtx();
-        function click(start, peak, dur){
-          const t0 = c.currentTime + start;
-          const bufSize = Math.max(1, Math.floor(c.sampleRate * dur));
-          const buffer = c.createBuffer(1, bufSize, c.sampleRate);
-          const data = buffer.getChannelData(0);
-          for(let i=0;i<bufSize;i++){ data[i] = (Math.random()*2-1); }
-          const src = c.createBufferSource();
-          src.buffer = buffer;
-          const gain = c.createGain();
-          gain.gain.setValueAtTime(peak*vol, t0);
-          gain.gain.linearRampToValueAtTime(0.0001, t0+dur);
-          src.connect(gain); gain.connect(c.destination);
-          src.start(t0);
-        }
-        function thump(start, peak, f0, f1, dur){
-          const t0 = c.currentTime + start;
-          const osc = c.createOscillator();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(f0, t0);
-          osc.frequency.exponentialRampToValueAtTime(f1, t0+dur);
-          const gain = c.createGain();
-          gain.gain.setValueAtTime(0.0001, t0);
-          gain.gain.linearRampToValueAtTime(peak*vol, t0+0.005);
-          gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
-          osc.connect(gain); gain.connect(c.destination);
-          osc.start(t0); osc.stop(t0+dur+0.02);
-        }
-        function fmBell(start, freq, modRatio, indexStart, dur, peak){
-          const t0 = c.currentTime + start;
-          const carrier = c.createOscillator();
-          carrier.type = 'sine';
-          carrier.frequency.setValueAtTime(freq, t0);
-          const mod = c.createOscillator();
-          mod.frequency.setValueAtTime(freq*modRatio, t0);
-          const modGain = c.createGain();
-          modGain.gain.setValueAtTime(freq*indexStart, t0);
-          modGain.gain.exponentialRampToValueAtTime(freq*0.02, t0+dur);
-          mod.connect(modGain); modGain.connect(carrier.frequency);
-          const gain = c.createGain();
-          gain.gain.setValueAtTime(0.0001, t0);
-          gain.gain.linearRampToValueAtTime(peak*vol, t0+0.002);
-          gain.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
-          carrier.connect(gain); gain.connect(c.destination);
-          carrier.start(t0); mod.start(t0);
-          carrier.stop(t0+dur+0.02); mod.stop(t0+dur+0.02);
-        }
-        [0, 0.16].forEach(t => {
-          click(t, 0.38, 0.005);
-          click(t+0.02, 0.34, 0.006);
-          thump(t, 0.45, 120, 28, 0.15);
-          fmBell(t, 600, 1.83, 10, 0.32, 0.44);
-        });
-      },
+      pass(){ FILE_SFX('pass'); },
+      roundStart(){ FILE_SFX('roundStart'); },
+      roundWin(){ FILE_SFX('roundWin'); },
+      qualifsEnd(){ FILE_SFX('qualifsEnd'); },
+      wordReveal(){ FILE_SFX('wordReveal'); },
+      jackpot(){ FILE_SFX('jackpot'); },
+      forbidden(){ FILE_SFX('forbidden'); },
       timeUp(){ tone(520, 0, 0.14, 'triangle', 0.17, null, 'game'); tone(300, 0.13, 0.32, 'triangle', 0.17, null, 'game'); },
-      palier(){ tone(523,0,0.10,'sine',0.15,null,'game'); tone(659,0.09,0.10,'sine',0.15,null,'game'); tone(784,0.18,0.10,'sine',0.15,null,'game'); tone(1047,0.27,0.22,'sine',0.17,null,'game'); },
+      palier(){ FILE_SFX('roundWin'); },
       ladderTick(i){ const freqs=[659,740,831,932,1046]; tone(freqs[i]||1046, 0, 0.07, 'sine', 0.14, null, 'game'); },
       ladderLock(){ tone(392,0,0.09,'sine',0.16,null,'game'); tone(523,0.08,0.16,'sine',0.19,null,'game'); },
-      // Mot passé en finale (perdu pour de bon) : descente façon "tir laser",
-      // lourde et volontairement rêche — la saturation est poussée fort pour
-      // que ça accroche l'oreille plutôt que de sonner propre.
+      // Non utilisé actuellement : le "passer" en finale réutilise SFX.pass()
+      // (même son qu'en qualifs, décision prise en session), gardée au cas où.
       finalePass(){
         if(!catOn('game')) return;
         const vol = catVol('game');
@@ -1919,11 +1942,16 @@
     { key:'correct',     label:'Bonne réponse',              kind:'sfx',   cat:'game' },
     { key:'wrong',       label:'Mauvaise réponse',           kind:'sfx',   cat:'game' },
     { key:'forbidden',   label:'Mot interdit prononcé',      kind:'sfx',   cat:'game' },
+    { key:'pass',        label:'Passer un mot',              kind:'sfx',   cat:'game' },
     { key:'timeUp',      label:'Fin du temps',               kind:'sfx',   cat:'game' },
+    { key:'roundStart',  label:'Lancement d\u2019une manche',       kind:'sfx',   cat:'game' },
+    { key:'roundWin',    label:'Victoire avant la fin du temps',    kind:'sfx',   cat:'game' },
+    { key:'qualifsEnd',  label:'Fin des qualifications',            kind:'sfx',   cat:'game' },
+    { key:'wordReveal',  label:'Affichage du 1er mot d\u2019un palier', kind:'sfx', cat:'game' },
     { key:'palier',      label:'Palier franchi (finale)',    kind:'sfx',   cat:'game' },
+    { key:'jackpot',     label:'Victoire finale (5 paliers)',kind:'sfx',   cat:'game' },
     { key:'ladderTick',  label:'Animation de l\u2019échelle', kind:'sfx',   cat:'game' },
     { key:'ladderLock',  label:'Échelle verrouillée',        kind:'sfx',   cat:'game' },
-    { key:'finalePass',  label:'Mot perdu en finale',        kind:'sfx',   cat:'game' },
     { key:'music-menu',      label:'Musique — Menu principal',                kind:'music', cat:'game' }, // en boucle propre (fondu au raccord) : la piste dure ~2min mais le menu peut rester ouvert bien plus longtemps
     { key:'music-handoff',   label:'Musique — Attente avant une manche',      kind:'music', cat:'game' },
     { key:'music-round',     label:'Musique — Manche de qualification',       kind:'music', cat:'game' }, // pas une boucle : la piste dure exactement les 30s de la manche, synchro avec le chrono
@@ -1938,8 +1966,9 @@
   // viendra une fois la liste complète et les comportements décidés.
   const SOUND_SLOT_TO_METHODS = {
     'ui-click':['select','deselect'], 'correct':['correct'], 'wrong':['wrong'], 'forbidden':['forbidden'],
-    'timeUp':['timeUp'], 'palier':['palier'], 'ladderTick':['ladderTick'],
-    'ladderLock':['ladderLock'], 'finalePass':['finalePass'],
+    'pass':['pass'], 'timeUp':['timeUp'], 'roundStart':['roundStart'], 'roundWin':['roundWin'],
+    'qualifsEnd':['qualifsEnd'], 'wordReveal':['wordReveal'], 'palier':['palier'], 'jackpot':['jackpot'],
+    'ladderTick':['ladderTick'], 'ladderLock':['ladderLock'],
   };
 
   const CUSTOM_AUDIO_DB = (function(){
@@ -2266,6 +2295,7 @@
     buzz: null, // { teams:[idx...], points:{idx:n}, startPos:0, turnPos:0, word:'' }
 
     finaleGiverName: '', finaleGuesserName: '', finaleColorIdx: 0,
+    inFinale: false, // true dès l'annonce des finalistes, pour la musique d'ambiance
     currentLevel: 0,
     bank: 0, safeBank: 0,
     jokerAvailable: false, jokerUsed: false,
@@ -2296,6 +2326,23 @@
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && ['qualif','solo_tiebreak'].includes(state.currentTurn.kind);
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
+    updateBackgroundMusic(name);
+  }
+  // Musique de fond "ambiante" selon l'écran affiché. Le "play" n'est PAS géré
+  // ici : tant que le mot n'est pas tapé pour lancer le chrono, l'ambiance en
+  // cours (menu ou finale) continue de tourner — c'est le clic sur le mot qui
+  // bascule vers la musique du timer (voir plus bas). Idem, on ne coupe rien
+  // ici quand on quitte "play" en cours de manche : c'est déjà géré à l'endroit
+  // où la manche se termine, pour un enchaînement propre.
+  function updateBackgroundMusic(name){
+    const turn = state.currentTurn;
+    if(name === 'play' || name === 'final') return;
+    if(name === 'setup'){ state.inFinale = false; MUSIC.play('menu', {loop:true}); return; }
+    if(state.inFinale && ['finalist','handoff','decision','peek'].includes(name)){
+      MUSIC.play('finaleAmbient', {loop:true});
+      return;
+    }
+    MUSIC.play('menu', {loop:true});
   }
   function renderScheduleOverlay(){
     const el = document.getElementById('schedule-list');
@@ -2410,7 +2457,7 @@
   document.getElementById('ui-volume-slider').value = Math.round(initialSfxSettings.uiVol * 100);
   document.getElementById('game-volume-slider').value = Math.round(initialSfxSettings.gameVol * 100);
   wireSoundToggle('ui-sound-toggle', () => SFX.getSettings().uiOn, v => SFX.setUiOn(v));
-  wireSoundToggle('game-sound-toggle', () => SFX.getSettings().gameOn, v => SFX.setGameOn(v));
+  wireSoundToggle('game-sound-toggle', () => SFX.getSettings().gameOn, v => { SFX.setGameOn(v); MUSIC.applyVolume(); });
   wireSoundToggle('recap-detail-toggle', () => UIPREFS.getShowRoundRecap(), v => UIPREFS.setShowRoundRecap(v));
   wireSoundToggle('pause-hide-toggle', () => UIPREFS.getHideWordOnPause(), v => UIPREFS.setHideWordOnPause(v));
   document.getElementById('ui-volume-slider').addEventListener('input', e => {
@@ -2419,6 +2466,7 @@
   document.getElementById('ui-volume-slider').addEventListener('change', () => SFX.select());
   document.getElementById('game-volume-slider').addEventListener('input', e => {
     SFX.setGameVol(Number(e.target.value) / 100);
+    MUSIC.applyVolume();
   });
   document.getElementById('game-volume-slider').addEventListener('change', () => SFX.wrong());
 
@@ -2599,6 +2647,7 @@
     state.finaleGiverName = 'Joueur A';
     state.finaleGuesserName = 'Joueur B';
     state.finaleColorIdx = 0;
+    state.inFinale = true;
     // Ce raccourci de test doit amener à l'écran de découverte du premier palier
     // (comme en vraie partie), pas directement dans la manche.
     document.getElementById('finalist-label').textContent = "Se qualifient pour la finale";
@@ -2825,6 +2874,7 @@
     state.dotsFound = 0;
     state.dotsLost = 0;
     state.running = false;
+    state.turnMusicStarted = false;
 
     const nameEl = document.getElementById('play-team-name');
     if(turn.kind === 'final'){
@@ -2896,18 +2946,37 @@
       // pause
       state.running = false;
       clearInterval(state.timerHandle);
+      MUSIC.pause();
       document.getElementById('word-pill').classList.add('waiting');
       if(UIPREFS.getHideWordOnPause()) document.getElementById('word-pill').classList.add('paused-hidden');
       document.getElementById('play-hint').textContent = "En pause — tape sur le mot pour reprendre";
       setPlayControlsEnabled(false);
     } else {
       // démarrage ou reprise
+      const turn = state.currentTurn;
+      const isFreshStart = !state.turnMusicStarted;
       state.running = true;
       document.getElementById('word-pill').classList.remove('waiting');
       document.getElementById('word-pill').classList.remove('paused-hidden');
       document.getElementById('play-hint').textContent = "";
       setPlayControlsEnabled(true);
       state.timerHandle = setInterval(tick, 1000);
+      if(isFreshStart){
+        state.turnMusicStarted = true;
+        // Jingle de lancement, superposé par-dessus la musique d'ambiance en
+        // cours (menu ou finale) — puis bascule vers la musique du timer,
+        // uniquement pour les qualifs et la finale (pas l'entraînement/tie-break).
+        if(turn.kind === 'qualif'){
+          SFX.roundStart();
+          MUSIC.play('qualif', {loop:false});
+        } else if(turn.kind === 'final'){
+          SFX.roundStart();
+          setTimeout(() => SFX.wordReveal(), 150);
+          MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
+        }
+      } else {
+        MUSIC.resume();
+      }
     }
   });
 
@@ -3278,6 +3347,7 @@
   document.getElementById('btn-correct').addEventListener('click', () => {
     if(inputLocked) return;
     SFX.correct();
+    const turn = state.currentTurn;
     state.wordsFound.push(state.pool[0]);
     state.pool.shift();
     state.foundCount += 1;
@@ -3286,6 +3356,10 @@
     // la manche est terminée et mérite la fermeture animée plutôt qu'un cut sec.
     if(state.pool.length === 0 || (state.target && state.foundCount >= state.target)){
       lockInput();
+      // Manche de qualif finie avant la fin des 30s : son de victoire dédié.
+      // Si le temps est déjà écoulé pile à ce moment, la musique du timer
+      // couvre déjà la fin (pas besoin de son en plus).
+      if(turn.kind === 'qualif' && state.timeLeft > 0) SFX.roundWin();
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
@@ -3297,12 +3371,13 @@
 
   document.getElementById('btn-not-found').addEventListener('click', () => {
     if(inputLocked) return;
-    SFX.wrong();
     const turn = state.currentTurn;
     if(turn.style === 'cycle'){
+      SFX.pass();
       lockInput();
       const w = state.pool.shift(); state.pool.push(w); loadNextWord(); return;
     }
+    SFX.wrong();
     if(state.clueCount < MAX_CLUES){
       state.clueCount += 1;
       renderChevrons();
@@ -3348,7 +3423,7 @@
 
   document.getElementById('btn-skip-final').addEventListener('click', () => {
     if(inputLocked) return;
-    SFX.finalePass();
+    SFX.pass();
     state.wordsFailed.push(state.pool[0]);
     state.pool.shift();
     state.dotsLost += 1;
@@ -3366,6 +3441,7 @@
 
   // ---- End of turn ----
   function endTurn(){
+    MUSIC.stop(); // coupe la musique du timer, quelle que soit la façon dont la manche s'est terminée
     const turn = state.currentTurn;
     const elapsed = turn.chrono ? state.timeLeft : (state.turnStartTime - state.timeLeft);
 
@@ -3667,6 +3743,8 @@
   }
 
   function announceTeamFinalist(idx){
+    SFX.qualifsEnd();
+    state.inFinale = true;
     const team = state.teams[idx];
     // Le score de qualif propose une pré-sélection (le meilleur donneur des deux),
     // mais c'est le duo qui tranche via les chips juste en dessous.
@@ -3773,6 +3851,8 @@
   });
 
   function finalizeSoloFinalists(giverIdx, guesserIdx){
+    SFX.qualifsEnd();
+    state.inFinale = true;
     const giver = state.soloStats[giverIdx], guesser = state.soloStats[guesserIdx];
     state.finaleGiverName = giver.name;
     state.finaleGuesserName = guesser.name;
@@ -3946,7 +4026,7 @@
   function goToDecision(turn, success){
     const p = PALIERS[turn.level-1];
     if(success){
-      SFX.palier();
+      if(turn.level < PALIERS.length) SFX.palier(); // le palier 5 a son propre son (jackpot), voir endFinal
       state.bank = p.gain;
       if(turn.level >= SAFE_LEVEL){
         state.safeBank = Math.max(state.safeBank, PALIERS[SAFE_LEVEL-1].gain);
@@ -4046,6 +4126,7 @@
   }
 
   function endFinal(wonAll){
+    if(wonAll) SFX.jackpot();
     renderTiles('final-tiles');
     const last = state.finalHistory[state.finalHistory.length - 1];
     const amount = wonAll ? PALIERS[PALIERS.length-1].gain : state.bank;
