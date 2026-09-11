@@ -743,6 +743,16 @@
   }
   #btn-quit-game.visible{ display:flex; }
 
+  #btn-play-settings{
+    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:54px; z-index:3;
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
+    color:var(--text-dim); font-size:15px; line-height:1;
+    align-items:center; justify-content:center; cursor:pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  #btn-play-settings.visible{ display:flex; }
+
   .quit-overlay{
     display:none; position:fixed; inset:0; z-index:10;
     background:rgba(0,0,0,0.62);
@@ -778,6 +788,7 @@
 <div id="app">
 
   <button id="btn-quit-game" title="Retour au menu principal">✕</button>
+  <button id="btn-play-settings" title="Réglages">⚙️</button>
   <button id="btn-schedule" title="Qui joue avec qui">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
       <circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/>
@@ -1850,16 +1861,16 @@
       try { localStorage.setItem('mdp_sound_settings', JSON.stringify(settings)); } catch(e){}
     }
     return {
-      correct(){ FILE_SFX('correct'); },
-      indice(){ FILE_SFX('indice'); },
-      pass(){ FILE_SFX('pass'); },
-      roundStart(){ FILE_SFX('roundStart'); },
+      correct(){ return FILE_SFX('correct'); },
+      indice(){ return FILE_SFX('indice'); },
+      pass(){ return FILE_SFX('pass'); },
+      roundStart(){ return FILE_SFX('roundStart'); },
       roundWin(){ return FILE_SFX('roundWin'); },
-      qualifsEnd(){ FILE_SFX('qualifsEnd'); },
-      wordReveal(){ FILE_SFX('wordReveal'); },
-      jackpot(){ FILE_SFX('jackpot'); },
-      forbidden(){ FILE_SFX('forbidden'); },
-      palier(){ FILE_SFX('roundWin', 'palier'); },
+      qualifsEnd(){ return FILE_SFX('qualifsEnd'); },
+      wordReveal(){ return FILE_SFX('wordReveal'); },
+      jackpot(){ return FILE_SFX('jackpot'); },
+      forbidden(){ return FILE_SFX('forbidden'); },
+      palier(){ return FILE_SFX('roundWin', 'palier'); },
       getSettings(){ return { uiOn: settings.uiOn, uiVol: settings.uiVol, gameOn: settings.gameOn, gameVol: settings.gameVol }; },
       setUiOn(v){ settings.uiOn = v; save(); },
       setGameOn(v){ settings.gameOn = v; save(); },
@@ -1973,26 +1984,41 @@
   const CUSTOM_SOUNDS = (function(){
     const overrides = {}; // key -> { url, fileName }
     let currentPreviewAudio = null;
+    let currentPreviewKey = null;
+    let onPreviewChange = null; // callback(key|null) — prévenu à chaque démarrage/arrêt
 
+    function notifyPreviewChange(){
+      if(onPreviewChange) onPreviewChange(currentPreviewKey);
+    }
     function stopPreview(){
       if(currentPreviewAudio){ currentPreviewAudio.pause(); currentPreviewAudio = null; }
+      currentPreviewKey = null;
+      notifyPreviewChange();
     }
     function volumeFor(cat, key){
       const s = SFX.getSettings();
       const base = cat === 'ui' ? (s.uiOn ? s.uiVol : 0) : (s.gameOn ? s.gameVol : 0);
       return base * SLOT_VOLUMES.get(key);
     }
+    function trackPreview(key, audio){
+      currentPreviewAudio = audio;
+      currentPreviewKey = key;
+      // Fin naturelle du son (pas via le bouton pause) : on remet l'icône à ▶.
+      audio.addEventListener('ended', () => {
+        if(currentPreviewAudio === audio){ currentPreviewAudio = null; currentPreviewKey = null; notifyPreviewChange(); }
+      }, { once:true });
+      notifyPreviewChange();
+    }
     function playOverride(key){
       const ov = overrides[key];
-      if(!ov) return;
+      if(!ov) return null;
       const slot = SOUND_SLOTS.find(s => s.key === key);
       const vol = volumeFor(slot ? slot.cat : 'game', key);
-      if(vol <= 0) return;
-      stopPreview();
+      if(vol <= 0) return null;
       const audio = new Audio(ov.url);
       audio.volume = Math.max(0, Math.min(1, vol));
-      currentPreviewAudio = audio;
       audio.play().catch(()=>{});
+      return audio;
     }
     // Remplace (patch) les méthodes SFX existantes pour qu'elles jouent le
     // fichier importé s'il y en a un, sinon le son synthétisé d'origine.
@@ -2000,7 +2026,7 @@
       methodNames.forEach(methodName => {
         const original = SFX[methodName].bind(SFX);
         SFX[methodName] = function(...args){
-          if(overrides[key]){ playOverride(key); return; }
+          if(overrides[key]){ return playOverride(key); }
           return original(...args);
         };
       });
@@ -2015,6 +2041,7 @@
       return overrides[key];
     }
     async function resetSlot(key){
+      if(currentPreviewKey === key) stopPreview();
       const ov = overrides[key];
       if(ov && ov.url) URL.revokeObjectURL(ov.url);
       delete overrides[key];
@@ -2032,13 +2059,20 @@
         });
       } catch(e){ /* pas grave, on retombe sur les sons par défaut */ }
     }
+    // Bascule play/pause : un appui sur le même slot en cours d'écoute l'arrête ;
+    // un appui sur un autre slot coupe la lecture en cours et démarre la nouvelle.
     function previewSlot(key){
+      if(currentPreviewKey === key){ stopPreview(); return; }
+      stopPreview();
       const methodNames = SOUND_SLOT_TO_METHODS[key];
-      if(methodNames){ SFX[methodNames[0]](0); return; } // (0) inoffensif pour les méthodes sans argument
-      // Slots musique : pas encore de méthode dédiée, on joue le fichier importé tel quel.
-      if(overrides[key]){ playOverride(key); }
+      let audio = null;
+      if(methodNames){ audio = SFX[methodNames[0]](0); } // (0) inoffensif pour les méthodes sans argument
+      else if(overrides[key]){ audio = playOverride(key); } // slots musique : pas encore de méthode dédiée
+      if(audio) trackPreview(key, audio);
     }
-    return { importFile, resetSlot, has, get, loadFromDB, previewSlot, stopPreview };
+    function setOnPreviewChange(cb){ onPreviewChange = cb; }
+    function getCurrentPreviewKey(){ return currentPreviewKey; }
+    return { importFile, resetSlot, has, get, loadFromDB, previewSlot, stopPreview, setOnPreviewChange, getCurrentPreviewKey };
   })();
 
   function renderCustomSoundList(){
@@ -2103,7 +2137,18 @@
         if(slot.kind === 'music' && MUSIC_KEY_TO_SLOT[MUSIC.current()] === slot.key) MUSIC.applyVolume();
       });
     });
+    updatePreviewIcons(CUSTOM_SOUNDS.getCurrentPreviewKey());
   }
+  function updatePreviewIcons(activeKey){
+    document.querySelectorAll('#custom-sound-list .custom-sound-row').forEach(row => {
+      const btn = row.querySelector('.preview-btn');
+      if(!btn) return;
+      const isPlaying = row.dataset.key === activeKey;
+      btn.textContent = isPlaying ? '⏸' : '▶';
+      btn.title = isPlaying ? 'Mettre en pause' : 'Écouter';
+    });
+  }
+  CUSTOM_SOUNDS.setOnPreviewChange(updatePreviewIcons);
   CUSTOM_SOUNDS.loadFromDB().then(renderCustomSoundList);
 
   // ---------- PRÉFÉRENCES UI ----------
@@ -2293,6 +2338,7 @@
     Object.values(screens).forEach(s => s.classList.remove('active'));
     screens[name].classList.add('active');
     document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
+    document.getElementById('btn-play-settings').classList.toggle('visible', name !== 'setup' && name !== 'final');
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && ['qualif','solo_tiebreak'].includes(state.currentTurn.kind);
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
@@ -2439,11 +2485,21 @@
     MUSIC.applyVolume();
   });
 
-  document.getElementById('btn-open-settings').addEventListener('click', () => {
+  function openSettingsOverlay(){
     document.getElementById('settings-overlay').classList.add('visible');
-  });
-  document.getElementById('btn-close-settings').addEventListener('click', () => {
+  }
+  function closeSettingsOverlay(){
+    CUSTOM_SOUNDS.stopPreview();
     document.getElementById('settings-overlay').classList.remove('visible');
+  }
+  document.getElementById('btn-open-settings').addEventListener('click', openSettingsOverlay);
+  document.getElementById('btn-play-settings').addEventListener('click', openSettingsOverlay);
+  document.getElementById('btn-close-settings').addEventListener('click', closeSettingsOverlay);
+  // Clic en dehors de la fenêtre de réglages (sur le fond assombri) : ferme
+  // aussi, comme le bouton OK — mais seulement si le clic touche bien le fond,
+  // pas un élément à l'intérieur de la fenêtre elle-même.
+  document.getElementById('settings-overlay').addEventListener('click', (e) => {
+    if(e.target.id === 'settings-overlay') closeSettingsOverlay();
   });
 
   // ---- Pavé des règles, dépliable ----
@@ -2861,14 +2917,13 @@
       nameEl.textContent = `${turn.giverName} et ${turn.guesserName}`;
     }
     nameEl.style.color = PLAYER_COLORS[turn.colorIdx];
-    nameEl.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
 
     const notFoundBtn = document.getElementById('btn-not-found');
     const chevronsLeft = document.getElementById('chevrons-left');
     const chevronsRight = document.getElementById('chevrons-right');
     const skipFinalBtn = document.getElementById('btn-skip-final');
-    const timerBadge = document.getElementById('play-timer-num');
-    timerBadge.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
+    const dotsRow = document.getElementById('play-dots');
+    dotsRow.style.opacity = '0'; // révélés après PLAY_REVEAL_DELAY, avec le reste
     if(turn.style === 'clues'){
       chevronsLeft.classList.add('active'); chevronsRight.classList.add('active');
       chevronsLeft.style.opacity = '0'; chevronsRight.style.opacity = '0'; // révélées après PLAY_REVEAL_DELAY
@@ -2897,19 +2952,22 @@
     wordPillEl.classList.remove('materialize', 'dematerialize', 'paused-hidden');
     wordPillEl.style.opacity = '0'; // caché : le cadre + le mot n'apparaissent qu'après PLAY_REVEAL_DELAY
     wordPillEl.style.pointerEvents = 'none'; // pas tapable tant que rien n'est visible (sinon le chrono pourrait démarrer avant l'apparition)
-    document.getElementById('play-hint').textContent = "Tape sur le mot pour lancer le chrono";
+    const playHint = document.getElementById('play-hint');
+    playHint.textContent = "Tape sur le mot pour lancer le chrono";
+    playHint.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
     showScreen('play');
 
-    // Nom des joueurs, timer, cadre du mot et cadre à diodes (finale) démarrent
-    // tous leur apparition ici, ensemble, PLAY_REVEAL_DELAY après le reste de
-    // l'écran — pas plus lentement, juste plus tard. Les boutons de jeu restent
-    // grisés (setPlayControlsEnabled(false) plus haut) jusqu'au premier tap sur
-    // le mot, qui n'est lui-même possible qu'une fois révélé.
+    // Points de progression, cadre du mot, cadre à diodes (finale) et texte
+    // d'indication démarrent tous leur apparition ici, ensemble,
+    // PLAY_REVEAL_DELAY après le reste de l'écran (nom, timer, boutons, qui
+    // restent immédiats) — pas plus lentement, juste plus tard. Les boutons de
+    // jeu restent grisés (setPlayControlsEnabled(false) plus haut) jusqu'au
+    // premier tap sur le mot, qui n'est lui-même possible qu'une fois révélé.
     setTimeout(() => {
-      nameEl.style.opacity = '';
-      timerBadge.style.opacity = '';
+      dotsRow.style.opacity = '';
       wordPillEl.style.opacity = '';
       wordPillEl.style.pointerEvents = '';
+      playHint.style.opacity = '';
       void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
       wordPillEl.classList.add('materialize');
       wordPillEl.classList.add('waiting');
