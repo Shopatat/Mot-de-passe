@@ -4165,6 +4165,21 @@
 
   document.getElementById('btn-replay').addEventListener('click', () => { SFX.select(); showScreen('setup'); });
 
+  // L'écran d'accueil est actif par défaut dans le HTML (pas de showScreen()
+  // appelé au tout premier chargement), donc la musique de menu ne se
+  // déclenchait jamais toute seule. On la lance ici explicitement.
+  // Par ailleurs, les navigateurs bloquent souvent l'audio tant qu'il n'y a
+  // pas eu d'interaction : si le premier essai est refusé, on retente au
+  // premier clic/tap n'importe où sur la page.
+  updateBackgroundMusic('setup');
+  function retryMusicOnFirstInteraction(){
+    if(!MUSIC.current()) updateBackgroundMusic(Object.keys(screens).find(k => screens[k].classList.contains('active')) || 'setup');
+    document.removeEventListener('click', retryMusicOnFirstInteraction);
+    document.removeEventListener('touchstart', retryMusicOnFirstInteraction);
+  }
+  document.addEventListener('click', retryMusicOnFirstInteraction);
+  document.addEventListener('touchstart', retryMusicOnFirstInteraction, { passive:true });
+
 })();
 </script>
 </body>
