@@ -2861,11 +2861,14 @@
       nameEl.textContent = `${turn.giverName} et ${turn.guesserName}`;
     }
     nameEl.style.color = PLAYER_COLORS[turn.colorIdx];
+    nameEl.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
 
     const notFoundBtn = document.getElementById('btn-not-found');
     const chevronsLeft = document.getElementById('chevrons-left');
     const chevronsRight = document.getElementById('chevrons-right');
     const skipFinalBtn = document.getElementById('btn-skip-final');
+    const timerBadge = document.getElementById('play-timer-num');
+    timerBadge.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
     if(turn.style === 'clues'){
       chevronsLeft.classList.add('active'); chevronsRight.classList.add('active');
       chevronsLeft.style.opacity = '0'; chevronsRight.style.opacity = '0'; // révélées après PLAY_REVEAL_DELAY
@@ -2893,14 +2896,20 @@
     inputLocked = false;
     wordPillEl.classList.remove('materialize', 'dematerialize', 'paused-hidden');
     wordPillEl.style.opacity = '0'; // caché : le cadre + le mot n'apparaissent qu'après PLAY_REVEAL_DELAY
+    wordPillEl.style.pointerEvents = 'none'; // pas tapable tant que rien n'est visible (sinon le chrono pourrait démarrer avant l'apparition)
     document.getElementById('play-hint').textContent = "Tape sur le mot pour lancer le chrono";
     showScreen('play');
 
-    // Le cadre du mot (et le cadre à diodes en finale) démarrent leur animation
-    // d'apparition ici, PLAY_REVEAL_DELAY après le reste de l'écran — pas plus
-    // lentement, juste plus tard.
+    // Nom des joueurs, timer, cadre du mot et cadre à diodes (finale) démarrent
+    // tous leur apparition ici, ensemble, PLAY_REVEAL_DELAY après le reste de
+    // l'écran — pas plus lentement, juste plus tard. Les boutons de jeu restent
+    // grisés (setPlayControlsEnabled(false) plus haut) jusqu'au premier tap sur
+    // le mot, qui n'est lui-même possible qu'une fois révélé.
     setTimeout(() => {
+      nameEl.style.opacity = '';
+      timerBadge.style.opacity = '';
       wordPillEl.style.opacity = '';
+      wordPillEl.style.pointerEvents = '';
       void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
       wordPillEl.classList.add('materialize');
       wordPillEl.classList.add('waiting');
