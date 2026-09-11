@@ -2181,6 +2181,10 @@
   const FINAL_TIME = 90;
   const FINAL_TARGET = 5;
   const MAX_CLUES = 3;
+  // Délai avant que le cadre du mot (et le cadre à diodes en finale) ne
+  // démarrent leur animation d'apparition après "C'est parti" — le reste de
+  // l'écran (nom, chrono, boutons) apparaît immédiatement comme avant.
+  const PLAY_REVEAL_DELAY = 2000;
   // Palier : nombre de mots disponibles + gain
   const PALIERS = [
     { level:1, pool:9, gain:1000 },
@@ -2864,7 +2868,7 @@
     const skipFinalBtn = document.getElementById('btn-skip-final');
     if(turn.style === 'clues'){
       chevronsLeft.classList.add('active'); chevronsRight.classList.add('active');
-      chevronsLeft.style.opacity = '1'; chevronsRight.style.opacity = '1';
+      chevronsLeft.style.opacity = '0'; chevronsRight.style.opacity = '0'; // révélées après PLAY_REVEAL_DELAY
       buildChevrons(chevronsLeft); buildChevrons(chevronsRight);
       skipFinalBtn.style.display = '';
     } else {
@@ -2888,11 +2892,23 @@
     wordEl.style.animation = '';
     inputLocked = false;
     wordPillEl.classList.remove('materialize', 'dematerialize', 'paused-hidden');
-    void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
-    wordPillEl.classList.add('materialize');
-    wordPillEl.classList.add('waiting');
+    wordPillEl.style.opacity = '0'; // caché : le cadre + le mot n'apparaissent qu'après PLAY_REVEAL_DELAY
     document.getElementById('play-hint').textContent = "Tape sur le mot pour lancer le chrono";
     showScreen('play');
+
+    // Le cadre du mot (et le cadre à diodes en finale) démarrent leur animation
+    // d'apparition ici, PLAY_REVEAL_DELAY après le reste de l'écran — pas plus
+    // lentement, juste plus tard.
+    setTimeout(() => {
+      wordPillEl.style.opacity = '';
+      void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
+      wordPillEl.classList.add('materialize');
+      wordPillEl.classList.add('waiting');
+      if(turn.style === 'clues'){
+        chevronsLeft.style.opacity = '1';
+        chevronsRight.style.opacity = '1';
+      }
+    }, PLAY_REVEAL_DELAY);
   }
 
   function setPlayControlsEnabled(enabled, dim = true){
