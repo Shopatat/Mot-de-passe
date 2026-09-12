@@ -3044,7 +3044,14 @@
           MUSIC.play('qualif', {loop:false});
         } else if(turn.kind === 'final'){
           MUSIC.setDuck(1);
-          setTimeout(() => SFX.wordReveal(), 150);
+          // Ce tout premier tap sur le mot du palier démarre le chrono ET
+          // vaut, de fait, pour l'annonce du 1er indice (impossible de taper
+          // le bouton indice avant, puisque rien n'était encore lancé) : on
+          // simule donc directement l'appui sur le bouton bleu, avec son
+          // vrai son (celui de l'indice, plus de wordReveal séparé).
+          SFX.indice();
+          state.clueCount += 1;
+          renderChevrons();
           MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
         } else {
           MUSIC.setDuck(1);
