@@ -2328,6 +2328,7 @@
 
     finaleGiverName: '', finaleGuesserName: '', finaleColorIdx: 0,
     inFinale: false, // true dès l'annonce des finalistes, pour la musique d'ambiance
+    holdFinaleAmbient: false, // true pendant le jingle de palier gagné : bloque la reprise immédiate de l'ambiance finale
     currentLevel: 0,
     bank: 0, safeBank: 0,
     jokerAvailable: false, jokerUsed: false,
@@ -2378,6 +2379,7 @@
     if(name === 'play' || name === 'final' || name === 'summary' || name === 'trainingSummary') return;
     if(name === 'setup'){ state.inFinale = false; MUSIC.play('menu', {loop:true}); return; }
     if(state.inFinale && ['finalist','handoff','decision','peek'].includes(name)){
+      if(state.holdFinaleAmbient) return; // le jingle de palier gagné joue encore, il doit finir d'abord
       MUSIC.play('finaleAmbient', {loop:true});
       return;
     }
@@ -4147,7 +4149,18 @@
   function goToDecision(turn, success){
     const p = PALIERS[turn.level-1];
     if(success){
-      if(turn.level < PALIERS.length) SFX.palier(); // le palier 5 a son propre son (jackpot), voir endFinal
+      if(turn.level < PALIERS.length){ // le palier 5 a son propre son (jackpot), voir endFinal
+        state.holdFinaleAmbient = true;
+        const node = SFX.palier();
+        if(node){
+          node.addEventListener('ended', () => {
+            state.holdFinaleAmbient = false;
+            if(state.inFinale) MUSIC.play('finaleAmbient', {loop:true});
+          }, { once:true });
+        } else {
+          state.holdFinaleAmbient = false; // pas de jingle dispo (son coupé...) : ambiance immédiate
+        }
+      }
       state.bank = p.gain;
       if(turn.level >= SAFE_LEVEL){
         state.safeBank = Math.max(state.safeBank, PALIERS[SAFE_LEVEL-1].gain);
