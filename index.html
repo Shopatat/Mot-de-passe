@@ -595,6 +595,9 @@
     color: var(--text-dim);
   }
   .text-action.danger{ color: var(--wrong); }
+  .blacklist-row{ display:flex; justify-content:center; margin-top:auto; padding-top:10px; padding-bottom:max(4px, env(safe-area-inset-bottom)); }
+  .text-action.subtle{ font-size:12px; font-weight:600; opacity:0.5; padding:8px 12px; }
+  .text-action.subtle:active{ opacity:0.28; }
   .text-action:active{ opacity:0.55; }
   .text-action:disabled{ opacity:0.3; pointer-events:none; }
   .text-action:disabled.no-dim{ opacity:1; }
@@ -810,6 +813,16 @@
     </div>
   </div>
 
+  <div class="quit-overlay" id="blacklist-confirm-overlay">
+    <div class="card quit-confirm-card">
+      <p>Mettre ce mot de côté ? Il ne sera plus proposé, sans compter comme une mauvaise réponse.</p>
+      <div class="controls-row">
+        <button class="btn btn-ghost" id="btn-blacklist-cancel">Annuler</button>
+        <button class="btn btn-gold" id="btn-blacklist-confirm">Mettre de côté</button>
+      </div>
+    </div>
+  </div>
+
   <div class="quit-overlay" id="settings-overlay">
     <div class="card settings-modal">
       <div class="block-header">⚙️ Réglages</div>
@@ -855,6 +868,12 @@
         Remplace n'importe quel son du jeu par un fichier audio importé depuis ton téléphone. Le fichier est copié dans le jeu — pas besoin de le garder dans tes fichiers.
       </p>
       <div id="custom-sound-list"></div>
+
+      <label class="field-label" style="margin-top:18px;">🚫 Mots mis de côté</label>
+      <p class="marquee-sub" style="text-align:left; font-style:normal; margin:-4px 0 8px;">
+        Mots marqués "trop difficile" en cours de partie : ils ne sont plus proposés tant qu'ils restent dans cette liste.
+      </p>
+      <div id="blacklist-word-list"></div>
 
       <button class="btn btn-gold" id="btn-close-settings" style="margin-top:16px; width:100%;">OK</button>
     </div>
@@ -1049,6 +1068,9 @@
         </svg>
         Passer
       </button>
+    </div>
+    <div class="blacklist-row">
+      <button class="text-action subtle" id="btn-word-too-hard">🚫 Mot trop difficile</button>
     </div>
   </section>
 
@@ -1707,14 +1729,37 @@
   const QUALIF_TIERS = [1,2];
   const FINAL_LEVEL_TIERS = { 1:[1,2], 2:[2], 3:[2,3], 4:[3], 5:[3] };
 
+  // Mots mis de côté via le bouton "Mot trop difficile" : jamais retirés de
+  // WORD_BANK (la suppression définitive du texte se fait à part, en édition
+  // du fichier), simplement filtrés à chaque tirage tant qu'ils restent ici.
+  // Persisté sur l'appareil, comme les autres réglages.
+  const WORD_BLACKLIST = (function(){
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem('mdp_word_blacklist') || '[]'); } catch(e){}
+    function save(){ try { localStorage.setItem('mdp_word_blacklist', JSON.stringify(list)); } catch(e){} }
+    return {
+      has(word){ return list.includes(word); },
+      add(word){ if(!list.includes(word)){ list.push(word); save(); } },
+      remove(word){ list = list.filter(w => w !== word); save(); },
+      all(){ return list.slice(); },
+    };
+  })();
+
   function drawTieredWords(n, tiers){
     let pool = [];
     Object.keys(WORD_BANK).forEach(cat => {
-      WORD_BANK[cat].forEach(item => { if(tiers.includes(item.d)) pool.push(item.w); });
+      WORD_BANK[cat].forEach(item => { if(tiers.includes(item.d) && !WORD_BLACKLIST.has(item.w)) pool.push(item.w); });
     });
     pool = shuffle(pool);
     if(pool.length === 0){
-      // niveau trop restreint : on élargit à tous les niveaux
+      // niveau trop restreint : on élargit à tous les niveaux (mots blacklistés
+      // toujours exclus à ce stade)
+      Object.keys(WORD_BANK).forEach(cat => WORD_BANK[cat].forEach(item => { if(!WORD_BLACKLIST.has(item.w)) pool.push(item.w); }));
+      pool = shuffle(pool);
+    }
+    if(pool.length === 0){
+      // Cas extrême (quasi toute la base blacklistée) : on ignore la blacklist
+      // plutôt que de planter faute de mots disponibles.
       Object.keys(WORD_BANK).forEach(cat => WORD_BANK[cat].forEach(item => pool.push(item.w)));
       pool = shuffle(pool);
     }
@@ -2504,8 +2549,32 @@
     MUSIC.applyVolume();
   });
 
+  function renderBlacklistPanel(){
+    const list = document.getElementById('blacklist-word-list');
+    const words = WORD_BLACKLIST.all();
+    if(words.length === 0){
+      list.innerHTML = '<p class="marquee-sub" style="text-align:left; font-style:normal;">Aucun mot mis de côté pour l\u2019instant.</p>';
+      return;
+    }
+    list.innerHTML = "";
+    words.forEach(w => {
+      const row = document.createElement('div');
+      row.className = 'sound-row';
+      const span = document.createElement('span');
+      span.textContent = w;
+      const btn = document.createElement('button');
+      btn.className = 'text-action subtle';
+      btn.style.opacity = '0.85';
+      btn.textContent = 'Restaurer';
+      btn.addEventListener('click', () => { WORD_BLACKLIST.remove(w); renderBlacklistPanel(); });
+      row.appendChild(span); row.appendChild(btn);
+      list.appendChild(row);
+    });
+  }
+
   function openSettingsOverlay(){
     document.getElementById('settings-overlay').classList.add('visible');
+    renderBlacklistPanel();
   }
   function closeSettingsOverlay(){
     CUSTOM_SOUNDS.stopPreview();
@@ -3552,6 +3621,38 @@
       playClosingChevronTransition(() => endTurn());
       return;
     }
+    lockInput();
+    loadNextWord();
+  });
+
+  // "Mot trop difficile" : met le mot de côté (plus jamais tiré dans les
+  // futures parties) et le remplace tout de suite par un nouveau, tiré dans
+  // les mêmes niveaux de difficulté que la manche en cours. Neutre pour la
+  // manche : pas de pénalité, pas de mot perdu — le pool garde la même
+  // longueur, donc l'objectif de la manche reste inchangé.
+  function drawReplacementWord(turn){
+    const tiers = turn.kind === 'final' ? FINAL_LEVEL_TIERS[turn.level] : QUALIF_TIERS;
+    const candidates = drawTieredWords(state.pool.length + 5, tiers).filter(w => !state.pool.includes(w));
+    return candidates.length ? candidates[0] : null;
+  }
+  document.getElementById('btn-word-too-hard').addEventListener('click', () => {
+    if(inputLocked) return;
+    document.getElementById('blacklist-confirm-overlay').classList.add('visible');
+  });
+  document.getElementById('btn-blacklist-cancel').addEventListener('click', () => {
+    document.getElementById('blacklist-confirm-overlay').classList.remove('visible');
+  });
+  document.getElementById('btn-blacklist-confirm').addEventListener('click', () => {
+    document.getElementById('blacklist-confirm-overlay').classList.remove('visible');
+    if(inputLocked) return;
+    const turn = state.currentTurn;
+    const word = state.pool[0];
+    WORD_BLACKLIST.add(word);
+    SFX.pass();
+    const replacement = drawReplacementWord(turn);
+    state.pool.shift();
+    if(replacement) state.pool.unshift(replacement);
+    // Pas de dotsLost/wordsFailed ici : ce n'est pas compté comme une mauvaise réponse.
     lockInput();
     loadNextWord();
   });
