@@ -1129,6 +1129,17 @@
     </div>
   </section>
 
+  <!-- ÉGALITÉ SOLO : CHOIX MANUEL (remplace l'ancien tie-break chronométré) -->
+  <section class="screen" id="screen-solo-tie-choice">
+    <div class="phase-tag">Égalité</div>
+    <div class="card handoff-wrap">
+      <div class="summary-icon">🤝</div>
+      <div class="handoff-label" id="solo-tie-label"></div>
+      <div class="handoff-role">Qui continue ?</div>
+    </div>
+    <div class="controls-row" id="solo-tie-buttons"></div>
+  </section>
+
   <!-- TIE-BREAK BUZZ : ANNONCE -->
   <section class="screen" id="screen-buzz-intro">
     <div class="phase-tag">Égalité — Tie-break buzz</div>
@@ -2312,8 +2323,6 @@
 
   const QUALIF_TIME = 30;
   const QUALIF_WORDS = 5;
-  const TIE_POOL = 3;
-  const TIE_TIME = 20;
   const BUZZ_TARGET = 2;      // points pour valider la qualif en tie-break buzz
   const BUZZ_TIERS = [2,3];   // mots un peu plus techniques que la qualif classique
 
@@ -2397,7 +2406,7 @@
     timeLeft: 0, timerHandle: null, turnStartTime: 0,
     dotsTotal: 0, dotsFound: 0, dotsLost: 0,
 
-    tieGroup: [], tieScores: {}, tieKind: null, // 'team' | 'giver' | 'guesser' (utilisé pour le tie-break solo)
+    soloFirstGiver: 0, // 0 ou 1 : qui fait deviner en premier (chacun pour soi, 2 joueurs uniquement)
 
     // Tie-break buzz (mode équipe) : un seul mot, les équipes à égalité se
     // relaient un indice à la fois, premier point marqué compte.
@@ -2422,6 +2431,7 @@
     summary: document.getElementById('screen-summary'),
     trainingSummary: document.getElementById('screen-training-summary'),
     roleChoice: document.getElementById('screen-role-choice'),
+    soloTieChoice: document.getElementById('screen-solo-tie-choice'),
     buzzIntro: document.getElementById('screen-buzz-intro'),
     buzzPlay: document.getElementById('screen-buzz-play'),
     finalist: document.getElementById('screen-finalist'),
@@ -2435,12 +2445,12 @@
     document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
     document.getElementById('btn-play-settings').classList.toggle('visible', name !== 'setup' && name !== 'final');
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
-      state.currentTurn && ['qualif','solo_tiebreak'].includes(state.currentTurn.kind);
+      state.currentTurn && state.currentTurn.kind === 'qualif';
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
-    // Volume de la musique d'ambiance (menu + ambiante finale) : normal partout,
-    // sauf "handoff" / "play" (avant de taper sur le mot) où on baisse fort (25%)
-    // pour laisser la concentration au moment de passer l'appareil / lire le mot.
-    MUSIC.setDuck(name === 'handoff' || name === 'play' ? 0.25 : 1);
+    // Volume de la musique d'ambiance (menu + ambiante finale) : réduite de 75%
+    // tant qu'une partie est en cours (tous les écrans sauf le menu principal),
+    // pour que ça reste léger en fond ; retour à 100% uniquement de retour au menu.
+    MUSIC.setDuck(name === 'setup' ? 1 : 0.25);
     updateBackgroundMusic(name);
   }
   // Musique de fond "ambiante" selon l'écran affiché. Le "play" n'est PAS géré
@@ -2796,6 +2806,20 @@
         input.addEventListener('input', () => PLAYERNAMES.setFlat(i, input.value.trim()));
       }
       container.appendChild(wrap);
+
+      // Chacun pour soi à 2 joueurs : on choisit qui commence plutôt que de le tirer au sort.
+      if(state.subMode === 'solo' && N === 2){
+        const firstGiverBlock = document.createElement('div');
+        firstGiverBlock.style.marginTop = '10px';
+        firstGiverBlock.innerHTML = `
+          <label class="field-label">Qui fait deviner en premier ?</label>
+          <div class="toggle-row" id="solo-first-giver-group">
+            <div class="toggle-btn${state.soloFirstGiver === 0 ? ' selected' : ''}" data-val="0">Joueur 1</div>
+            <div class="toggle-btn${state.soloFirstGiver === 1 ? ' selected' : ''}" data-val="1">Joueur 2</div>
+          </div>`;
+        container.appendChild(firstGiverBlock);
+        wireToggleGroup('solo-first-giver-group', val => { state.soloFirstGiver = parseInt(val, 10); });
+      }
     }
   }
   renderPlayerFields();
@@ -2892,7 +2916,18 @@
       }
     } else {
       buildSoloStats();
-      const schedule = buildSoloSchedule(state.playerCount);
+      let schedule;
+      if(state.playerCount === 2){
+        // À 2 joueurs : pas de tirage au sort, l'ordre est fixe (A-B répété deux fois)
+        // à partir du choix fait sur l'écran de configuration.
+        const first = state.soloFirstGiver, second = 1 - first;
+        schedule = [
+          {giver:first, guesser:second}, {giver:second, guesser:first},
+          {giver:first, guesser:second}, {giver:second, guesser:first}
+        ];
+      } else {
+        schedule = buildSoloSchedule(state.playerCount);
+      }
       state.turnQueue = schedule.map((pair, idx) => ({
         kind: 'qualif', style: 'cycle',
         giverIdx: pair.giver, guesserIdx: pair.guesser,
@@ -2983,11 +3018,6 @@
     if(turn.kind === 'final'){
       tag.style.display = 'none';
       label.textContent = `Palier ${turn.level} — ${euro(PALIERS[turn.level-1].gain)}`;
-    } else if(turn.kind === 'solo_tiebreak'){
-      tag.style.display = '';
-      tag.textContent = turn.role === 'giver' ? "Égalité — meilleur donneur" : "Égalité — meilleur devineur";
-      tag.classList.remove('final');
-      label.textContent = "Qui trouvera le plus sur 3 ?";
     } else if(turn.kind === 'training'){
       tag.style.display = '';
       tag.textContent = "Entraînement";
@@ -3204,9 +3234,9 @@
           state.clueCount += 1;
           renderChevrons();
           MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
-        } else {
-          MUSIC.setDuck(1);
         }
+        // Sinon (entraînement) : on ne change pas de piste, la musique de menu
+        // continue avec son duck ambiant déjà en place (réduite tant qu'on joue).
       } else {
         MUSIC.resume();
       }
@@ -3792,9 +3822,6 @@
         state.soloStats[turn.guesserIdx].guesserTime += elapsed;
       }
       showTurnSummary(turn, `${state.foundCount} mot${state.foundCount>1?'s':''} sur ${QUALIF_WORDS}`);
-    } else if(turn.kind === 'solo_tiebreak'){
-      state.tieScores[turn.playerIdx] = (state.tieScores[turn.playerIdx]||0) + state.foundCount;
-      showTurnSummary(turn, `${state.foundCount} mot${state.foundCount>1?'s':''} sur ${turn.poolSize}`);
     } else if(turn.kind === 'training'){
       showTrainingSummary(state.foundCount, elapsed);
       return;
@@ -3858,7 +3885,6 @@
 
   // ================= PHASE RESOLUTION (fin de qualification) =================
   function resolvePhase(){
-    if(state.tieKind === 'giver' || state.tieKind === 'guesser'){ resolveSoloTiebreakResult(); return; }
     if(state.subMode === 'team'){ resolveTeamPhase(); }
     else { resolveSoloPhase(); }
   }
@@ -4104,13 +4130,13 @@
     if(state._resolvedGiver === undefined){
       const givers = state._pendingGivers;
       const tied = givers.filter(g => g.score === givers[0].score && g.time === givers[0].time).map(g => g.idx);
-      if(tied.length > 1){ pushSoloTiebreak(tied, 'giver'); return; }
+      if(tied.length > 1){ showSoloTieChoice(tied, 'giver'); return; }
       state._resolvedGiver = givers[0].idx;
     }
     if(state._resolvedGuesser === undefined){
       const guessers = state._pendingGuessers;
       const tied = guessers.filter(g => g.score === guessers[0].score && g.time === guessers[0].time).map(g => g.idx);
-      if(tied.length > 1){ pushSoloTiebreak(tied, 'guesser'); return; }
+      if(tied.length > 1){ showSoloTieChoice(tied, 'guesser'); return; }
       state._resolvedGuesser = guessers[0].idx;
     }
     const bestGiver = state._resolvedGiver, bestGuesser = state._resolvedGuesser;
@@ -4121,39 +4147,27 @@
     }
   }
 
-  function resolveSoloTiebreakResult(){
-    const role = state.tieKind;
-    const scores = state.tieGroup.map(idx => ({ idx, score: state.tieScores[idx] || 0 }));
-    const maxScore = Math.max(...scores.map(s => s.score));
-    const stillTied = scores.filter(s => s.score === maxScore).map(s => s.idx);
-    state.tieKind = null;
-    if(stillTied.length > 1){
-      pushSoloTiebreak(stillTied, role); // toujours à égalité : on rejoue avec un nouveau lot de mots
-      return;
-    }
-    if(role === 'giver') state._resolvedGiver = stillTied[0];
-    else state._resolvedGuesser = stillTied[0];
-    proceedSoloResolution(); // fixe l'autre rôle (avec son propre départage si besoin), puis vérifie la double couronne
-  }
-
-  function pushSoloTiebreak(tiedIdxs, role){
-    state.tieGroup = tiedIdxs;
-    state.tieScores = {};
-    state.tieKind = role;
-    // les joueurs à égalité s'affrontent entre eux, en rotation, dans le rôle disputé
-    state.turnQueue = tiedIdxs.map((idx, i) => {
-      const opponent = tiedIdxs[(i+1) % tiedIdxs.length];
-      const giverIdx = (role === 'giver') ? idx : opponent;
-      const guesserIdx = (role === 'giver') ? opponent : idx;
-      return {
-        kind:'solo_tiebreak', style:'cycle', role, playerIdx: idx,
-        giverName: state.soloStats[giverIdx].name, guesserName: state.soloStats[guesserIdx].name,
-        colorIdx: state.soloStats[idx].colorIdx,
-        poolSize: TIE_POOL, target:null, time: TIE_TIME
-      };
+  // ---- Égalité solo : choix manuel (au lieu d'une mini-manche chronométrée) ----
+  function showSoloTieChoice(tiedIdxs, role){
+    state._tieChoiceRole = role;
+    document.getElementById('solo-tie-label').textContent =
+      role === 'giver' ? "Égalité pour meilleur donneur d'indices" : "Égalité pour meilleur devineur";
+    const row = document.getElementById('solo-tie-buttons');
+    row.innerHTML = "";
+    tiedIdxs.forEach(idx => {
+      const p = state.soloStats[idx];
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-gold';
+      btn.textContent = p.name;
+      btn.style.color = PLAYER_COLORS[p.colorIdx];
+      btn.addEventListener('click', () => {
+        if(role === 'giver') state._resolvedGiver = idx;
+        else state._resolvedGuesser = idx;
+        proceedSoloResolution(); // fixe l'autre rôle (avec son propre choix si besoin), puis vérifie la double couronne
+      });
+      row.appendChild(btn);
     });
-    state.currentTurnIndex = 0;
-    goToHandoff();
+    showScreen('soloTieChoice');
   }
 
   function showRoleChoice(playerIdx){
