@@ -2573,8 +2573,14 @@
     });
   }
 
+  function pruneBlacklistAgainstWordBank(){
+    const validWords = new Set();
+    Object.keys(WORD_BANK).forEach(cat => WORD_BANK[cat].forEach(item => validWords.add(item.w)));
+    WORD_BLACKLIST.all().forEach(w => { if(!validWords.has(w)) WORD_BLACKLIST.remove(w); });
+  }
   function openSettingsOverlay(){
     document.getElementById('settings-overlay').classList.add('visible');
+    pruneBlacklistAgainstWordBank();
     renderBlacklistPanel();
   }
   const btnExportBlacklist = document.getElementById('btn-export-blacklist');
