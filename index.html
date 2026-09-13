@@ -874,6 +874,7 @@
         Mots marqués "trop difficile" en cours de partie : ils ne sont plus proposés tant qu'ils restent dans cette liste.
       </p>
       <div id="blacklist-word-list"></div>
+      <button class="text-action subtle" id="btn-export-blacklist" style="margin-top:6px; opacity:0.85;">Copier la liste</button>
 
       <button class="btn btn-gold" id="btn-close-settings" style="margin-top:16px; width:100%;">OK</button>
     </div>
@@ -1343,7 +1344,7 @@
       {w:"Armistice",d:3},{w:"Abdication",d:3},{w:"Couronnement",d:3},{w:"Grenaille",d:3},
       {w:"Vétusté",d:3},{w:"Squat",d:3},{w:"Taudis",d:3},{w:"Masure",d:3},{w:"Manoir",d:3},
       {w:"Donjon",d:3},{w:"Rempart",d:3},{w:"Douves",d:3},{w:"Créneau",d:3},
-      {w:"Meurtrière",d:3},{w:"Herse",d:3},{w:"Pont-levis",d:3},{w:"Beffroi",d:3},
+      {w:"Meurtrière",d:3},{w:"Herse",d:3},{w:"Beffroi",d:3},
       {w:"Clocher",d:3}
     ],
     "Animaux": [
@@ -1374,10 +1375,10 @@
       {w:"Panthère",d:2},{w:"Sanglier",d:2},{w:"Cerf",d:2},{w:"Biche",d:2},{w:"Faon",d:2},
       {w:"Élan",d:2},{w:"Renne",d:2},{w:"Bouquetin",d:2},{w:"Mouflon",d:2},{w:"Yack",d:2},
       {w:"Lama",d:2},{w:"Alpaga",d:2},{w:"Zébu",d:2},{w:"Gazelle",d:2},{w:"Ouistiti",d:2},
-      {w:"Gorille",d:2},{w:"Orang-outan",d:2},{w:"Chimpanzé",d:2},{w:"Manchot",d:2},
+      {w:"Gorille",d:2},{w:"Chimpanzé",d:2},{w:"Manchot",d:2},
       {w:"Albatros",d:2},{w:"Mouette",d:2},{w:"Cormoran",d:2},{w:"Huître",d:2},{w:"Moule",d:2},
       {w:"Crabe",d:2},{w:"Crevette",d:2},{w:"Chenille",d:2},{w:"Scarabée",d:2},
-      {w:"Lucane",d:2},{w:"Grillon",d:2},{w:"Mille-pattes",d:2},{w:"Cloporte",d:2},
+      {w:"Lucane",d:2},{w:"Grillon",d:2},{w:"Cloporte",d:2},
       {w:"Tarentule",d:2},{w:"Mygale",d:2},{w:"Crapaud",d:2},{w:"Triton",d:2},{w:"Lézard",d:2},
       {w:"Boa",d:2},{w:"Python",d:2},{w:"Varan",d:2},{w:"Marsouin",d:2},{w:"Espadon",d:2},
       {w:"Anguille",d:2},{w:"Sardine",d:2},{w:"Thon",d:2},{w:"Saumon",d:2},{w:"Truite",d:2},
@@ -1392,14 +1393,14 @@
       {w:"Cobra",d:3},{w:"Mante",d:3},{w:"Termite",d:3},{w:"Sangsue",d:3},{w:"Girafon",d:3},
       {w:"Larve",d:3},{w:"Chrysalide",d:3},{w:"Nymphe",d:3},{w:"Otarie",d:3},{w:"Béluga",d:3},
       {w:"Dugong",d:3},{w:"Lamantin",d:3},{w:"Fennec",d:3},{w:"Coyote",d:3},{w:"Dingo",d:3},
-      {w:"Wapiti",d:3},{w:"Bernard-l'ermite",d:3},{w:"Étourneau",d:3},{w:"Geai",d:3},
-      {w:"Martin-pêcheur",d:3},{w:"Vanneau",d:3},{w:"Guêpier",d:3},{w:"Percnoptère",d:3},
+      {w:"Wapiti",d:3},{w:"Étourneau",d:3},{w:"Geai",d:3},
+      {w:"Vanneau",d:3},{w:"Guêpier",d:3},{w:"Percnoptère",d:3},
       {w:"Loriot",d:3},{w:"Rossignol",d:3},{w:"Alouette",d:3},{w:"Chardonneret",d:3},
       {w:"Bouvreuil",d:3},{w:"Bécasse",d:3},{w:"Perdrix",d:3},{w:"Caille",d:3},
       {w:"Faisan",d:3},{w:"Héron",d:3},{w:"Ibis",d:3},{w:"Grue",d:3},{w:"Casoar",d:3},
-      {w:"Émeu",d:3},{w:"Nandou",d:3},{w:"Tapir",d:3},{w:"Okapi",d:3},{w:"Oryx",d:3},
+      {w:"Émeu",d:3},{w:"Nandou",d:3},{w:"Tapir",d:3},{w:"Oryx",d:3},
       {w:"Addax",d:3},{w:"Ocelot",d:3},{w:"Serval",d:3},{w:"Caracal",d:3},{w:"Glouton",d:3},
-      {w:"Ragondin",d:3},{w:"Castor",d:3},{w:"Musaraigne",d:3},{w:"Chauve-souris",d:3},
+      {w:"Ragondin",d:3},{w:"Castor",d:3},{w:"Musaraigne",d:3},
       {w:"Pieuvre",d:3},{w:"Calmar",d:3},{w:"Seiche",d:3},{w:"Corail",d:3},{w:"Anémone",d:3},
       {w:"Plancton",d:3},{w:"Krill",d:3},{w:"Barracuda",d:3},{w:"Hippogriffe",d:3},
       {w:"Centaure",d:3},{w:"Griffon",d:3},{w:"Phénix",d:3},{w:"Minotaure",d:3},
@@ -1415,8 +1416,8 @@
       {w:"Chevalier",d:1},{w:"Cowboy",d:1},{w:"Princesse",d:1},{w:"Dragon",d:1},
       {w:"Monstre",d:1},{w:"Détective",d:1},{w:"Explosion",d:1},{w:"Poursuite",d:1},
       {w:"Bagarre",d:1},{w:"Trailer",d:1},{w:"Marvel",d:1},{w:"Disney",d:1},{w:"Émission",d:1},
-      {w:"Ninja",d:1},{w:"Samouraï",d:1},{w:"Loup-garou",d:1},{w:"Super-héros",d:1},
-      {w:"Méchant",d:1},{w:"Braquage",d:1},{w:"Course-poursuite",d:1},{w:"Fusillade",d:1},
+      {w:"Ninja",d:1},{w:"Samouraï",d:1},
+      {w:"Méchant",d:1},{w:"Braquage",d:1},{w:"Fusillade",d:1},
       {w:"Évasion",d:1},
       {w:"Matrix",d:2},{w:"Avatar",d:2},{w:"Shrek",d:2},{w:"Pixar",d:2},{w:"Oscar",d:2},
       {w:"Tournage",d:2},{w:"Casting",d:2},{w:"Suspense",d:2},{w:"Décor",d:2},{w:"Scène",d:2},
@@ -1424,12 +1425,12 @@
       {w:"Maquillage",d:2},{w:"Studio",d:2},{w:"Remake",d:2},{w:"Trilogie",d:2},
       {w:"Générique",d:2},{w:"Réplique",d:2},{w:"Montage",d:2},{w:"Thriller",d:2},
       {w:"Documentaire",d:2},{w:"Western",d:2},{w:"Figurant",d:2},{w:"Réalisateur",d:2},
-      {w:"Cliffhanger",d:2},{w:"Spin-off",d:2},{w:"Sitcom",d:2},{w:"Sous-titre",d:2},
-      {w:"Doublage",d:2},{w:"Bande-annonce",d:2},{w:"Plateau",d:2},{w:"Répétition",d:2},
+      {w:"Cliffhanger",d:2},{w:"Sitcom",d:2},
+      {w:"Doublage",d:2},{w:"Plateau",d:2},{w:"Répétition",d:2},
       {w:"Audition",d:2},{w:"Nomination",d:2},{w:"Festival",d:2},{w:"Paparazzi",d:2},
       {w:"Biopic",d:2},{w:"Marionnette",d:2},{w:"Twist",d:2},{w:"Flashback",d:2},
       {w:"Comédien",d:2},{w:"Figuration",d:2},{w:"Réalisation",d:2},{w:"Projection",d:2},
-      {w:"Avant-première",d:2},{w:"Sortie",d:2},{w:"Box-office",d:2},{w:"Critique",d:2},
+      {w:"Sortie",d:2},{w:"Critique",d:2},
       {w:"Note",d:2},{w:"Affiche",d:2},{w:"Teaser",d:2},{w:"Streaming",d:2},
       {w:"Abonnement",d:2},{w:"Final",d:2},{w:"Diffusion",d:2},{w:"Rediffusion",d:2},
       {w:"Audimat",d:2},
@@ -1441,7 +1442,7 @@
       {w:"Antagoniste",d:3},{w:"Protagoniste",d:3},{w:"Intégrale",d:3},{w:"Diffuseur",d:3},
       {w:"Novélisation",d:3},{w:"Cinéphile",d:3},{w:"Cinémathèque",d:3},
       {w:"Rétrospective",d:3},{w:"Muet",d:3},{w:"Colorisation",d:3},{w:"Restauration",d:3},
-      {w:"Cadrage",d:3},{w:"Contre-plongée",d:3},{w:"Séquence",d:3},{w:"Raccord",d:3},
+      {w:"Cadrage",d:3},{w:"Séquence",d:3},{w:"Raccord",d:3},
       {w:"Rushes",d:3},{w:"Repérage",d:3}
     ],
     "Nourriture": [
@@ -1455,7 +1456,7 @@
       {w:"Cerise",d:1},{w:"Raisin",d:1},{w:"Citron",d:1},{w:"Café",d:1},{w:"Frite",d:1},
       {w:"Burger",d:1},{w:"Steak",d:1},{w:"Saucisse",d:1},{w:"Frites",d:1},{w:"Ketchup",d:1},
       {w:"Sandwich",d:1},{w:"Kebab",d:1},{w:"Chips",d:1},{w:"Nutella",d:1},
-      {w:"Petit-déjeuner",d:1},{w:"Goûter",d:1},{w:"Dessert",d:1},{w:"Entrée",d:1},
+      {w:"Goûter",d:1},{w:"Dessert",d:1},{w:"Entrée",d:1},
       {w:"Menu",d:1},{w:"Recette",d:1},{w:"Four",d:1},{w:"Frigo",d:1},{w:"Poêle",d:1},
       {w:"Régime",d:1},{w:"Vin",d:1},{w:"Bière",d:1},{w:"Jus",d:1},{w:"Melon",d:1},
       {w:"Pastèque",d:1},{w:"Ananas",d:1},{w:"Kiwi",d:1},{w:"Mangue",d:1},{w:"Poire",d:1},
@@ -1473,14 +1474,14 @@
       {w:"Moutarde",d:2},{w:"Mayonnaise",d:2},{w:"Vinaigrette",d:2},{w:"Poivre",d:2},
       {w:"Vinaigre",d:2},{w:"Nouille",d:2},{w:"Épice",d:2},{w:"Cannelle",d:2},
       {w:"Basilic",d:2},{w:"Truffe",d:2},{w:"Gratin",d:2},{w:"Cocktail",d:2},
-      {w:"Apéritif",d:2},{w:"Digestif",d:2},{w:"Entremets",d:2},{w:"Bicarbonate",d:2},
+      {w:"Apéritif",d:2},{w:"Digestif",d:2},{w:"Bicarbonate",d:2},
       {w:"Levure",d:2},{w:"Gingembre",d:2},{w:"Safran",d:2},{w:"Curry",d:2},{w:"Wasabi",d:2},
       {w:"Guacamole",d:2},{w:"Houmous",d:2},{w:"Falafel",d:2},{w:"Paella",d:2},
-      {w:"Risotto",d:2},{w:"Ravioli",d:2},{w:"Croque-monsieur",d:2},{w:"Vol-au-vent",d:2},
+      {w:"Risotto",d:2},{w:"Ravioli",d:2},
       {w:"Charcuterie",d:2},{w:"Lentille",d:2},{w:"Quinoa",d:2},{w:"Semoule",d:2},
       {w:"Boulgour",d:2},{w:"Farine",d:2},{w:"Croûte",d:2},{w:"Mie",d:2},{w:"Miette",d:2},
       {w:"Brioche",d:2},{w:"Chausson",d:2},{w:"Religieuse",d:2},{w:"Millefeuille",d:2},
-      {w:"Paris-Brest",d:2},{w:"Opéra",d:2},{w:"Forêt-Noire",d:2},{w:"Tiramisu",d:2},
+      {w:"Opéra",d:2},{w:"Tiramisu",d:2},
       {w:"Roquefort",d:2},{w:"Comté",d:2},{w:"Brie",d:2},{w:"Raclette",d:2},{w:"Céleri",d:2},
       {w:"Fenouil",d:2},{w:"Artichaut",d:2},{w:"Asperge",d:2},{w:"Endive",d:2},
       {w:"Groseille",d:2},{w:"Myrtille",d:2},{w:"Mûre",d:2},{w:"Cassis",d:2},
@@ -1492,12 +1493,12 @@
       {w:"Nougatine",d:3},{w:"Ganache",d:3},{w:"Chantilly",d:3},{w:"Levain",d:3},
       {w:"Saumure",d:3},{w:"Fumet",d:3},{w:"Bavarois",d:3},{w:"Homard",d:3},{w:"Terroir",d:3},
       {w:"Appellation",d:3},{w:"Dégustation",d:3},{w:"Terrine",d:3},{w:"Confit",d:3},
-      {w:"Gésier",d:3},{w:"Abats",d:3},{w:"Tripes",d:3},{w:"Pot-au-feu",d:3},
+      {w:"Gésier",d:3},{w:"Abats",d:3},{w:"Tripes",d:3},
       {w:"Bourguignon",d:3},{w:"Bortsch",d:3},{w:"Gaspacho",d:3},{w:"Mimolette",d:3},
       {w:"Munster",d:3},{w:"Maroilles",d:3},{w:"Reblochon",d:3},{w:"Beaufort",d:3},
-      {w:"Saint-Nectaire",d:3},{w:"Cancoillotte",d:3},{w:"Brandade",d:3},{w:"Aligot",d:3},
+      {w:"Cancoillotte",d:3},{w:"Brandade",d:3},{w:"Aligot",d:3},
       {w:"Garbure",d:3},{w:"Daube",d:3},{w:"Navarin",d:3},{w:"Fricassée",d:3},
-      {w:"Matelote",d:3},{w:"Court-bouillon",d:3},{w:"Roux",d:3},{w:"Béchamel",d:3},
+      {w:"Matelote",d:3},{w:"Roux",d:3},{w:"Béchamel",d:3},
       {w:"Hollandaise",d:3},{w:"Béarnaise",d:3},{w:"Rémoulade",d:3},{w:"Cresson",d:3},
       {w:"Salsifis",d:3},{w:"Topinambour",d:3},{w:"Rutabaga",d:3},{w:"Panais",d:3},
       {w:"Coing",d:3},{w:"Nèfle",d:3}
@@ -1521,7 +1522,7 @@
       {w:"Comptable",d:2},{w:"Notaire",d:2},{w:"Serrurier",d:2},{w:"Électricien",d:2},
       {w:"Maçon",d:2},{w:"Couturier",d:2},{w:"Traiteur",d:2},{w:"Pâtissier",d:2},
       {w:"Fleuriste",d:2},{w:"Antiquaire",d:2},{w:"Brocanteur",d:2},{w:"Douanier",d:2},
-      {w:"Gendarme",d:2},{w:"Sage-femme",d:2},{w:"Chercheur",d:2},{w:"Biologiste",d:2},
+      {w:"Gendarme",d:2},{w:"Chercheur",d:2},{w:"Biologiste",d:2},
       {w:"Météorologue",d:2},{w:"Statisticien",d:2},{w:"Urbaniste",d:2},{w:"Décorateur",d:2},
       {w:"Styliste",d:2},{w:"Designer",d:2},{w:"Éboueur",d:2},{w:"Balayeur",d:2},
       {w:"Grutier",d:2},{w:"Charpentier",d:2},{w:"Vitrier",d:2},{w:"Barman",d:2},
@@ -1556,7 +1557,7 @@
       {w:"Panier",d:1},{w:"Caddie",d:1},{w:"Cageot",d:1},{w:"Poubelle",d:1},
       {w:"Allumette",d:1},{w:"Briquet",d:1},{w:"Cendrier",d:1},{w:"Bol",d:1},{w:"Nappe",d:1},
       {w:"Torchon",d:1},{w:"Rasoir",d:1},{w:"Dentifrice",d:1},{w:"Shampoing",d:1},
-      {w:"Coton-tige",d:1},{w:"Mouchoir",d:1},{w:"Élastique",d:1},{w:"Épingle",d:1},
+      {w:"Mouchoir",d:1},{w:"Élastique",d:1},{w:"Épingle",d:1},
       {w:"Aiguille",d:1},{w:"Bouton",d:1},
       {w:"Aspirateur",d:2},{w:"Trombone",d:2},{w:"Cintre",d:2},{w:"Cadenas",d:2},
       {w:"Boussole",d:2},{w:"Lanterne",d:2},{w:"Tabouret",d:2},{w:"Coussin",d:2},
@@ -1565,23 +1566,23 @@
       {w:"Vase",d:2},{w:"Chandelier",d:2},{w:"Thermomètre",d:2},{w:"Tournevis",d:2},
       {w:"Bouchon",d:2},{w:"Ficelle",d:2},{w:"Entonnoir",d:2},{w:"Parasol",d:2},
       {w:"Extincteur",d:2},{w:"Rallonge",d:2},{w:"Multiprise",d:2},{w:"Tondeuse",d:2},
-      {w:"Sécateur",d:2},{w:"Bêche",d:2},{w:"Fouet",d:2},{w:"Presse-agrumes",d:2},
+      {w:"Sécateur",d:2},{w:"Bêche",d:2},{w:"Fouet",d:2},
       {w:"Balance",d:2},{w:"Niveau",d:2},{w:"Serpillière",d:2},{w:"Éventail",d:2},
       {w:"Berceau",d:2},{w:"Velcro",d:2},{w:"Lacet",d:2},{w:"Semelle",d:2},{w:"Talon",d:2},
       {w:"Planche",d:2},{w:"Étendoir",d:2},{w:"Corbeille",d:2},{w:"Cuvette",d:2},
       {w:"Seau",d:2},{w:"Louche",d:2},{w:"Spatule",d:2},{w:"Râpe",d:2},{w:"Mixeur",d:2},
-      {w:"Grille-pain",d:2},{w:"Cocotte",d:2},{w:"Autocuiseur",d:2},{w:"Ramequin",d:2},
+      {w:"Cocotte",d:2},{w:"Autocuiseur",d:2},{w:"Ramequin",d:2},
       {w:"Saladier",d:2},{w:"Repassage",d:2},{w:"Couture",d:2},{w:"Tricot",d:2},
       {w:"Sablier",d:3},{w:"Loupe",d:3},{w:"Jumelles",d:3},{w:"Enclume",d:3},
       {w:"Bougeoir",d:3},{w:"Soufflet",d:3},{w:"Rouet",d:3},{w:"Métronome",d:3},
       {w:"Kaléidoscope",d:3},{w:"Baromètre",d:3},{w:"Sextant",d:3},{w:"Encrier",d:3},
       {w:"Plumeau",d:3},{w:"Écumoire",d:3},{w:"Passoire",d:3},{w:"Tamis",d:3},{w:"Bocal",d:3},
       {w:"Trépied",d:3},{w:"Débroussailleuse",d:3},{w:"Binette",d:3},{w:"Pendule",d:3},
-      {w:"Girouette",d:3},{w:"Paratonnerre",d:3},{w:"Chausse-pied",d:3},{w:"Coupe-papier",d:3},
-      {w:"Presse-purée",d:3},{w:"Casse-noix",d:3},{w:"Tire-bouchon",d:3},{w:"Décapsuleur",d:3},
+      {w:"Girouette",d:3},{w:"Paratonnerre",d:3},
+      {w:"Décapsuleur",d:3},
       {w:"Éteignoir",d:3},{w:"Chalumeau",d:3},{w:"Soudure",d:3},{w:"Ponceuse",d:3},
       {w:"Rabot",d:3},{w:"Gouge",d:3},{w:"Varlope",d:3},{w:"Équerre",d:3},{w:"Compas",d:3},
-      {w:"Truelle",d:3},{w:"Taloche",d:3},{w:"Auge",d:3},{w:"Serre-joint",d:3},{w:"Cric",d:3},
+      {w:"Truelle",d:3},{w:"Taloche",d:3},{w:"Auge",d:3},{w:"Cric",d:3},
       {w:"Broderie",d:3},{w:"Dentelle",d:3},{w:"Écheveau",d:3},{w:"Navette",d:3},
       {w:"Fuseau",d:3},{w:"Bobinette",d:3},{w:"Canevas",d:3}
     ],
@@ -1632,27 +1633,27 @@
       {w:"Stade",d:1},{w:"Victoire",d:1},{w:"Défaite",d:1},{w:"Médaille",d:1},
       {w:"Champion",d:1},{w:"Entraîneur",d:1},{w:"Boxe",d:1},{w:"Judo",d:1},{w:"Ski",d:1},
       {w:"Golf",d:1},{w:"Marathon",d:1},{w:"Vélodrome",d:1},{w:"Handball",d:1},
-      {w:"Volley",d:1},{w:"Ping-pong",d:1},{w:"Badminton",d:1},{w:"Karaté",d:1},
+      {w:"Volley",d:1},{w:"Badminton",d:1},{w:"Karaté",d:1},
       {w:"Athlétisme",d:1},{w:"Saut",d:1},{w:"Lancer",d:1},{w:"Relais",d:1},{w:"Sprint",d:1},
       {w:"Coupe",d:1},{w:"Trophée",d:1},{w:"Record",d:1},{w:"Maillot",d:1},{w:"Crampon",d:1},
       {w:"Raquette",d:1},{w:"Filet",d:1},{w:"Piste",d:1},{w:"Tribune",d:1},{w:"Gourde",d:1},
-      {w:"Penalty",d:2},{w:"Mi-temps",d:2},{w:"Prolongation",d:2},{w:"Podium",d:2},
+      {w:"Penalty",d:2},{w:"Prolongation",d:2},{w:"Podium",d:2},
       {w:"Chronomètre",d:2},{w:"Haltérophilie",d:2},{w:"Escrime",d:2},{w:"Aviron",d:2},
       {w:"Voile",d:2},{w:"Surf",d:2},{w:"Plongeon",d:2},{w:"Gymnastique",d:2},
       {w:"Patinage",d:2},{w:"Bobsleigh",d:2},{w:"Biathlon",d:2},{w:"Décathlon",d:2},
       {w:"Supporter",d:2},{w:"Vestiaire",d:2},{w:"Dribble",d:2},{w:"Passe",d:2},
-      {w:"Tacle",d:2},{w:"Corner",d:2},{w:"Hors-jeu",d:2},{w:"Mêlée",d:2},{w:"Essai",d:2},
+      {w:"Tacle",d:2},{w:"Corner",d:2},{w:"Mêlée",d:2},{w:"Essai",d:2},
       {w:"Transformation",d:2},{w:"Service",d:2},{w:"Revers",d:2},{w:"Smash",d:2},
-      {w:"Set",d:2},{w:"Tie-break",d:2},{w:"Uppercut",d:2},{w:"Tatami",d:2},{w:"Ring",d:2},
+      {w:"Set",d:2},{w:"Uppercut",d:2},{w:"Tatami",d:2},{w:"Ring",d:2},
       {w:"Tremplin",d:2},{w:"Piolet",d:2},{w:"Rappel",d:2},{w:"Escalade",d:2},
       {w:"Spéléologie",d:2},{w:"Parapente",d:2},{w:"Deltaplane",d:2},{w:"Kayak",d:2},
       {w:"Échauffement",d:2},{w:"Étirement",d:2},{w:"Endurance",d:2},{w:"Souplesse",d:2},
       {w:"Musculation",d:2},{w:"Haltère",d:2},{w:"Cerceau",d:2},{w:"Trampoline",d:2},
       {w:"Barre",d:2},
-      {w:"Antidopage",d:3},{w:"Commotion",d:3},{w:"Var",d:3},{w:"Sparring-partner",d:3},
+      {w:"Antidopage",d:3},{w:"Commotion",d:3},{w:"Var",d:3},
       {w:"Homologation",d:3},{w:"Disqualification",d:3},{w:"Forfait",d:3},{w:"Pentathlon",d:3},
-      {w:"Curling",d:3},{w:"Water-polo",d:3},{w:"Freestyle",d:3},{w:"Peloton",d:3},
-      {w:"Échappée",d:3},{w:"Contre-la-montre",d:3},{w:"Étape",d:3},{w:"Col",d:3},
+      {w:"Curling",d:3},{w:"Freestyle",d:3},{w:"Peloton",d:3},
+      {w:"Échappée",d:3},{w:"Étape",d:3},{w:"Col",d:3},
       {w:"Slalom",d:3},{w:"Descente",d:3},{w:"Luge",d:3},{w:"Skeleton",d:3},{w:"Haie",d:3},
       {w:"Perche",d:3},{w:"Javelot",d:3},{w:"Disque",d:3},{w:"Anneaux",d:3}
     ],
@@ -1689,7 +1690,7 @@
       {w:"Rythme",d:1},{w:"Rock",d:1},{w:"Rap",d:1},{w:"Jazz",d:1},{w:"Karaoké",d:1},
       {w:"Refrain",d:1},
       {w:"Accordéon",d:2},{w:"Harpe",d:2},{w:"Violoncelle",d:2},{w:"Contrebasse",d:2},
-      {w:"Clarinette",d:2},{w:"Hautbois",d:2},{w:"Tambour",d:2},{w:"Cymbale",d:2},
+      {w:"Clarinette",d:2},{w:"Tambour",d:2},{w:"Cymbale",d:2},
       {w:"Xylophone",d:2},{w:"Orchestre",d:2},{w:"Chorale",d:2},{w:"Symphonie",d:2},
       {w:"Partition",d:2},{w:"Mélodie",d:2},{w:"Harmonie",d:2},{w:"Tempo",d:2},
       {w:"Couplet",d:2},{w:"Tournée",d:2},{w:"Vinyle",d:2},{w:"Playlist",d:2},{w:"Touche",d:2},
@@ -2575,6 +2576,34 @@
   function openSettingsOverlay(){
     document.getElementById('settings-overlay').classList.add('visible');
     renderBlacklistPanel();
+  }
+  const btnExportBlacklist = document.getElementById('btn-export-blacklist');
+  if(btnExportBlacklist){
+    btnExportBlacklist.addEventListener('click', () => {
+      const words = WORD_BLACKLIST.all();
+      if(words.length === 0) return;
+      const text = words.join(', ');
+      const done = () => {
+        const original = btnExportBlacklist.textContent;
+        btnExportBlacklist.textContent = 'Copié !';
+        setTimeout(() => { btnExportBlacklist.textContent = original; }, 1500);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(() => {
+          const ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(e){}
+          document.body.removeChild(ta);
+          done();
+        });
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch(e){}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
   }
   function closeSettingsOverlay(){
     CUSTOM_SOUNDS.stopPreview();
