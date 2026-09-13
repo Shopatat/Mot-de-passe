@@ -1812,17 +1812,18 @@
   const MUSIC = (function(){
     let audio = null;
     let currentKey = null;
-    let duckFactor = 1; // baisse temporaire de volume (ex: écran d'attente "Prêt ?"), 1 = normal
+    // Les musiques d'ambiance (menu + attente de la finale) restent en permanence
+    // à un quart de leur volume max, quel que soit l'écran — pour rester en
+    // retrait. Les musiques de chrono (qualif/finale) et les bruitages, eux,
+    // jouent toujours à plein volume.
+    const AMBIENT_KEYS = new Set(['menu', 'finaleAmbient']);
     function applyVolume(){
       if(!audio) return;
       const s = SFX.getSettings();
       const slotKey = MUSIC_KEY_TO_SLOT[currentKey] || currentKey;
-      audio.volume = s.gameVol * duckFactor * SLOT_VOLUMES.get(slotKey);
+      const ambientReduction = AMBIENT_KEYS.has(currentKey) ? 0.25 : 1;
+      audio.volume = s.gameVol * ambientReduction * SLOT_VOLUMES.get(slotKey);
       audio.muted = !s.gameOn;
-    }
-    function setDuck(factor){
-      duckFactor = factor;
-      applyVolume();
     }
     function play(key, opts){
       opts = opts || {};
@@ -1850,7 +1851,7 @@
       if(!audio || audio.ended){ cb(); return; }
       audio.addEventListener('ended', cb, { once:true });
     }
-    return { play, stop, pause, resume, applyVolume, setDuck, onEnded, current(){ return currentKey; } };
+    return { play, stop, pause, resume, applyVolume, onEnded, current(){ return currentKey; } };
   })();
 
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
@@ -2447,10 +2448,8 @@
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && state.currentTurn.kind === 'qualif';
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
-    // Volume de la musique d'ambiance (menu + ambiante finale) : réduite de 75%
-    // tant qu'une partie est en cours (tous les écrans sauf le menu principal),
-    // pour que ça reste léger en fond ; retour à 100% uniquement de retour au menu.
-    MUSIC.setDuck(name === 'setup' ? 1 : 0.25);
+    // Volume de la musique d'ambiance (menu + ambiante finale) : fixe en
+    // permanence à un quart du volume max, géré directement dans MUSIC.applyVolume().
     updateBackgroundMusic(name);
   }
   // Musique de fond "ambiante" selon l'écran affiché. Le "play" n'est PAS géré
@@ -3218,13 +3217,10 @@
         state.turnMusicStarted = true;
         // Bascule vers la musique du timer, uniquement pour les qualifs et la
         // finale (pas l'entraînement/tie-break, qui restent sur la musique de
-        // menu — dans ce cas on garde le duck ambiant "en partie" à 75%, jamais
-        // 100% tant qu'on n'est pas revenu au menu principal).
+        // menu — toujours à un quart du volume, voir MUSIC.applyVolume()).
         if(turn.kind === 'qualif'){
-          MUSIC.setDuck(1);
           MUSIC.play('qualif', {loop:false});
         } else if(turn.kind === 'final'){
-          MUSIC.setDuck(1);
           // Ce tout premier tap sur le mot du palier démarre le chrono ET
           // vaut, de fait, pour l'annonce du 1er indice (impossible de taper
           // le bouton indice avant, puisque rien n'était encore lancé) : on
@@ -3236,7 +3232,7 @@
           MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
         }
         // Sinon (entraînement) : on ne change pas de piste, la musique de menu
-        // continue avec son duck ambiant déjà en place (réduite tant qu'on joue).
+        // continue, toujours à volume réduit.
       } else {
         MUSIC.resume();
       }
@@ -3633,9 +3629,8 @@
     MUSIC.stop();
     const node = SFX.roundWin();
     if(node){
-      node.addEventListener('ended', () => { if(!state.inFinale){ MUSIC.setDuck(0.25); MUSIC.play('menu', {loop:true}); } }, { once:true });
+      node.addEventListener('ended', () => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); }, { once:true });
     } else {
-      MUSIC.setDuck(0.25);
       MUSIC.play('menu', {loop:true}); // pas de jingle dispo (son coupé...) : retour immédiat
     }
   }
@@ -3678,7 +3673,6 @@
       document.getElementById('play-hint').textContent = "";
       setPlayControlsEnabled(true);
       state.timerHandle = setInterval(tick, 1000);
-      MUSIC.setDuck(1);
       SFX.indice();
       state.clueCount += 1;
       renderChevrons();
@@ -3796,7 +3790,7 @@
       // playQualifRoundWinJingle() (coupe nette + jingle + retour au menu à la
       // fin du jingle), rien à faire ici.
       if(state.timeLeft <= 0){
-        MUSIC.onEnded(() => { if(!state.inFinale){ MUSIC.setDuck(0.25); MUSIC.play('menu', {loop:true}); } });
+        MUSIC.onEnded(() => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); });
       }
     } else if(turn.kind !== 'final'){
       MUSIC.stop(); // coupe la musique en cours (menu), quelle que soit la façon dont la manche s'est terminée
