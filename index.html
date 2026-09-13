@@ -836,6 +836,27 @@
     </div>
   </div>
 
+  <div class="quit-overlay" id="first-giver-overlay">
+    <div class="card quit-confirm-card">
+      <p>Qui fait deviner en premier ?</p>
+      <div class="controls-row" style="flex-direction:column; gap:8px;">
+        <button class="btn btn-ghost" id="btn-first-giver-0">Joueur 1</button>
+        <button class="btn btn-ghost" id="btn-first-giver-1">Joueur 2</button>
+        <button class="btn btn-gold" id="btn-first-giver-random">🎲 Aléatoire</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="quit-overlay" id="training-end-confirm-overlay">
+    <div class="card quit-confirm-card">
+      <p>Tu es sûr ? Ça mettra fin à la manche en cours.</p>
+      <div class="controls-row">
+        <button class="btn btn-ghost" id="btn-training-end-cancel">Annuler</button>
+        <button class="btn btn-gold" id="btn-training-end-confirm">Terminer</button>
+      </div>
+    </div>
+  </div>
+
   <div class="quit-overlay" id="settings-overlay">
     <div class="card settings-modal">
       <div class="block-header">⚙️ Réglages</div>
@@ -1085,6 +1106,9 @@
     </div>
     <div class="blacklist-row">
       <button class="text-action subtle" id="btn-word-too-hard">🚫 Mot trop difficile</button>
+    </div>
+    <div class="blacklist-row" id="training-end-row" style="display:none;">
+      <button class="text-action subtle" id="btn-training-end">🏁 Terminer la manche</button>
     </div>
   </section>
 
@@ -2878,26 +2902,40 @@
         input.addEventListener('input', () => PLAYERNAMES.setFlat(i, input.value.trim()));
       }
       container.appendChild(wrap);
-
-      // Chacun pour soi à 2 joueurs : on choisit qui commence plutôt que de le tirer au sort.
-      if(state.subMode === 'solo' && N === 2){
-        const firstGiverBlock = document.createElement('div');
-        firstGiverBlock.style.marginTop = '10px';
-        firstGiverBlock.innerHTML = `
-          <label class="field-label">Qui fait deviner en premier ?</label>
-          <div class="toggle-row" id="solo-first-giver-group">
-            <div class="toggle-btn${state.soloFirstGiver === 0 ? ' selected' : ''}" data-val="0">Joueur 1</div>
-            <div class="toggle-btn${state.soloFirstGiver === 1 ? ' selected' : ''}" data-val="1">Joueur 2</div>
-          </div>`;
-        container.appendChild(firstGiverBlock);
-        wireToggleGroup('solo-first-giver-group', val => { state.soloFirstGiver = parseInt(val, 10); });
-      }
+      // Qui commence à faire deviner (chacun pour soi, 2 joueurs) : désormais
+      // choisi via une popup au lancement de la partie plutôt qu'ici, pour
+      // pouvoir afficher les vrais prénoms saisis. Voir btn-start-game.
     }
   }
   renderPlayerFields();
 
   // ---- Game start ----
-  document.getElementById('btn-start-game').addEventListener('click', () => { startGame(); });
+  document.getElementById('btn-start-game').addEventListener('click', () => {
+    // Chacun pour soi à 2 joueurs : on demande qui commence via une popup
+    // (avec les vrais prénoms) avant de lancer la partie.
+    if(state.mode === 'full' && state.subMode === 'solo' && state.playerCount === 2){
+      document.getElementById('btn-first-giver-0').textContent = PLAYERNAMES.getFlat(0) || 'Joueur 1';
+      document.getElementById('btn-first-giver-1').textContent = PLAYERNAMES.getFlat(1) || 'Joueur 2';
+      document.getElementById('first-giver-overlay').classList.add('visible');
+      return;
+    }
+    startGame();
+  });
+  document.getElementById('btn-first-giver-0').addEventListener('click', () => {
+    state.soloFirstGiver = 0;
+    document.getElementById('first-giver-overlay').classList.remove('visible');
+    startGame();
+  });
+  document.getElementById('btn-first-giver-1').addEventListener('click', () => {
+    state.soloFirstGiver = 1;
+    document.getElementById('first-giver-overlay').classList.remove('visible');
+    startGame();
+  });
+  document.getElementById('btn-first-giver-random').addEventListener('click', () => {
+    state.soloFirstGiver = Math.random() < 0.5 ? 0 : 1;
+    document.getElementById('first-giver-overlay').classList.remove('visible');
+    startGame();
+  });
 
   // 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive
   document.getElementById('btn-debug-finale').addEventListener('click', () => {
@@ -3193,6 +3231,7 @@
       chevronsLeft.innerHTML = ""; chevronsRight.innerHTML = "";
       skipFinalBtn.style.display = 'none';
     }
+    document.getElementById('training-end-row').style.display = (turn.kind === 'training') ? '' : 'none';
 
     updateTimerUI();
     loadNextWord(false);
@@ -3863,6 +3902,25 @@
     loadNextWord();
   });
 
+  // Bouton "Terminer la manche" (entraînement uniquement) : clôture la manche
+  // en cours à la demande, avec le même jingle de fin que quand les 5 mots
+  // sont trouvés, puis enchaîne sur le résumé d'entraînement habituel.
+  document.getElementById('btn-training-end').addEventListener('click', () => {
+    if(inputLocked) return;
+    document.getElementById('training-end-confirm-overlay').classList.add('visible');
+  });
+  document.getElementById('btn-training-end-cancel').addEventListener('click', () => {
+    document.getElementById('training-end-confirm-overlay').classList.remove('visible');
+  });
+  document.getElementById('btn-training-end-confirm').addEventListener('click', () => {
+    document.getElementById('training-end-confirm-overlay').classList.remove('visible');
+    if(inputLocked) return;
+    lockInput();
+    playQualifRoundWinJingle();
+    clearInterval(state.timerHandle);
+    renderDots();
+    playClosingChevronTransition(() => endTurn());
+  });
 
   // ---- End of turn ----
   function endTurn(){
