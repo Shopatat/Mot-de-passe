@@ -4093,8 +4093,25 @@
     document.getElementById('finalist-role-toggle').innerHTML = '';
   }
 
+  // Le son de fin de qualifs et l'ambiance de la finale se chevauchaient (l'ambiance
+  // démarrait instantanément avec showScreen('finalist'), pendant que le son jouait
+  // encore). On retient l'ambiance (même mécanisme que pour le jingle de palier
+  // gagné, voir goToDecision) jusqu'à la fin du son.
+  function announceFinaleReached(){
+    state.holdFinaleAmbient = true;
+    const node = SFX.qualifsEnd();
+    if(node){
+      node.addEventListener('ended', () => {
+        state.holdFinaleAmbient = false;
+        if(state.inFinale) MUSIC.play('finaleAmbient', {loop:true});
+      }, { once:true });
+    } else {
+      state.holdFinaleAmbient = false; // son coupé/indisponible : ambiance immédiate
+    }
+  }
+
   function announceTeamFinalist(idx){
-    SFX.qualifsEnd();
+    announceFinaleReached();
     state.inFinale = true;
     const team = state.teams[idx];
     // Le score de qualif propose une pré-sélection (le meilleur donneur des deux),
@@ -4188,7 +4205,7 @@
   });
 
   function finalizeSoloFinalists(giverIdx, guesserIdx){
-    SFX.qualifsEnd();
+    announceFinaleReached();
     state.inFinale = true;
     const giver = state.soloStats[giverIdx], guesser = state.soloStats[guesserIdx];
     state.finaleGiverName = giver.name;
