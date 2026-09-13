@@ -3633,8 +3633,9 @@
     MUSIC.stop();
     const node = SFX.roundWin();
     if(node){
-      node.addEventListener('ended', () => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); }, { once:true });
+      node.addEventListener('ended', () => { if(!state.inFinale){ MUSIC.setDuck(0.25); MUSIC.play('menu', {loop:true}); } }, { once:true });
     } else {
+      MUSIC.setDuck(0.25);
       MUSIC.play('menu', {loop:true}); // pas de jingle dispo (son coupé...) : retour immédiat
     }
   }
@@ -3795,7 +3796,7 @@
       // playQualifRoundWinJingle() (coupe nette + jingle + retour au menu à la
       // fin du jingle), rien à faire ici.
       if(state.timeLeft <= 0){
-        MUSIC.onEnded(() => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); });
+        MUSIC.onEnded(() => { if(!state.inFinale){ MUSIC.setDuck(0.25); MUSIC.play('menu', {loop:true}); } });
       }
     } else if(turn.kind !== 'final'){
       MUSIC.stop(); // coupe la musique en cours (menu), quelle que soit la façon dont la manche s'est terminée
