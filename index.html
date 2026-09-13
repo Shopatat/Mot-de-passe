@@ -1812,18 +1812,27 @@
   const MUSIC = (function(){
     let audio = null;
     let currentKey = null;
+    let gainNode = null;
     // Les musiques d'ambiance (menu + attente de la finale) restent en permanence
     // à un quart de leur volume max, quel que soit l'écran — pour rester en
     // retrait. Les musiques de chrono (qualif/finale) et les bruitages, eux,
     // jouent toujours à plein volume.
+    // NB : le volume passe par un GainNode Web Audio (même principe que les
+    // bruitages ci-dessous), et non par audio.volume — Safari iOS ignore
+    // silencieusement les changements de volume faits directement sur une
+    // balise <audio>, ce qui empêchait toute réduction de fonctionner.
     const AMBIENT_KEYS = new Set(['menu', 'finaleAmbient']);
-    function applyVolume(){
-      if(!audio) return;
+    function computeVolume(){
       const s = SFX.getSettings();
+      if(!s.gameOn) return 0;
       const slotKey = MUSIC_KEY_TO_SLOT[currentKey] || currentKey;
       const ambientReduction = AMBIENT_KEYS.has(currentKey) ? 0.25 : 1;
-      audio.volume = s.gameVol * ambientReduction * SLOT_VOLUMES.get(slotKey);
-      audio.muted = !s.gameOn;
+      return s.gameVol * ambientReduction * SLOT_VOLUMES.get(slotKey);
+    }
+    function applyVolume(){
+      const vol = computeVolume();
+      if(gainNode){ gainNode.gain.value = vol; }
+      else if(audio){ audio.volume = vol; } // repli si Web Audio indisponible
     }
     function play(key, opts){
       opts = opts || {};
@@ -1834,12 +1843,22 @@
       audio = new Audio(url);
       audio.loop = !!opts.loop;
       currentKey = key;
+      const ctx = getAudioCtx();
+      if(ctx){
+        if(ctx.state === 'suspended') ctx.resume();
+        const source = ctx.createMediaElementSource(audio);
+        gainNode = ctx.createGain();
+        source.connect(gainNode).connect(ctx.destination);
+      } else {
+        gainNode = null;
+      }
       applyVolume();
       audio.play().catch(()=>{}); // le navigateur peut refuser avant une interaction utilisateur, sans gravité
     }
     function stop(){
       if(audio){ audio.pause(); audio.currentTime = 0; }
       audio = null;
+      gainNode = null;
       currentKey = null;
     }
     function pause(){ if(audio) audio.pause(); }
