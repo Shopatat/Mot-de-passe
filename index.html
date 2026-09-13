@@ -2024,6 +2024,13 @@
       forbidden(){ return FILE_SFX('forbidden'); },
       palier(){ return FILE_SFX('roundWin', 'palier'); },
       finaleTimeout(){ return FILE_SFX('finaleTimeout'); },
+      // Enchaîne un son déjà lancé (le node qu'il a retourné) avec le son de fin
+      // de palier une fois le premier terminé, pour éviter que les deux se
+      // chevauchent ("interdit"/"passer" puis "temps écoulé").
+      thenFinaleTimeout(node){
+        if(node){ node.addEventListener('ended', () => FILE_SFX('finaleTimeout'), { once:true }); }
+        else { FILE_SFX('finaleTimeout'); }
+      },
       getSettings(){ return { uiOn: settings.uiOn, uiVol: settings.uiVol, gameOn: settings.gameOn, gameVol: settings.gameVol }; },
       setUiOn(v){ settings.uiOn = v; save(); },
       setGameOn(v){ settings.gameOn = v; save(); },
@@ -3763,12 +3770,12 @@
       state.clueCount += 1;
       renderChevrons();
     } else {
-      SFX.pass();
+      const passNode = SFX.pass();
       state.wordsFailed.push(state.pool[0]);
       state.pool.shift();
       state.dotsLost += 1;
       if(isObjectiveImpossible()){
-        SFX.finaleTimeout();
+        SFX.thenFinaleTimeout(passNode);
         lockInput();
         clearInterval(state.timerHandle);
         renderDots();
@@ -3782,7 +3789,7 @@
 
   document.getElementById('btn-interdit').addEventListener('click', () => {
     if(inputLocked) return;
-    SFX.forbidden();
+    const forbiddenNode = SFX.forbidden();
     const turn = state.currentTurn;
     state.wordsFailed.push(state.pool[0]);
     state.pool.shift();
@@ -3796,7 +3803,7 @@
     if(roundOver){
       lockInput();
       if(turn.kind === 'qualif' && state.timeLeft > 0) playQualifRoundWinJingle();
-      else if(turn.kind === 'final') SFX.finaleTimeout();
+      else if(turn.kind === 'final') SFX.thenFinaleTimeout(forbiddenNode);
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
@@ -3808,12 +3815,12 @@
 
   document.getElementById('btn-skip-final').addEventListener('click', () => {
     if(inputLocked) return;
-    SFX.pass();
+    const skipPassNode = SFX.pass();
     state.wordsFailed.push(state.pool[0]);
     state.pool.shift();
     state.dotsLost += 1;
     if(isObjectiveImpossible()){
-      SFX.finaleTimeout();
+      SFX.thenFinaleTimeout(skipPassNode);
       lockInput();
       clearInterval(state.timerHandle);
       renderDots();
