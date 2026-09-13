@@ -1918,15 +1918,16 @@
 
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
   const FILE_SFX_SOURCES = {
-    correct:     'sounds/sfx-correct.wav',
-    indice:      'sounds/sfx-reserve-br3.wav',
-    forbidden:   'sounds/sfx-forbidden.wav',
-    pass:        'sounds/sfx-pass.wav',
-    roundStart:  'sounds/sfx-round-start.wav',
-    roundWin:    'sounds/sfx-round-win.wav',
-    qualifsEnd:  'sounds/sfx-qualifs-end.wav',
-    wordReveal:  'sounds/sfx-word-reveal.wav',
-    jackpot:     'sounds/sfx-jackpot.mp3',
+    correct:       'sounds/sfx-correct.wav',
+    indice:        'sounds/sfx-reserve-br3.wav',
+    forbidden:     'sounds/sfx-forbidden.wav',
+    pass:          'sounds/sfx-pass.wav',
+    roundStart:    'sounds/sfx-round-start.wav',
+    roundWin:      'sounds/sfx-round-win.wav',
+    qualifsEnd:    'sounds/sfx-qualifs-end.wav',
+    wordReveal:    'sounds/sfx-word-reveal.wav',
+    jackpot:       'sounds/sfx-jackpot.mp3',
+    finaleTimeout: 'sounds/sfx-finale-timeout.wav',
   };
   // Boost de volume pour les sons trop faibles à la source : un GainNode Web
   // Audio n'est pas plafonné à 100% comme le volume natif d'un <audio>, donc
@@ -2022,6 +2023,7 @@
       jackpot(){ return FILE_SFX('jackpot'); },
       forbidden(){ return FILE_SFX('forbidden'); },
       palier(){ return FILE_SFX('roundWin', 'palier'); },
+      finaleTimeout(){ return FILE_SFX('finaleTimeout'); },
       getSettings(){ return { uiOn: settings.uiOn, uiVol: settings.uiVol, gameOn: settings.gameOn, gameVol: settings.gameVol }; },
       setUiOn(v){ settings.uiOn = v; save(); },
       setGameOn(v){ settings.gameOn = v; save(); },
@@ -2045,6 +2047,7 @@
     { key:'qualifsEnd',  label:'Fin des qualifications',            kind:'sfx',   cat:'game' },
     { key:'wordReveal',  label:'Affichage du 1er mot d\u2019un palier', kind:'sfx', cat:'game' },
     { key:'palier',      label:'Palier franchi (finale)',    kind:'sfx',   cat:'game' },
+    { key:'finaleTimeout', label:'Palier perdu avant l\u2019heure (finale)', kind:'sfx', cat:'game' },
     { key:'jackpot',     label:'Victoire finale (5 paliers)',kind:'sfx',   cat:'game' },
     { key:'music-menu',           label:'Musique — Menu principal',            kind:'music', cat:'game' }, // en boucle propre (fondu au raccord) : la piste dure ~2min mais le menu peut rester ouvert bien plus longtemps
     { key:'music-qualif',         label:'Musique — Qualifications',            kind:'music', cat:'game' }, // pas une boucle : la piste dure exactement les 30s de la manche, synchro avec le chrono
@@ -2079,6 +2082,7 @@
     'correct':['correct'], 'indice':['indice'], 'forbidden':['forbidden'],
     'pass':['pass'], 'roundStart':['roundStart'], 'roundWin':['roundWin'],
     'qualifsEnd':['qualifsEnd'], 'wordReveal':['wordReveal'], 'palier':['palier'], 'jackpot':['jackpot'],
+    'finaleTimeout':['finaleTimeout'],
   };
 
   const CUSTOM_AUDIO_DB = (function(){
@@ -3764,6 +3768,7 @@
       state.pool.shift();
       state.dotsLost += 1;
       if(isObjectiveImpossible()){
+        SFX.finaleTimeout();
         lockInput();
         clearInterval(state.timerHandle);
         renderDots();
@@ -3791,6 +3796,7 @@
     if(roundOver){
       lockInput();
       if(turn.kind === 'qualif' && state.timeLeft > 0) playQualifRoundWinJingle();
+      else if(turn.kind === 'final') SFX.finaleTimeout();
       clearInterval(state.timerHandle);
       renderDots();
       playClosingChevronTransition(() => endTurn());
@@ -3807,6 +3813,7 @@
     state.pool.shift();
     state.dotsLost += 1;
     if(isObjectiveImpossible()){
+      SFX.finaleTimeout();
       lockInput();
       clearInterval(state.timerHandle);
       renderDots();
