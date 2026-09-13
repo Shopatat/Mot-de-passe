@@ -3156,7 +3156,7 @@
     wordPillEl.style.pointerEvents = 'none'; // pas tapable tant que rien n'est visible (sinon le chrono pourrait démarrer avant l'apparition)
     const playHint = document.getElementById('play-hint');
     playHint.textContent = (turn.kind === 'final')
-      ? "Appuie sur le bouton bleu pour lancer le chrono et voir le 1er indice"
+      ? "Appuie sur le bouton bleu pour lancer le chrono et donner le 1er mot-indice"
       : "Tape sur le mot pour lancer le chrono";
     playHint.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
     showScreen('play');
@@ -3265,7 +3265,7 @@
   // Le bouton "indice" de la finale évolue à chaque appui : 1er indice → 2ème
   // → 3ème → puis seulement là il se transforme en "Pas trouvé" (le vrai
   // abandon du mot). MAX_CLUES = 3 indices, donc clueCount va de 1 à 4.
-  const CLUE_LABELS = ['1er indice', '2ème indice', '3ème indice'];
+  const CLUE_LABELS = ['1er mot-indice', '2ème mot-indice', '3ème mot-indice'];
   function updateNotFoundBtnState(){
     if(state.currentTurn.style !== 'clues') return;
     const notFoundBtn = document.getElementById('btn-not-found');
