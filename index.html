@@ -451,6 +451,19 @@
     0%,100%{ filter: brightness(1); }
     50%{ filter: brightness(1.4); }
   }
+  /* Tout premier mot d'un palier de finale : le mot, les chevrons et les
+     points restent visibles mais assombris — seul le bouton bleu "1er
+     indice" reste net et pulse, pour ne montrer qu'un seul geste possible. */
+  #screen-play.finale-pending-start .word-pill,
+  #screen-play.finale-pending-start .chevrons,
+  #screen-play.finale-pending-start #play-dots{
+    opacity: 0.28 !important;
+    filter: saturate(0.5);
+    transition: opacity 0.3s ease;
+  }
+  #screen-play.finale-pending-start #btn-not-found{
+    animation: pulseGlow 1.25s ease-in-out infinite;
+  }
   /* Masque le mot pendant une pause en cours de manche, pour éviter qu'il reste
      visible à l'écran quand on lâche le téléphone. L'animation wordTextReveal
      (fill-mode: both) maintient sinon opacity:1 avec une priorité supérieure
@@ -2063,6 +2076,12 @@
       const base = cat === 'ui' ? (s.uiOn ? s.uiVol : 0) : (s.gameOn ? s.gameVol : 0);
       return base * SLOT_VOLUMES.get(key);
     }
+    function updatePreviewVolume(){
+      if(!currentPreviewAudio || !currentPreviewKey) return;
+      const slot = SOUND_SLOTS.find(s => s.key === currentPreviewKey);
+      const vol = volumeFor(slot ? slot.cat : 'game', currentPreviewKey);
+      currentPreviewAudio.volume = Math.max(0, Math.min(1, vol));
+    }
     function trackPreview(key, audio){
       currentPreviewAudio = audio;
       currentPreviewKey = key;
@@ -2072,17 +2091,26 @@
       }, { once:true });
       notifyPreviewChange();
     }
-    function playOverride(key){
-      const ov = overrides[key];
-      if(!ov) return null;
+    function playAudioForKey(key, url){
       const slot = SOUND_SLOTS.find(s => s.key === key);
       const vol = volumeFor(slot ? slot.cat : 'game', key);
       if(vol <= 0) return null;
-      const audio = new Audio(ov.url);
+      const audio = new Audio(url);
       audio.volume = Math.max(0, Math.min(1, vol));
       audio.play().catch(()=>{});
       return audio;
     }
+    function playOverride(key){
+      const ov = overrides[key];
+      if(!ov) return null;
+      return playAudioForKey(key, ov.url);
+    }
+    // Slot de musique -> fichier par défaut (sounds/...), pour permettre au
+    // bouton "Écouter" de jouer quelque chose même sans import personnalisé.
+    const SLOT_TO_DEFAULT_MUSIC_URL = {};
+    Object.entries(MUSIC_KEY_TO_SLOT).forEach(([musicKey, slotKey]) => {
+      SLOT_TO_DEFAULT_MUSIC_URL[slotKey] = MUSIC_FILES[musicKey];
+    });
     // Remplace (patch) les méthodes SFX existantes pour qu'elles jouent le
     // fichier importé s'il y en a un, sinon le son synthétisé d'origine.
     Object.entries(SOUND_SLOT_TO_METHODS).forEach(([key, methodNames]) => {
@@ -2130,12 +2158,13 @@
       const methodNames = SOUND_SLOT_TO_METHODS[key];
       let audio = null;
       if(methodNames){ audio = SFX[methodNames[0]](0); } // (0) inoffensif pour les méthodes sans argument
-      else if(overrides[key]){ audio = playOverride(key); } // slots musique : pas encore de méthode dédiée
+      else if(overrides[key]){ audio = playOverride(key); }
+      else if(SLOT_TO_DEFAULT_MUSIC_URL[key]){ audio = playAudioForKey(key, SLOT_TO_DEFAULT_MUSIC_URL[key]); } // musique par défaut, pas encore importée
       if(audio) trackPreview(key, audio);
     }
     function setOnPreviewChange(cb){ onPreviewChange = cb; }
     function getCurrentPreviewKey(){ return currentPreviewKey; }
-    return { importFile, resetSlot, has, get, loadFromDB, previewSlot, stopPreview, setOnPreviewChange, getCurrentPreviewKey };
+    return { importFile, resetSlot, has, get, loadFromDB, previewSlot, stopPreview, setOnPreviewChange, getCurrentPreviewKey, updatePreviewVolume };
   })();
 
   function renderCustomSoundList(){
@@ -2198,6 +2227,8 @@
         // Musique en cours de lecture : on répercute le changement tout de
         // suite, sans attendre la prochaine piste.
         if(slot.kind === 'music' && MUSIC_KEY_TO_SLOT[MUSIC.current()] === slot.key) MUSIC.applyVolume();
+        // Préécoute en cours sur ce même slot (via le bouton "Écouter") : idem.
+        if(CUSTOM_SOUNDS.getCurrentPreviewKey() === slot.key) CUSTOM_SOUNDS.updatePreviewVolume();
       });
     });
     updatePreviewIcons(CUSTOM_SOUNDS.getCurrentPreviewKey());
@@ -3076,7 +3107,9 @@
     wordPillEl.style.opacity = '0'; // caché : le cadre + le mot n'apparaissent qu'après PLAY_REVEAL_DELAY
     wordPillEl.style.pointerEvents = 'none'; // pas tapable tant que rien n'est visible (sinon le chrono pourrait démarrer avant l'apparition)
     const playHint = document.getElementById('play-hint');
-    playHint.textContent = "Tape sur le mot pour lancer le chrono";
+    playHint.textContent = (turn.kind === 'final')
+      ? "Appuie sur le bouton bleu pour lancer le chrono et voir le 1er indice"
+      : "Tape sur le mot pour lancer le chrono";
     playHint.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
     showScreen('play');
 
@@ -3093,10 +3126,16 @@
       playHint.style.opacity = '';
       void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
       wordPillEl.classList.add('materialize');
-      wordPillEl.classList.add('waiting');
+      if(turn.kind !== 'final') wordPillEl.classList.add('waiting');
       if(turn.style === 'clues'){
         chevronsLeft.style.opacity = '1';
         chevronsRight.style.opacity = '1';
+      }
+      if(turn.kind === 'final'){
+        // Tout premier mot du palier : le mot n'est pas encore tapable, seul
+        // le bouton bleu "1er indice" lance la manche (voir son handler).
+        document.getElementById('screen-play').classList.add('finale-pending-start');
+        document.getElementById('btn-not-found').disabled = false;
       }
     }, PLAY_REVEAL_DELAY);
   }
@@ -3120,6 +3159,12 @@
   function unlockInput(){ inputLocked = false; setPlayControlsEnabled(true); }
 
   document.getElementById('word-pill').addEventListener('click', () => {
+    if(state.currentTurn.kind === 'final' && !state.turnMusicStarted){
+      // En finale, le tout premier lancement du palier passe uniquement par
+      // le bouton bleu "1er indice" (voir son handler) — le mot n'est pas
+      // tapable avant ça, pour ne garder qu'un seul geste de départ.
+      return;
+    }
     if(state.running){
       // pause
       state.running = false;
@@ -3592,6 +3637,23 @@
   document.getElementById('btn-not-found').addEventListener('click', () => {
     if(inputLocked) return;
     const turn = state.currentTurn;
+    if(turn.kind === 'final' && !state.turnMusicStarted){
+      // Tout premier appui du palier : lance le chrono ET révèle le 1er
+      // indice en un seul geste (voir aussi le guard sur le tap du mot).
+      state.running = true;
+      state.turnMusicStarted = true;
+      document.getElementById('screen-play').classList.remove('finale-pending-start');
+      document.getElementById('word-pill').classList.remove('waiting', 'paused-hidden');
+      document.getElementById('play-hint').textContent = "";
+      setPlayControlsEnabled(true);
+      state.timerHandle = setInterval(tick, 1000);
+      MUSIC.setDuck(1);
+      SFX.indice();
+      state.clueCount += 1;
+      renderChevrons();
+      MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
+      return;
+    }
     if(turn.style === 'cycle'){
       SFX.pass();
       lockInput();
