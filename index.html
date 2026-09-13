@@ -1770,26 +1770,69 @@
     };
   })();
 
+  // Mots déjà tirés, toutes parties confondues (persisté sur l'appareil comme
+  // la liste noire ci-dessus) : on les exclut des tirages suivants pour éviter
+  // de retomber dessus trop vite, jusqu'à ce qu'il ne reste plus qu'une réserve
+  // d'environ 300 mots frais dans toute la base — à ce moment-là, le cycle
+  // repart de zéro (comme un jeu de cartes qu'on rebat une fois épuisé).
+  const WORD_RECYCLE_THRESHOLD = 300;
+  const PLAYED_WORDS = (function(){
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem('mdp_played_words') || '[]'); } catch(e){}
+    function save(){ try { localStorage.setItem('mdp_played_words', JSON.stringify(list)); } catch(e){} }
+    return {
+      has(word){ return list.includes(word); },
+      add(word){ if(!list.includes(word)){ list.push(word); save(); } },
+      reset(){ list = []; save(); },
+      count(){ return list.length; },
+    };
+  })();
+  const TOTAL_WORD_COUNT = Object.keys(WORD_BANK).reduce((n, cat) => n + WORD_BANK[cat].length, 0);
+
   function drawTieredWords(n, tiers){
-    let pool = [];
-    Object.keys(WORD_BANK).forEach(cat => {
-      WORD_BANK[cat].forEach(item => { if(tiers.includes(item.d) && !WORD_BLACKLIST.has(item.w)) pool.push(item.w); });
-    });
-    pool = shuffle(pool);
+    // Réserve fraîche trop basse pour toute la base : on relance le cycle avant
+    // même de construire le pool de ce tirage.
+    if((TOTAL_WORD_COUNT - PLAYED_WORDS.count()) <= WORD_RECYCLE_THRESHOLD) PLAYED_WORDS.reset();
+
+    function buildPool(excludePlayed){
+      const p = [];
+      Object.keys(WORD_BANK).forEach(cat => {
+        WORD_BANK[cat].forEach(item => {
+          if(!tiers.includes(item.d) || WORD_BLACKLIST.has(item.w)) return;
+          if(excludePlayed && PLAYED_WORDS.has(item.w)) return;
+          p.push(item.w);
+        });
+      });
+      return p;
+    }
+
+    let pool = shuffle(buildPool(true));
+    if(pool.length < n){
+      // Ce niveau précis n'a plus assez de mots frais (même si la base entière
+      // en a encore) : on relance le cycle entièrement plutôt que de retomber
+      // sur un pool trop restreint pour ce tirage.
+      PLAYED_WORDS.reset();
+      pool = shuffle(buildPool(false));
+    }
     if(pool.length === 0){
       // niveau trop restreint : on élargit à tous les niveaux (mots blacklistés
       // toujours exclus à ce stade)
-      Object.keys(WORD_BANK).forEach(cat => WORD_BANK[cat].forEach(item => { if(!WORD_BLACKLIST.has(item.w)) pool.push(item.w); }));
-      pool = shuffle(pool);
+      pool = shuffle(Object.keys(WORD_BANK).reduce((p, cat) => {
+        WORD_BANK[cat].forEach(item => { if(!WORD_BLACKLIST.has(item.w)) p.push(item.w); });
+        return p;
+      }, []));
     }
     if(pool.length === 0){
       // Cas extrême (quasi toute la base blacklistée) : on ignore la blacklist
       // plutôt que de planter faute de mots disponibles.
-      Object.keys(WORD_BANK).forEach(cat => WORD_BANK[cat].forEach(item => pool.push(item.w)));
-      pool = shuffle(pool);
+      pool = shuffle(Object.keys(WORD_BANK).reduce((p, cat) => {
+        WORD_BANK[cat].forEach(item => p.push(item.w));
+        return p;
+      }, []));
     }
     const result = [];
     for(let i=0;i<n;i++) result.push(pool[i % pool.length]);
+    result.forEach(w => PLAYED_WORDS.add(w));
     return result;
   }
 
@@ -3802,7 +3845,16 @@
   // ---- End of turn ----
   function endTurn(){
     const turn = state.currentTurn;
-    if(turn.kind === 'qualif'){
+    if(turn.kind === 'final'){
+      // Palier perdu par timeout : la piste de chrono (finaleEarly/finaleLate)
+      // inclut elle aussi son propre son de fin de temps à la toute fin du
+      // fichier — on la laisse terminer plutôt que de la couper net (elle
+      // s'arrête toute seule, {loop:false}). Palier réussi (trouvé avant le
+      // temps, ou pile au buzzer) : coupe nette, l'écran de décision gère sa
+      // propre ambiance immédiatement.
+      const success = state.foundCount >= turn.target;
+      if(state.timeLeft > 0 || success) MUSIC.stop();
+    } else if(turn.kind === 'qualif'){
       // Fin par timeout : la musique du chrono inclut le son de fin de temps,
       // on la laisse jouer jusqu'au bout — c'est son 'ended' naturel qui relance
       // la musique du menu. Fin avant le timeout : déjà géré par
@@ -3811,13 +3863,11 @@
       if(state.timeLeft <= 0){
         MUSIC.onEnded(() => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); });
       }
-    } else if(turn.kind !== 'final'){
+    } else {
       MUSIC.stop(); // coupe la musique en cours (menu), quelle que soit la façon dont la manche s'est terminée
       // Petit silence avant de reprendre la musique du menu, pour laisser la fin de
       // manche respirer plutôt que d'enchaîner instantanément.
       setTimeout(() => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); }, 1000);
-    } else {
-      MUSIC.stop(); // finale : l'écran de décision gère sa propre ambiance immédiatement
     }
     const elapsed = turn.chrono ? state.timeLeft : (state.turnStartTime - state.timeLeft);
 
