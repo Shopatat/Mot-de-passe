@@ -3238,6 +3238,10 @@
       el.disabled = !enabled;
       el.classList.toggle('no-dim', !dim);
     });
+    // "Passer" a sa propre règle de désactivation (objectif qui deviendrait
+    // mathématiquement impossible) : on la réapplique après la réactivation
+    // générale ci-dessus, sinon elle serait systématiquement écrasée.
+    if(enabled) updateSkipFinalBtnState();
   }
 
   // Verrou anti-rafale : le passage d'un mot à l'autre (ou la fermeture de
@@ -3322,9 +3326,23 @@
       notFoundBtn.classList.add('btn-wrong');
     }
   }
+  // "Passer" (skip volontaire, dispo à tout moment sur un mot en finale) : on le
+  // grise dès qu'il ne reste plus aucune marge, c-à-d si passer CE mot rendrait
+  // l'objectif de 5 mots mathématiquement hors de portée. Ne s'applique qu'à ce
+  // skip délibéré — ni à un "interdit" (faute, qui fait perdre malgré tout), ni
+  // au "✗ Pas trouvé" forcé après les 3 mots-indices (le coéquipier a eu sa
+  // chance, ce n'est pas un choix qu'on pourrait empêcher).
+  function updateSkipFinalBtnState(){
+    if(state.currentTurn.style !== 'clues') return;
+    const skipBtn = document.getElementById('btn-skip-final');
+    if(!skipBtn) return;
+    const noSlackLeft = state.target && (state.foundCount + state.pool.length) <= state.target;
+    skipBtn.disabled = noSlackLeft;
+  }
   function renderChevrons(){
     if(state.currentTurn.style !== 'clues') return;
     updateNotFoundBtnState();
+    updateSkipFinalBtnState();
     const lit = MAX_CLUES - (state.clueCount - 1);
     // Gauche : la flèche adjacente au mot est la dernière (index le plus élevé).
     const leftSpans = document.getElementById('chevrons-left').querySelectorAll('span');
