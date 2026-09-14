@@ -4448,6 +4448,7 @@
 
     // 1er passage : le montant se cache, l'objectif du palier apparaît (pastilles).
     sweepChevrons(() => {
+      SFX.wordReveal();
       face.style.opacity = '0';
       dots.style.opacity = '1';
     }, () => {
@@ -4485,6 +4486,7 @@
           setTimeout(() => {
             // 2e passage : l'objectif se cache, le montant réapparaît, prêt à jouer.
             sweepChevrons(() => {
+              SFX.wordReveal();
               dots.style.opacity = '0';
               face.style.opacity = '1';
             }, () => {
