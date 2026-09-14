@@ -4078,9 +4078,15 @@
     wordEl.style.opacity = '';
     wordEl.style.animation = '';
     if(animate === false){
-      setWordText(b.word.toUpperCase(), 'buzz-word');
-      void pillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque tie-break
-      pillEl.classList.add('materialize');
+      pillEl.style.opacity = '0'; // caché : ne s'affiche qu'après PLAY_REVEAL_DELAY, comme goToPlay()
+      setBuzzControlsEnabled(false);
+      setTimeout(() => {
+        setWordText(b.word.toUpperCase(), 'buzz-word');
+        pillEl.style.opacity = '';
+        void pillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque tie-break
+        pillEl.classList.add('materialize');
+        setBuzzControlsEnabled(true);
+      }, PLAY_REVEAL_DELAY);
     } else {
       animateBuzzWordChange(b.word);
     }
