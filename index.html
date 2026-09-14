@@ -1181,6 +1181,7 @@
     <div class="chip-group" id="buzz-points-row" style="justify-content:center; margin-bottom:4px;"></div>
     <div class="word-row">
       <div class="word-pill" id="buzz-word-pill">
+        <div class="word-flare" id="buzz-word-flare"></div>
         <div class="word-wipe" id="buzz-word-wipe">
           <div class="wipe-chevron-group left" id="buzz-wipe-left">
             <span></span><span></span><span></span>
@@ -3173,7 +3174,7 @@
     // Son de lancement de la partie déclenché ici, au moment où le joueur valide
     // "C'est parti !" — pas au tap sur le mot (qui, lui, ne fait que démarrer le chrono).
     const turn = state.currentTurn;
-    if(turn.kind === 'qualif' || turn.kind === 'final') SFX.roundStart();
+    if(turn.kind === 'qualif' || turn.kind === 'final' || turn.kind === 'training') SFX.roundStart();
     goToPlay();
   });
 
@@ -4061,6 +4062,7 @@
     showScreen('buzzIntro');
   }
   document.getElementById('btn-buzz-ready').addEventListener('click', () => {
+    SFX.roundStart();
     startBuzzRound(false);
   });
   function startBuzzRound(animate){
@@ -4072,11 +4074,13 @@
     showScreen('buzzPlay');
     const pillEl = document.getElementById('buzz-word-pill');
     const wordEl = document.getElementById('buzz-word');
-    pillEl.classList.remove('dematerialize');
+    pillEl.classList.remove('dematerialize', 'materialize');
     wordEl.style.opacity = '';
     wordEl.style.animation = '';
     if(animate === false){
       setWordText(b.word.toUpperCase(), 'buzz-word');
+      void pillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque tie-break
+      pillEl.classList.add('materialize');
     } else {
       animateBuzzWordChange(b.word);
     }
