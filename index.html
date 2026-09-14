@@ -179,6 +179,21 @@
     font-size:11px; text-transform:uppercase; letter-spacing:1px; font-weight:800;
     color: var(--gold-dim); margin: 12px 0 2px;
   }
+  /* Bruitages/Musiques repliés par défaut : même principe que le récap de
+     manche (bandeau cliquable + chevron + hauteur animée). */
+  .sound-group{ margin-top:10px; }
+  .sound-group-toggle{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    width:100%; padding:9px 2px; background:none; border:none; border-bottom:1px solid var(--card-edge);
+    cursor:pointer; user-select:none; -webkit-tap-highlight-color: transparent;
+  }
+  .sound-group-toggle:active{ opacity:0.7; }
+  .sound-group-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:1px; font-weight:800; color: var(--gold-dim);
+  }
+  .sound-group-chevron{ flex-shrink:0; color: var(--text-dim); font-size:10px; transition: transform .25s ease; }
+  .sound-group.expanded .sound-group-chevron{ transform: rotate(180deg); }
+  .sound-group-body{ max-height:0; overflow:hidden; transition: max-height .3s ease; }
   .chip{
     padding: 8px 13px; border-radius: 999px;
     background: linear-gradient(180deg, var(--bg-alt), #05070c);
@@ -2477,18 +2492,44 @@
     return { importFile, resetSlot, has, get, loadFromDB, previewSlot, stopPreview, setOnPreviewChange, getCurrentPreviewKey, updatePreviewVolume };
   })();
 
+  // Repliés par défaut ; se souvient de l'état ouvert/fermé d'une session à
+  // l'autre du menu réglages (mais pas d'un rechargement de page à l'autre).
+  const soundGroupExpanded = { sfx:false, music:false };
   function renderCustomSoundList(){
     const container = document.getElementById('custom-sound-list');
     if(!container) return;
     container.innerHTML = '';
-    let lastKind = null;
+    let currentBody = null;
     SOUND_SLOTS.forEach(slot => {
-      if(slot.kind !== lastKind){
-        lastKind = slot.kind;
-        const groupLabel = document.createElement('div');
-        groupLabel.className = 'custom-sound-group-label';
-        groupLabel.textContent = slot.kind === 'music' ? 'Musiques' : 'Bruitages';
-        container.appendChild(groupLabel);
+      if(!currentBody || currentBody.dataset.kind !== slot.kind){
+        const kind = slot.kind;
+        const isExpanded = soundGroupExpanded[kind];
+        const group = document.createElement('div');
+        group.className = 'sound-group' + (isExpanded ? ' expanded' : '');
+        group.innerHTML = `
+          <button type="button" class="sound-group-toggle">
+            <span class="sound-group-label">${kind === 'music' ? 'Musiques' : 'Bruitages'}</span>
+            <span class="sound-group-chevron">▼</span>
+          </button>
+          <div class="sound-group-body" data-kind="${kind}"></div>`;
+        container.appendChild(group);
+        const body = group.querySelector('.sound-group-body');
+        currentBody = body;
+        group.querySelector('.sound-group-toggle').addEventListener('click', () => {
+          const nowExpanded = !group.classList.contains('expanded');
+          soundGroupExpanded[kind] = nowExpanded;
+          if(nowExpanded){
+            group.classList.add('expanded');
+            body.style.maxHeight = body.scrollHeight + 'px';
+          } else {
+            body.style.maxHeight = body.scrollHeight + 'px'; // fige la hauteur avant de la ramener à 0
+            requestAnimationFrame(() => {
+              body.style.maxHeight = '0px';
+              group.classList.remove('expanded');
+            });
+          }
+        });
+        if(isExpanded){ requestAnimationFrame(() => { body.style.maxHeight = body.scrollHeight + 'px'; }); }
       }
       const has = CUSTOM_SOUNDS.has(slot.key);
       const entry = CUSTOM_SOUNDS.get(slot.key);
@@ -2514,7 +2555,7 @@
         </div>
         <input type="file" accept="audio/*" class="custom-sound-file-input" style="display:none;">
       `;
-      container.appendChild(row);
+      currentBody.appendChild(row);
       const fileInput = row.querySelector('.custom-sound-file-input');
       row.querySelector('.import-btn').addEventListener('click', () => { fileInput.click(); });
       row.querySelector('.preview-btn').addEventListener('click', () => { CUSTOM_SOUNDS.previewSlot(slot.key); });
