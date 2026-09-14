@@ -2370,7 +2370,14 @@
       if(onPreviewChange) onPreviewChange(currentPreviewKey);
     }
     function stopPreview(){
-      if(currentPreviewAudio){ currentPreviewAudio.pause(); currentPreviewAudio = null; }
+      // Deux types possibles selon le son : un <audio> classique (musiques,
+      // sons perso importés) qui a .pause(), ou un AudioBufferSourceNode
+      // (bruitages courts joués via Web Audio) qui n'a que .stop().
+      if(currentPreviewAudio){
+        if(typeof currentPreviewAudio.pause === 'function'){ currentPreviewAudio.pause(); }
+        else if(typeof currentPreviewAudio.stop === 'function'){ try{ currentPreviewAudio.stop(); }catch(e){} }
+        currentPreviewAudio = null;
+      }
       currentPreviewKey = null;
       notifyPreviewChange();
     }
