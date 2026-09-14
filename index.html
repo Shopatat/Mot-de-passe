@@ -242,6 +242,7 @@
     text-shadow: 0 1px 3px rgba(6,20,40,0.55), 0 0 8px rgba(210,235,255,0.4);
   }
   .btn-indice:active{ box-shadow: 0 1px 0 #2c5e85, inset 0 1px 0 rgba(255,255,255,0.25); }
+  .btn-indice sup{ font-size:0.62em; vertical-align:super; }
   .check-glow{
     color:#e8ffee;
     text-shadow: 0 0 4px #baffcf, 0 0 10px rgba(80,255,140,0.85), 0 0 18px rgba(60,220,110,0.6);
@@ -3619,12 +3620,12 @@
   // Le bouton "indice" de la finale évolue à chaque appui : 1er indice → 2ème
   // → 3ème → puis seulement là il se transforme en "Pas trouvé" (le vrai
   // abandon du mot). MAX_CLUES = 3 indices, donc clueCount va de 1 à 4.
-  const CLUE_LABELS = ['1er mot-indice', '2ème mot-indice', '3ème mot-indice'];
+  const CLUE_LABELS = ['1<sup>er</sup> mot-indice', '2<sup>ème</sup> mot-indice', '3<sup>ème</sup> mot-indice'];
   function updateNotFoundBtnState(){
     if(state.currentTurn.style !== 'clues') return;
     const notFoundBtn = document.getElementById('btn-not-found');
     if(state.clueCount <= MAX_CLUES){
-      notFoundBtn.textContent = CLUE_LABELS[state.clueCount - 1];
+      notFoundBtn.innerHTML = CLUE_LABELS[state.clueCount - 1];
       notFoundBtn.classList.remove('btn-wrong');
       notFoundBtn.classList.add('btn-indice');
     } else {
