@@ -136,6 +136,10 @@
   .swap-btn:active{ transform: scale(0.88); }
   .swap-btn.spin{ animation: swapSpin .3s ease; }
   @keyframes swapSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(180deg); } }
+  .vswap-row{ display:flex; gap:8px; align-items:center; margin:2px 0; }
+  .vswap-row > div{ flex:1; display:flex; justify-content:center; }
+  .vswap-row .swap-btn{ width:28px; height:28px; font-size:14px; opacity:0.85; }
+  .vswap-row .swap-spacer{ flex:0 0 34px; }
   .block-header{ display:flex; align-items:center; gap:8px; font-weight:800; font-size:14px; margin-bottom:4px; }
   .dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; }
 
@@ -2603,6 +2607,17 @@
         data.names[2*t+1] = tmp;
         save();
       },
+      // Échange une seule colonne ("giver" ou "guesser") entre deux équipes
+      // adjacentes t et t+1 — ex: le "Fait deviner" de l'Équipe 1 avec celui
+      // de l'Équipe 2, sans toucher au reste.
+      swapAcrossTeams(col, t){
+        const i = (col === 'giver') ? 2*t : 2*t+1;
+        const j = (col === 'giver') ? 2*(t+1) : 2*(t+1)+1;
+        const tmp = data.names[i];
+        data.names[i] = data.names[j];
+        data.names[j] = tmp;
+        save();
+      },
     };
   })();
 
@@ -3055,7 +3070,43 @@
     const N = state.playerCount;
 
     if(state.subMode === 'team' && state.teamAssignment === 'predefined'){
+      // Références gardées d'une itération à l'autre pour pouvoir câbler les
+      // rangées d'échange vertical entre l'équipe t-1 et l'équipe t (voir
+      // vswap-row ci-dessous), une fois les deux blocs présents dans le DOM.
+      const giverInputs = [], guesserInputs = [];
       for(let t=0; t<N/2; t++){
+        if(t > 0){
+          // Rangée fine entre deux équipes : un ⇅ sous chaque colonne pour
+          // échanger uniquement ce rôle-là avec l'équipe juste au-dessus,
+          // sans toucher à l'autre colonne ni rouvrir le swap horizontal.
+          const vrow = document.createElement('div');
+          vrow.className = 'vswap-row';
+          vrow.innerHTML = `
+            <div><button type="button" class="swap-btn" id="vswap-giver-${t}" title="Échanger les \u00ab Fait deviner \u00bb avec l'équipe du dessus" aria-label="Échanger les Fait deviner avec l'équipe du dessus">⇅</button></div>
+            <div class="swap-spacer"></div>
+            <div><button type="button" class="swap-btn" id="vswap-guesser-${t}" title="Échanger les \u00ab Devine \u00bb avec l'équipe du dessus" aria-label="Échanger les Devine avec l'équipe du dessus">⇅</button></div>`;
+          container.appendChild(vrow);
+          const vGiverBtn = vrow.querySelector(`#vswap-giver-${t}`);
+          const vGuesserBtn = vrow.querySelector(`#vswap-guesser-${t}`);
+          vGiverBtn.addEventListener('click', () => {
+            PLAYERNAMES.swapAcrossTeams('giver', t-1);
+            const tmp = giverInputs[t-1].value;
+            giverInputs[t-1].value = giverInputs[t].value;
+            giverInputs[t].value = tmp;
+            vGiverBtn.classList.remove('spin');
+            void vGiverBtn.offsetWidth;
+            vGiverBtn.classList.add('spin');
+          });
+          vGuesserBtn.addEventListener('click', () => {
+            PLAYERNAMES.swapAcrossTeams('guesser', t-1);
+            const tmp = guesserInputs[t-1].value;
+            guesserInputs[t-1].value = guesserInputs[t].value;
+            guesserInputs[t].value = tmp;
+            vGuesserBtn.classList.remove('spin');
+            void vGuesserBtn.offsetWidth;
+            vGuesserBtn.classList.add('spin');
+          });
+        }
         const block = document.createElement('div');
         block.className = 'team-name-block';
         block.innerHTML = `
@@ -3075,6 +3126,8 @@
         const giverInput = block.querySelector(`#team${t}-giver`);
         const guesserInput = block.querySelector(`#team${t}-guesser`);
         const swapBtn = block.querySelector(`#team${t}-swap`);
+        giverInputs[t] = giverInput;
+        guesserInputs[t] = guesserInput;
         giverInput.addEventListener('input', () => PLAYERNAMES.setTeamGiver(t, giverInput.value.trim()));
         guesserInput.addEventListener('input', () => PLAYERNAMES.setTeamGuesser(t, guesserInput.value.trim()));
         swapBtn.addEventListener('click', () => {
