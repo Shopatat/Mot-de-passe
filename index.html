@@ -369,6 +369,7 @@
     text-align:center; gap:8px; padding: 28px 10px;
   }
   .handoff-label{ color: var(--text-dim); font-size:13px; letter-spacing:1px; text-transform:uppercase; font-weight:700; }
+  .tiebreak-text{ font-size:13px; font-weight:700; letter-spacing:0.3px; color:#eaf6ff; text-shadow: 0 0 6px rgba(150,220,255,0.35); line-height:1.4; }
   .handoff-team{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:28px; letter-spacing:0.5px; line-height:1.15; }
   .handoff-role{ font-size:14px; color:var(--text-dim); }
   .handoff-role b{ color: var(--text); }
@@ -910,6 +911,10 @@
       <div id="blacklist-word-list"></div>
       <button class="text-action subtle" id="btn-export-blacklist" style="margin-top:6px; opacity:0.85;">Copier la liste</button>
 
+      <label class="field-label" style="margin-top:18px;">📚 Réserve de mots</label>
+      <p class="marquee-sub" style="text-align:left; font-style:normal; margin:-4px 0 8px;" id="word-pool-status"></p>
+      <button class="text-action subtle" id="btn-reset-word-pool" style="margin-top:6px; opacity:0.85;">Réinitialiser maintenant</button>
+
       <button class="btn btn-gold" id="btn-close-settings" style="margin-top:16px; width:100%;">OK</button>
     </div>
   </div>
@@ -1166,12 +1171,12 @@
 
   <!-- TIE-BREAK BUZZ : ANNONCE -->
   <section class="screen" id="screen-buzz-intro">
-    <div class="phase-tag">Égalité — Tie-break buzz</div>
     <div class="card handoff-wrap">
-      <div class="summary-icon">⚡</div>
-      <div class="handoff-label">Un seul mot. Les équipes font deviner à tour de rôle, un indice à la fois. Premier·ère qui trouve marque le point.</div>
+      <div class="summary-title">Tie Break</div>
+      <div class="tiebreak-text">Un seul mot pour toutes les équipes.</div>
+      <div class="tiebreak-text">À son tour, chacune donne un mot-indice pour son équipe. Si le mot est trouvé, l'équipe marque le point. Sinon, ce mot passe à l'équipe suivante. Un interdit prononcé élimine l'équipe.</div>
       <div class="handoff-team" id="buzz-intro-teams" style="font-size:17px;"></div>
-      <div class="handoff-role">Première équipe à 2 points en finale.</div>
+      <div class="handoff-role">La première à 2 points accède à la finale</div>
     </div>
     <button class="btn btn-gold" id="btn-buzz-ready">C'est parti</button>
   </section>
@@ -1194,6 +1199,7 @@
       </div>
     </div>
     <p class="footer-note" id="buzz-turn-label" style="min-height:2.8em; line-height:1.4; font-size:14px;"></p>
+    <p class="footer-note" style="font-size:12px; margin:4px 0;">⚠️ Interdits : mot composé, même famille, même son, mime</p>
     <button class="btn btn-gold" id="btn-buzz-elim-continue" style="display:none;">C'est bon, on reprend</button>
     <div class="controls-row">
       <button class="btn btn-wrong" id="btn-buzz-not-found">✗ Pas trouvé</button>
@@ -1583,7 +1589,7 @@
       {w:"Esthéticienne",d:2},{w:"Masseur",d:2},{w:"Parfumeur",d:2},{w:"Chocolatier",d:2},
       {w:"Brasseur",d:2},
       {w:"Ébéniste",d:3},{w:"Sommelier",d:3},{w:"Archiviste",d:3},{w:"Paléontologue",d:3},
-      {w:"Astrophysicien",d:3},{w:"Apiculteur",d:3},{w:"Herboriste",d:3},{w:"Cordonnier",d:3},
+      {w:"Apiculteur",d:3},{w:"Herboriste",d:3},{w:"Cordonnier",d:3},
       {w:"Horloger",d:3},{w:"Fossoyeur",d:3},{w:"Bourreau",d:3},{w:"Alchimiste",d:3},
       {w:"Corsaire",d:3},{w:"Croupier",d:3},{w:"Marionnettiste",d:3},{w:"Funambule",d:3},
       {w:"Dresseur",d:3},{w:"Diplomate",d:3},{w:"Kinésithérapeute",d:3},{w:"Colporteur",d:3},
@@ -2716,10 +2722,21 @@
     Object.keys(WORD_BANK).forEach(cat => WORD_BANK[cat].forEach(item => validWords.add(item.w)));
     WORD_BLACKLIST.all().forEach(w => { if(!validWords.has(w)) WORD_BLACKLIST.remove(w); });
   }
+  function renderWordPoolStatus(){
+    const used = PLAYED_WORDS.count();
+    const fresh = TOTAL_WORD_COUNT - used;
+    document.getElementById('word-pool-status').textContent =
+      `${used} mots utilisés sur ${TOTAL_WORD_COUNT} — réinitialisation automatique à ${WORD_RECYCLE_THRESHOLD} mots frais restants (reste ${fresh}).`;
+  }
+  document.getElementById('btn-reset-word-pool').addEventListener('click', () => {
+    PLAYED_WORDS.reset();
+    renderWordPoolStatus();
+  });
   function openSettingsOverlay(){
     document.getElementById('settings-overlay').classList.add('visible');
     pruneBlacklistAgainstWordBank();
     renderBlacklistPanel();
+    renderWordPoolStatus();
   }
   const btnExportBlacklist = document.getElementById('btn-export-blacklist');
   if(btnExportBlacklist){
