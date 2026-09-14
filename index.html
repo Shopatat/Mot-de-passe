@@ -3463,13 +3463,14 @@
   // Variante pour deux volets qui se croisent l'un l'autre (au lieu de croiser un
   // centre fixe) : déclenche quand le bord meneur de elA a rejoint/dépassé le bord
   // meneur de elB. Utilisée quand les deux éléments convergent l'un vers l'autre.
-  function waitForStripsCross(elA, elB, callback){
+  function waitForStripsCross(elA, elB, callback, leadPx){
+    const lead = leadPx || 0;
     let done = false;
     function poll(){
       if(done) return;
       const a = elA.getBoundingClientRect();
       const b = elB.getBoundingClientRect();
-      if(a.right >= b.left){
+      if(a.right + lead >= b.left){
         done = true;
         callback();
         return;
@@ -4423,6 +4424,10 @@
     stepEl.appendChild(dots);
 
     const SWEEP_DURATION = 900;
+    // Avance (en px) à laquelle le son se déclenche par rapport au croisement visuel
+    // des volets : sans elle, le son semblait démarrer après que les volets soient
+    // déjà arrivés au milieu. Ajustable si le ressenti n'est pas encore le bon.
+    const LADDER_SOUND_LEAD_PX = 40;
     // Fait traverser un jeu de volets LED de bord à bord (le gauche part de la
     // gauche et sort à droite, le droit fait l'inverse) : onMidpoint s'exécute
     // quand ils se croisent au centre (tout est recouvert), onComplete une fois
@@ -4440,15 +4445,16 @@
         stripLeft.style.transform = 'translateX(240%)';
         stripRight.style.transform = 'translateX(-240%)';
       });
-      // onMidpoint se déclenche pile quand les deux volets se croisent (leurs bords
-      // se rejoignent), pas à un délai fixe qui suppose le milieu de l'animation.
+      // Le son part un peu avant le croisement réel (LADDER_SOUND_LEAD_PX), tandis
+      // qu'onMidpoint continue de se déclencher pile au croisement (leurs bords se
+      // rejoignent), pas à un délai fixe qui suppose le milieu de l'animation.
+      waitForStripsCross(stripLeft, stripRight, () => SFX.wordReveal(), LADDER_SOUND_LEAD_PX);
       waitForStripsCross(stripLeft, stripRight, onMidpoint);
       setTimeout(() => { led.remove(); if(onComplete) onComplete(); }, SWEEP_DURATION + 20);
     }
 
     // 1er passage : le montant se cache, l'objectif du palier apparaît (pastilles).
     sweepChevrons(() => {
-      SFX.wordReveal();
       face.style.opacity = '0';
       dots.style.opacity = '1';
     }, () => {
@@ -4486,7 +4492,6 @@
           setTimeout(() => {
             // 2e passage : l'objectif se cache, le montant réapparaît, prêt à jouer.
             sweepChevrons(() => {
-              SFX.wordReveal();
               dots.style.opacity = '0';
               face.style.opacity = '1';
             }, () => {
@@ -4563,8 +4568,8 @@
       `Prochain palier : <b>${euro(PALIERS[turn.level].gain)}</b> — 5 mots parmi ${PALIERS[turn.level].pool}`;
     renderWordRecap('decision-recap', true);
     // L'échelle reflète immédiatement le vrai état (palier gagné en vert, suivant
-    // en doré) : la révélation animée se joue automatiquement à l'arrivée sur cet
-    // écran, avant même que le joueur ait le choix de continuer ou de s'arrêter.
+    // en doré) ; l'animation LED, elle, ne se joue plus toute seule ici — elle
+    // attend le clic sur "Jouer pour X €" (voir le handler du bouton plus bas).
     renderLadder('decision-ladder', turn.level + 1);
 
     const jokerZone = document.getElementById('decision-joker-zone');
@@ -4578,18 +4583,11 @@
       jokerZone.appendChild(btn);
     }
 
+    document.getElementById('btn-continue-final').textContent = `Jouer pour ${euro(PALIERS[turn.level].gain)}`;
     const controls = document.getElementById('decision-controls');
-    controls.classList.remove('revealed');
-    controls.classList.add('pending');
+    controls.classList.remove('pending');
+    controls.classList.add('revealed');
     showScreen('decision');
-    // La révélation LED se joue toute seule dès l'arrivée sur l'écran ; le choix
-    // Continuer/S'arrêter n'apparaît qu'une fois qu'elle est terminée.
-    setTimeout(() => {
-      playLadderReveal('decision-ladder', turn.level + 1, () => {
-        controls.classList.remove('pending');
-        controls.classList.add('revealed');
-      });
-    }, 400);
   }
 
   document.getElementById('btn-continue-final').addEventListener('click', () => {
@@ -4598,7 +4596,9 @@
     const btnStop = document.getElementById('btn-stop-final');
     btnContinue.disabled = true;
     btnStop.disabled = true;
-    startPalier(nextLevel);
+    playLadderReveal('decision-ladder', nextLevel, () => {
+      startPalier(nextLevel);
+    });
   });
   document.getElementById('btn-stop-final').addEventListener('click', () => {
     state.endedByStop = true;
