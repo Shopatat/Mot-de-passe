@@ -2139,6 +2139,7 @@
     }
     function pause(){ if(audio) audio.pause(); }
     function resume(){ if(audio){ applyVolume(); audio.play().catch(()=>{}); } }
+    function isPlaying(){ return !!(audio && !audio.paused); }
     // Permet de savoir quand la piste en cours se termine NATURELLEMENT (fin de
     // fichier, ex: timeout des qualifs dont le son de fin est inclus dans la
     // musique) — pas via un stop() manuel, qui ne déclenche jamais 'ended'.
@@ -2146,7 +2147,7 @@
       if(!audio || audio.ended){ cb(); return; }
       audio.addEventListener('ended', cb, { once:true });
     }
-    return { play, stop, pause, resume, applyVolume, onEnded, current(){ return currentKey; } };
+    return { play, stop, pause, resume, isPlaying, applyVolume, onEnded, current(){ return currentKey; } };
   })();
 
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
@@ -5001,6 +5002,20 @@
   }
   document.addEventListener('click', retryMusicOnFirstInteraction);
   document.addEventListener('touchstart', retryMusicOnFirstInteraction, { passive:true });
+
+  // Coupe la musique quand l'appli passe en arrière-plan (balayage, verrouillage,
+  // changement d'appli) — sinon elle continue de jouer en boucle côté iOS/Android
+  // même écran éteint. Ne relance au retour que si elle jouait vraiment avant
+  // (si le joueur avait déjà mis le jeu en pause manuellement, ça le reste).
+  let musicWasPlayingBeforeHidden = false;
+  document.addEventListener('visibilitychange', () => {
+    if(document.hidden){
+      musicWasPlayingBeforeHidden = MUSIC.isPlaying();
+      MUSIC.pause();
+    } else if(musicWasPlayingBeforeHidden){
+      MUSIC.resume();
+    }
+  });
 
 })();
 </script>
