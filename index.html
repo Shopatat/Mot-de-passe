@@ -36,15 +36,10 @@
     --text-dim: #8a92a3;
     --radius: 18px;
     /* Habillage relevé sur le plateau (extrait qualif) : le balayage entre deux
-       mots n'est pas rouge mais crème/ambre chaud sur cuivre incandescent, et
-       le compteur de mots est une piste bronze à pastilles gris argent. */
+       mots n'est pas rouge mais crème/ambre chaud sur cuivre incandescent. */
     --sweep-hot: #f6ecd8;      /* le crème des points allumés du chevron */
     --sweep-amber: #9a5426;    /* le cuivre du fond de chevron */
     --sweep-glow: 255,150,70;  /* halo orange autour du balayage */
-    --track-bronze: #2e1409;   /* intérieur de la piste du compteur */
-    --track-bronze-hi: #6b3a1d;
-    --track-rim: #b9b9b4;      /* liseré gris clair de la piste */
-    --puck-off: #c9c9c2;       /* pastille non jouée : gris argent clair */
   }
   *{box-sizing:border-box;}
   html,body{
@@ -465,20 +460,21 @@
   }
   .timer-badge.urgent{ color: var(--red); border-color: var(--red); box-shadow: 0 0 8px rgba(255,59,48,0.6), inset 0 0 6px rgba(0,0,0,0.6); }
 
-  /* Piste du compteur de mots : sur le plateau c'est un boîtier bronze foncé
-     cerclé d'un liseré gris clair mat (pas chromé animé), posé au-dessus du
-     bandeau et large d'environ la moitié de celui-ci. */
+  /* Piste du compteur de mots. On garde le boîtier sombre et le liseré chromé
+     animé d'origine — plus profond et plus joli que le bronze clair essayé un
+     temps — mais aux dimensions élargies pour accueillir 5 LED plus grosses. */
   .dot-row{ display:flex; justify-content:center; gap:13px; align-self:center; flex-wrap:wrap; max-width:100%;
-    background: linear-gradient(180deg, var(--track-bronze-hi) 0%, var(--track-bronze) 45%, #1d0c05 100%);
+    background: linear-gradient(180deg, #1c0d0c 0%, #0c0302 60%, #0c0302 100%);
     border:3px solid transparent; border-radius:999px; padding:7px 18px;
     position:relative;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.75), inset 0 -1px 0 rgba(255,190,130,0.12); }
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5); }
   .dot-row::before{
     content:""; position:absolute; inset:-3px; border-radius:inherit; padding:3px;
-    background: linear-gradient(180deg, #d6d6d0 0%, var(--track-rim) 45%, #7e7e79 100%);
+    background: conic-gradient(from var(--shine-angle), #4c4c50 0deg, #8c8c92 180deg, #4c4c50 360deg);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
+    animation: word-pill-shine 14s linear infinite;
     pointer-events:none;
     box-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
@@ -492,13 +488,11 @@
     background: radial-gradient(circle at 35% 28%, #6b6b6b 0%, #454545 45%, #2a2a2a 80%, #1a1a1a 100%);
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.65), inset 0 -1px 1px rgba(255,255,255,0.04);
   }
-  /* Dans la piste de jeu (et seulement là — l'échelle des paliers garde ses
-     points sombres), la pastille non jouée est un puck gris argent bombé,
-     comme les vrais boutons du décor. */
+  /* Dans la piste de jeu (et seulement là — l'échelle des paliers garde sa
+     taille), la LED éteinte est simplement agrandie : on conserve le gris-taupe
+     mat d'origine, qui se fond dans le noir du boîtier. */
   .dot-row .dot-mark{
     width:14px; height:14px;
-    background: radial-gradient(circle at 34% 26%, #ffffff 0%, #e2e2dc 22%, var(--puck-off) 52%, #8e8e88 82%, #6a6a65 100%);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.6), inset 0 -2px 3px rgba(0,0,0,0.28), inset 0 1px 1px rgba(255,255,255,0.55);
   }
   /* Allumage des pastilles en début de manche : du centre vers l'extérieur.
      Le délai est porté par --puck-delay, calculé au rendu. */
