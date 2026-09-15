@@ -35,6 +35,16 @@
     --text: #f5f3ea;
     --text-dim: #8a92a3;
     --radius: 18px;
+    /* Habillage relevé sur le plateau (extrait qualif) : le balayage entre deux
+       mots n'est pas rouge mais crème/ambre chaud sur cuivre incandescent, et
+       le compteur de mots est une piste bronze à pastilles gris argent. */
+    --sweep-hot: #f6ecd8;      /* le crème des points allumés du chevron */
+    --sweep-amber: #9a5426;    /* le cuivre du fond de chevron */
+    --sweep-glow: 255,150,70;  /* halo orange autour du balayage */
+    --track-bronze: #2e1409;   /* intérieur de la piste du compteur */
+    --track-bronze-hi: #6b3a1d;
+    --track-rim: #b9b9b4;      /* liseré gris clair de la piste */
+    --puck-off: #c9c9c2;       /* pastille non jouée : gris argent clair */
   }
   *{box-sizing:border-box;}
   html,body{
@@ -455,18 +465,20 @@
   }
   .timer-badge.urgent{ color: var(--red); border-color: var(--red); box-shadow: 0 0 8px rgba(255,59,48,0.6), inset 0 0 6px rgba(0,0,0,0.6); }
 
-  .dot-row{ display:flex; justify-content:center; gap:8px; align-self:center; flex-wrap:wrap; max-width:100%;
-    background: linear-gradient(180deg, #1c0d0c 0%, #0c0302 60%, #0c0302 100%);
-    border:3px solid transparent; border-radius:999px; padding:8px 16px;
+  /* Piste du compteur de mots : sur le plateau c'est un boîtier bronze foncé
+     cerclé d'un liseré gris clair mat (pas chromé animé), posé au-dessus du
+     bandeau et large d'environ la moitié de celui-ci. */
+  .dot-row{ display:flex; justify-content:center; gap:13px; align-self:center; flex-wrap:wrap; max-width:100%;
+    background: linear-gradient(180deg, var(--track-bronze-hi) 0%, var(--track-bronze) 45%, #1d0c05 100%);
+    border:3px solid transparent; border-radius:999px; padding:7px 18px;
     position:relative;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5); }
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.75), inset 0 -1px 0 rgba(255,190,130,0.12); }
   .dot-row::before{
     content:""; position:absolute; inset:-3px; border-radius:inherit; padding:3px;
-    background: conic-gradient(from var(--shine-angle), #4c4c50 0deg, #8c8c92 180deg, #4c4c50 360deg);
+    background: linear-gradient(180deg, #d6d6d0 0%, var(--track-rim) 45%, #7e7e79 100%);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    animation: word-pill-shine 14s linear infinite;
     pointer-events:none;
     box-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
@@ -479,6 +491,24 @@
     width:11px; height:11px; border-radius:50%; flex-shrink:0;
     background: radial-gradient(circle at 35% 28%, #6b6b6b 0%, #454545 45%, #2a2a2a 80%, #1a1a1a 100%);
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.65), inset 0 -1px 1px rgba(255,255,255,0.04);
+  }
+  /* Dans la piste de jeu (et seulement là — l'échelle des paliers garde ses
+     points sombres), la pastille non jouée est un puck gris argent bombé,
+     comme les vrais boutons du décor. */
+  .dot-row .dot-mark{
+    width:14px; height:14px;
+    background: radial-gradient(circle at 34% 26%, #ffffff 0%, #e2e2dc 22%, var(--puck-off) 52%, #8e8e88 82%, #6a6a65 100%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.6), inset 0 -2px 3px rgba(0,0,0,0.28), inset 0 1px 1px rgba(255,255,255,0.55);
+  }
+  /* Allumage des pastilles en début de manche : du centre vers l'extérieur.
+     Le délai est porté par --puck-delay, calculé au rendu. */
+  .dot-row.lighting .dot-mark{
+    opacity:0;
+    animation: puckLight 0.16s ease-out var(--puck-delay, 0s) both;
+  }
+  @keyframes puckLight{
+    from{ opacity:0; transform: scale(0.4); }
+    to{ opacity:1; transform: scale(1); }
   }
   .dot-mark.found{
     background: radial-gradient(circle at 35% 28%, #eafff2 0%, #5fe89f 28%, #1ec574 58%, #0a7a44 100%);
@@ -577,6 +607,53 @@
     to{ opacity:1; transform: translateY(0); }
   }
 
+  /* Apparition relevée image par image sur l'extrait du plateau (qualif,
+     entraînement, tie-break — la finale garde pour l'instant l'ancienne).
+     Déroulé sur 1 s : point blanc -> étirement horizontal -> l'intérieur noir
+     se creuse -> l'éclat central regrossit -> flash blanc plein (~180 ms) ->
+     cadre noir et vide (~100 ms) -> le mot apparaît d'un coup, sans fondu. */
+  .word-pill.materialize-tv{
+    animation: pillMaterializeTV 1s linear both;
+  }
+  @keyframes pillMaterializeTV{
+    0%{   transform: scaleX(0.03) scaleY(0.26); opacity:0; }
+    5%{   transform: scaleX(0.045) scaleY(0.62); opacity:1; }
+    14%{  transform: scaleX(0.055) scaleY(0.95); }
+    22%{  transform: scaleX(0.07) scaleY(1); }
+    30%{  transform: scaleX(0.17) scaleY(1); }
+    38%{  transform: scaleX(0.37) scaleY(1); }
+    46%{  transform: scaleX(0.64) scaleY(1); }
+    54%{  transform: scaleX(0.92) scaleY(1); }
+    59%{  transform: scaleX(1.03) scaleY(1.03); }
+    66%{  transform: scaleX(0.99) scaleY(0.99); }
+    72%{  transform: scaleX(1) scaleY(1); }
+    100%{ transform: scaleX(1) scaleY(1); opacity:1; }
+  }
+  .word-pill.materialize-tv .word-flare{
+    animation: pillFlareTV 1s linear both;
+  }
+  @keyframes pillFlareTV{
+    0%{   opacity:0; }
+    5%{   opacity:1; }   /* le point de départ EST la lumière */
+    30%{  opacity:1; }
+    46%{  opacity:0.42; } /* l'intérieur noir se creuse pendant l'étirement */
+    56%{  opacity:0.30; }
+    60%{  opacity:0.55; } /* l'éclat central repart */
+    72%{  opacity:1; }
+    90%{  opacity:1; }   /* flash blanc plein */
+    92%{  opacity:0; }   /* retombée franche au noir, pas de gris intermédiaire */
+    100%{ opacity:0; }
+  }
+  .word-pill.materialize-tv .word-text{
+    opacity:0; animation: wordSnapReveal 1s linear both;
+  }
+  @keyframes wordSnapReveal{
+    0%{ opacity:0; }
+    95.9%{ opacity:0; }
+    96%{ opacity:1; }   /* apparition sèche : aucun fondu, comme à l'antenne */
+    100%{ opacity:1; }
+  }
+
   /* Fermeture du cadre en fin de manche : l'inverse de la matérialisation
      (la TV s'éteint) — déclenché pendant que les chevrons recouvrent encore
      le mot, pour une fermeture propre avant de basculer sur l'écran de fin. */
@@ -598,23 +675,41 @@
     position:absolute; inset:0; overflow:hidden; border-radius:inherit;
     pointer-events:none; z-index:2;
   }
-  .wipe-chevron-group{
-    position:absolute; top:50%; height:100%; display:flex;
-    opacity:0; transform: translateY(-50%) translateX(0);
-    transition: transform 0.58s cubic-bezier(.4,0,.2,1), opacity 0.15s ease-in-out;
+  /* Balayage entre deux mots, relevé image par image sur le plateau : deux
+     bandes de chevrons pleins naissent aux DEUX extrémités intérieures du
+     bandeau, convergent vers le centre et s'y éteignent — elles ne traversent
+     pas pour ressortir de l'autre côté. Chaque moitié du bandeau est un cache
+     qui clippe sa bande ; la bande défile de -100% à +100% de sa propre
+     largeur, ce qui donne exactement le comportement observé : le front avant
+     avance du bord vers le centre, puis le front arrière le suit et laisse le
+     noir revenir par le bord. */
+  .wipe-half{
+    position:absolute; top:0; height:100%; width:50%; overflow:hidden;
+    pointer-events:none;
   }
-  .wipe-chevron-group span{
-    width:38px; height:100%; margin-left:-15px;
-    background-image: radial-gradient(circle at center, #ffffff 0%, #ffe9d2 30%, currentColor 62%, transparent 70%);
-    background-size: 7px 7px;
-    color: var(--red);
-    filter: drop-shadow(0 0 10px rgba(255,240,220,0.85)) drop-shadow(0 0 24px rgba(255,90,60,0.85)) brightness(1.2);
+  .wipe-half.left{ left:0; }
+  .wipe-half.right{ right:0; }
+  .wipe-band{
+    position:absolute; top:0; height:100%; display:flex; align-items:stretch;
+    opacity:0; transform: translateX(0);
+    will-change: transform;
   }
-  .wipe-chevron-group span:first-child{ margin-left:0; }
-  .wipe-chevron-group.left{ left:0; }
-  .wipe-chevron-group.left span{ clip-path: polygon(0% 8%, 46% 50%, 0% 92%, 20% 100%, 66% 50%, 20% 0%); }
-  .wipe-chevron-group.right{ right:0; }
-  .wipe-chevron-group.right span{ clip-path: polygon(100% 8%, 54% 50%, 100% 92%, 80% 100%, 34% 50%, 80% 0%); }
+  .wipe-band.left{ left:0; justify-content:flex-end; }
+  .wipe-band.right{ right:0; justify-content:flex-start; }
+  /* Chevrons pleins (bloc à pointe avant et encoche arrière), texturés en
+     matrice de points crème sur cuivre incandescent. */
+  .wipe-band span{
+    height:100%; flex:0 0 auto;
+    background-image: radial-gradient(circle at center, #ffffff 0%, var(--sweep-hot) 28%, var(--sweep-amber) 54%, rgba(40,14,4,0.9) 72%, transparent 78%);
+    background-size: 5px 5px;
+    filter: drop-shadow(0 0 7px rgba(var(--sweep-glow),0.75)) drop-shadow(0 0 20px rgba(var(--sweep-glow),0.45)) brightness(1.08);
+  }
+  .wipe-band.left span{ clip-path: polygon(0% 0%, 68% 0%, 100% 50%, 68% 100%, 0% 100%, 32% 50%); }
+  .wipe-band.right span{ clip-path: polygon(100% 0%, 32% 0%, 0% 50%, 32% 100%, 100% 100%, 68% 50%); }
+  /* Réapparition du mot suivant : fondu d'opacité seul (~230 ms), sans
+     déplacement — c'est ce que fait l'émission, là où notre ancienne version
+     ajoutait un petit translateY. */
+  @keyframes wordFadeIn{ from{ opacity:0; } to{ opacity:1; } }
   .chevrons{ display:none; flex-shrink:0; flex-direction:row; gap:0; position:relative; z-index:50; align-self:center; transition: opacity 0.15s ease; }
   .chevrons.active{ display:flex; }
   .chevrons span{
@@ -1140,12 +1235,8 @@
       <div class="chevrons left" id="chevrons-left"></div>
       <div class="word-pill" id="word-pill">
         <div class="word-wipe" id="word-wipe">
-          <div class="wipe-chevron-group left" id="wipe-left">
-            <span></span><span></span><span></span>
-          </div>
-          <div class="wipe-chevron-group right" id="wipe-right">
-            <span></span><span></span><span></span>
-          </div>
+          <div class="wipe-half left"><div class="wipe-band left" id="wipe-left"></div></div>
+          <div class="wipe-half right"><div class="wipe-band right" id="wipe-right"></div></div>
         </div>
         <div class="word-text" id="play-word">MOT</div>
         <div class="word-flare" id="word-flare"></div>
@@ -1281,12 +1372,8 @@
       <div class="word-pill" id="buzz-word-pill">
         <div class="word-flare" id="buzz-word-flare"></div>
         <div class="word-wipe" id="buzz-word-wipe">
-          <div class="wipe-chevron-group left" id="buzz-wipe-left">
-            <span></span><span></span><span></span>
-          </div>
-          <div class="wipe-chevron-group right" id="buzz-wipe-right">
-            <span></span><span></span><span></span>
-          </div>
+          <div class="wipe-half left"><div class="wipe-band left" id="buzz-wipe-left"></div></div>
+          <div class="wipe-half right"><div class="wipe-band right" id="buzz-wipe-right"></div></div>
         </div>
         <div class="word-text" id="buzz-word"></div>
       </div>
@@ -3752,7 +3839,7 @@
     wordEl.style.opacity = '';
     wordEl.style.animation = '';
     inputLocked = false;
-    wordPillEl.classList.remove('materialize', 'dematerialize', 'paused-hidden');
+    wordPillEl.classList.remove('materialize', 'materialize-tv', 'dematerialize', 'paused-hidden');
     wordPillEl.style.opacity = '0'; // caché : le cadre + le mot n'apparaissent qu'après PLAY_REVEAL_DELAY
     wordPillEl.style.pointerEvents = 'none'; // pas tapable tant que rien n'est visible (sinon le chrono pourrait démarrer avant l'apparition)
     const playHint = document.getElementById('play-hint');
@@ -3775,7 +3862,10 @@
       wordPillEl.style.pointerEvents = '';
       playHint.style.opacity = '';
       void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
-      wordPillEl.classList.add('materialize');
+      // Qualif / entraînement : apparition "plateau" (flash puis mot sec).
+      // Finale : on garde l'ancienne matérialisation en attendant son extrait.
+      wordPillEl.classList.add(turn.kind === 'final' ? 'materialize' : 'materialize-tv');
+      if(turn.kind !== 'final') lightUpDots();
       if(turn.kind !== 'final') wordPillEl.classList.add('waiting');
       if(turn.style === 'clues'){
         chevronsLeft.style.opacity = '1';
@@ -3919,6 +4009,26 @@
       el.appendChild(d);
     }
   }
+  // Allumage des pastilles en début de manche : sur le plateau, la piste
+  // apparaît vide puis les pastilles s'allument du centre vers l'extérieur,
+  // pendant que le bandeau est encore en train de s'étirer (~330 ms après le
+  // début de l'apparition, sur ~190 ms).
+  function lightUpDots(){
+    const el = document.getElementById('play-dots');
+    const marks = el.querySelectorAll('.dot-mark');
+    if(!marks.length) return;
+    const mid = (marks.length - 1) / 2;
+    marks.forEach((m, i) => {
+      // Distance au centre -> rang d'allumage (les deux pastilles centrales
+      // partent ensemble quand le nombre est pair).
+      const rank = Math.round(Math.abs(i - mid));
+      m.style.setProperty('--puck-delay', (0.33 + rank * 0.055) + 's');
+    });
+    el.classList.remove('lighting');
+    void el.offsetWidth;
+    el.classList.add('lighting');
+    setTimeout(() => el.classList.remove('lighting'), 1000);
+  }
   function formatTime(t){
     const m = Math.floor(t/60);
     const s = t % 60;
@@ -3960,6 +4070,95 @@
   // révéler de nouveau mot : le cadre se referme (dématérialisation) pendant qu'il
   // est encore caché par les chevrons, puis la callback est appelée une fois que
   // tout est retombé — pour conclure une manche sans cut instantané.
+  // ---- Balayage convergent (qualif, entraînement, tie-break) ----
+  // Durées relevées sur l'extrait du plateau : le balayage dure ~400 ms, les
+  // deux fronts se rejoignent au centre à mi-course (le mot est alors
+  // entièrement recouvert), puis le bandeau reste noir et vide ~40 ms avant que
+  // le mot suivant n'apparaisse en fondu sur ~230 ms.
+  const SWEEP_MS = 400;
+  const SWEEP_COVER_MS = 208;   // instant où les fronts se rejoignent
+  const SWEEP_BLANK_MS = 40;    // noir entre la fin du balayage et le mot suivant
+
+  // Remplit une bande avec juste ce qu'il faut de chevrons pour couvrir
+  // exactement la moitié du bandeau. Le pas visuel vise ~1,15 fois la hauteur
+  // intérieure (proportion relevée sur le plateau) ; la largeur est ensuite
+  // ajustée pour tomber pile, afin que translateX(±100%) place le front
+  // exactement sur le bord et sur le centre.
+  function buildSweepBand(bandEl, halfW, innerH){
+    // ~55 px de pas visé : sur un bandeau de téléphone ça donne 3 chevrons par
+    // moitié (6 sur la largeur), la densité relevée sur le plateau. Borné pour
+    // rester correct sur un très petit écran comme sur une tablette.
+    const n = Math.max(2, Math.min(5, Math.round(halfW / 55)));
+    // largeur totale = n*0.70*w + 0.30*w  ->  w = halfW / (0.70n + 0.30)
+    const w = halfW / (0.70 * n + 0.30);
+    const overlap = 0.30 * w;
+    bandEl.style.width = halfW + 'px';
+    bandEl.innerHTML = "";
+    for(let i = 0; i < n; i++){
+      const s = document.createElement('span');
+      s.style.width = w + 'px';
+      if(i > 0) s.style.marginLeft = (-overlap) + 'px';
+      bandEl.appendChild(s);
+    }
+  }
+
+  // Lance le balayage sur une pastille donnée. onCovered() est appelé quand le
+  // mot est entièrement recouvert, onDone() quand les chevrons ont disparu.
+  function runConvergingSweep(pillEl, leftEl, rightEl, onCovered, onDone){
+    // On mesure le cache lui-même (et en offsetWidth, pas en
+    // getBoundingClientRect) : #app porte un zoom global, et getBoundingClientRect
+    // renvoie des pixels zoomés alors qu'une largeur posée en style est en
+    // pixels de mise en page — l'écart ferait dépasser la bande de son cache.
+    const halfW = leftEl.parentElement.offsetWidth;
+    const innerH = leftEl.parentElement.offsetHeight;
+    if(!halfW){ if(onCovered) onCovered(); if(onDone) onDone(); return; }
+    buildSweepBand(leftEl, halfW, innerH);
+    buildSweepBand(rightEl, halfW, innerH);
+
+    // Position de départ : chaque bande est entièrement hors de sa moitié, du
+    // côté du bord extérieur. On coupe la transition le temps du placement.
+    [leftEl, rightEl].forEach(el => { el.style.transition = 'none'; });
+    leftEl.style.transform = 'translateX(-100%)';
+    rightEl.style.transform = 'translateX(100%)';
+    leftEl.style.opacity = '0';
+    rightEl.style.opacity = '0';
+    void leftEl.offsetWidth; // applique le placement avant d'armer l'animation
+
+    [leftEl, rightEl].forEach(el => {
+      el.style.transition = `transform ${SWEEP_MS}ms linear, opacity 70ms ease-out`;
+      el.style.opacity = '1';
+    });
+    leftEl.style.transform = 'translateX(100%)';
+    rightEl.style.transform = 'translateX(-100%)';
+
+    if(onCovered) setTimeout(onCovered, SWEEP_COVER_MS);
+    setTimeout(() => {
+      // Remise à zéro silencieuse pour le mot suivant.
+      [leftEl, rightEl].forEach(el => {
+        el.style.transition = 'none';
+        el.style.opacity = '0';
+      });
+      leftEl.style.transform = 'translateX(-100%)';
+      rightEl.style.transform = 'translateX(100%)';
+      void leftEl.offsetWidth;
+      [leftEl, rightEl].forEach(el => { el.style.transition = ''; });
+      if(onDone) onDone();
+    }, SWEEP_MS);
+  }
+
+  // Réapparition du mot : fondu d'opacité pur, sans déplacement.
+  function fadeInWord(elId){
+    const el = document.getElementById(elId);
+    if(!el) return;
+    // Animation posée en inline (et pas via une classe) : la règle
+    // .word-pill.materialize-tv .word-text est plus spécifique qu'une classe
+    // simple et écraserait sinon ce fondu par l'apparition sèche.
+    el.style.animation = 'none';
+    void el.offsetWidth;
+    el.style.opacity = '';
+    el.style.animation = 'wordFadeIn 0.23s linear both';
+  }
+
   // Suit la traversée réelle d'un chevron (via sa position à l'écran, frame par
   // frame) et déclenche le callback pile au moment où son centre croise le centre
   // de la pastille — plutôt qu'un délai fixe qui suppose le milieu de l'animation.
@@ -4063,44 +4262,21 @@
     } else {
       const wipeLeft = document.getElementById('wipe-left');
       const wipeRight = document.getElementById('wipe-right');
-      const pillW = pillEl.getBoundingClientRect().width;
-      const dist = pillW + 20;
-      wipeLeft.style.opacity = '1';
-      wipeRight.style.opacity = '1';
-      wipeLeft.style.transform = `translateY(-50%) translateX(${dist}px)`;
-      wipeRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
-
-      // Le mot disparaît pile au moment où les chevrons le croisent (pas à un délai
-      // fixe), pour rester synchro quelle que soit la largeur du mot. On coupe aussi
-      // l'animation de matérialisation qui tiendrait encore opacity:1 par-dessus.
-      waitForChevronCrossing(pillEl, wipeLeft, () => {
-        const wordEl = document.getElementById('play-word');
-        wordEl.style.animation = 'none';
-        wordEl.style.opacity = '0';
-      });
-
-      setTimeout(() => {
-        // Les chevrons terminent leur traversée normalement et dégagent,
-        // le cadre (vide, le mot est déjà caché) reste visible le temps qu'ils sortent.
-        wipeLeft.style.transition = 'none';
-        wipeRight.style.transition = 'none';
-        wipeLeft.style.opacity = '0';
-        wipeRight.style.opacity = '0';
-        wipeLeft.style.transform = 'translateY(-50%) translateX(0)';
-        wipeRight.style.transform = 'translateY(-50%) translateX(0)';
-        void wipeLeft.offsetWidth;
-        wipeLeft.style.transition = '';
-        wipeRight.style.transition = '';
-      }, 600);
-
-      setTimeout(() => {
-        // ...puis c'est le cadre qui se referme, visible, comme une TV qui s'éteint.
-        pillEl.style.setProperty('--dematerialize-duration', '0.32s');
-        pillEl.classList.remove('materialize');
-        pillEl.classList.add('dematerialize');
-      }, 600);
-
-      setTimeout(onDone, 940);
+      runConvergingSweep(pillEl, wipeLeft, wipeRight,
+        () => {
+          // Fronts rejoints : le mot s'efface à couvert. On coupe l'animation de
+          // matérialisation, qui tiendrait encore opacity:1 par-dessus.
+          const wordEl = document.getElementById('play-word');
+          wordEl.style.animation = 'none';
+          wordEl.style.opacity = '0';
+          },
+        () => {
+          // Chevrons partis : le cadre (vide) se referme comme une TV qui s'éteint.
+          pillEl.style.setProperty('--dematerialize-duration', '0.32s');
+          pillEl.classList.remove('materialize', 'materialize-tv');
+          pillEl.classList.add('dematerialize');
+          setTimeout(onDone, 340);
+        });
     }
   }
 
@@ -4150,26 +4326,16 @@
     const wipeLeft = document.getElementById('buzz-wipe-left');
     const wipeRight = document.getElementById('buzz-wipe-right');
     const pillEl = document.getElementById('buzz-word-pill');
-    const pillW = pillEl.getBoundingClientRect().width;
-    const dist = pillW + 20;
-    wipeLeft.style.opacity = '1';
-    wipeRight.style.opacity = '1';
-    wipeLeft.style.transform = `translateY(-50%) translateX(${dist}px)`;
-    wipeRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
-    waitForChevronCrossing(pillEl, wipeLeft, () => {
-      setWordText(nextWord.toUpperCase(), 'buzz-word');
-    });
-    setTimeout(() => {
-      wipeLeft.style.transition = 'none';
-      wipeRight.style.transition = 'none';
-      wipeLeft.style.opacity = '0';
-      wipeRight.style.opacity = '0';
-      wipeLeft.style.transform = 'translateY(-50%) translateX(0)';
-      wipeRight.style.transform = 'translateY(-50%) translateX(0)';
-      void wipeLeft.offsetWidth; // relance proprement pour le prochain mot
-      wipeLeft.style.transition = '';
-      wipeRight.style.transition = '';
-    }, 600);
+    const wordEl = document.getElementById('buzz-word');
+    runConvergingSweep(pillEl, wipeLeft, wipeRight,
+      () => {
+        wordEl.style.animation = 'none';
+        wordEl.style.opacity = '0';
+        setWordText(nextWord.toUpperCase(), 'buzz-word');
+      },
+      () => {
+        setTimeout(() => fadeInWord('buzz-word'), SWEEP_BLANK_MS);
+      });
   }
 
   function loadNextWord(animate){
@@ -4231,29 +4397,22 @@
       const wipeLeft = document.getElementById('wipe-left');
       const wipeRight = document.getElementById('wipe-right');
       const pillEl = document.getElementById('word-pill');
-      const pillW = pillEl.getBoundingClientRect().width;
-      const dist = pillW + 20;
-      wipeLeft.style.opacity = '1';
-      wipeRight.style.opacity = '1';
-      wipeLeft.style.transform = `translateY(-50%) translateX(${dist}px)`;
-      wipeRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
-      // Le mot bascule pile au moment où les chevrons le croisent (pas à un délai
-      // fixe), pour rester synchro quelle que soit la largeur du mot.
-      waitForChevronCrossing(pillEl, wipeLeft, () => {
-        setWordText(nextWord);
-      });
-      setTimeout(() => {
-        wipeLeft.style.transition = 'none';
-        wipeRight.style.transition = 'none';
-        wipeLeft.style.opacity = '0';
-        wipeRight.style.opacity = '0';
-        wipeLeft.style.transform = 'translateY(-50%) translateX(0)';
-        wipeRight.style.transform = 'translateY(-50%) translateX(0)';
-        void wipeLeft.offsetWidth; // relance proprement pour le prochain mot
-        wipeLeft.style.transition = '';
-        wipeRight.style.transition = '';
-        unlockInput();
-      }, 600);
+      const wordEl = document.getElementById('play-word');
+      runConvergingSweep(pillEl, wipeLeft, wipeRight,
+        () => {
+          // Fronts rejoints : le mot est recouvert, on peut le remplacer à
+          // couvert. Il reste masqué jusqu'à la disparition des chevrons.
+          wordEl.style.animation = 'none';
+          wordEl.style.opacity = '0';
+            setWordText(nextWord);
+        },
+        () => {
+          // Chevrons partis : court noir, puis le mot suivant monte en fondu.
+          setTimeout(() => {
+            fadeInWord('play-word');
+            unlockInput();
+          }, SWEEP_BLANK_MS);
+        });
     }
     renderDots();
   }
@@ -4593,7 +4752,7 @@
     showScreen('buzzPlay');
     const pillEl = document.getElementById('buzz-word-pill');
     const wordEl = document.getElementById('buzz-word');
-    pillEl.classList.remove('dematerialize', 'materialize');
+    pillEl.classList.remove('dematerialize', 'materialize', 'materialize-tv');
     wordEl.style.opacity = '';
     wordEl.style.animation = '';
     if(animate === false){
@@ -4603,7 +4762,8 @@
         setWordText(b.word.toUpperCase(), 'buzz-word');
         pillEl.style.opacity = '';
         void pillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque tie-break
-        pillEl.classList.add('materialize');
+        // Le tie-break partage l'apparition de la qualif (même effet, même son).
+        pillEl.classList.add('materialize-tv');
         setBuzzControlsEnabled(true);
       }, PLAY_REVEAL_DELAY);
     } else {
@@ -4656,35 +4816,18 @@
     const wipeLeft = document.getElementById('buzz-wipe-left');
     const wipeRight = document.getElementById('buzz-wipe-right');
     const pillEl = document.getElementById('buzz-word-pill');
-    const pillW = pillEl.getBoundingClientRect().width;
-    const dist = pillW + 20;
-    wipeLeft.style.opacity = '1';
-    wipeRight.style.opacity = '1';
-    wipeLeft.style.transform = `translateY(-50%) translateX(${dist}px)`;
-    wipeRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
-
-    waitForChevronCrossing(pillEl, wipeLeft, () => {
-      document.getElementById('buzz-word').style.opacity = '0';
-    });
-
-    setTimeout(() => {
-      wipeLeft.style.transition = 'none';
-      wipeRight.style.transition = 'none';
-      wipeLeft.style.opacity = '0';
-      wipeRight.style.opacity = '0';
-      wipeLeft.style.transform = 'translateY(-50%) translateX(0)';
-      wipeRight.style.transform = 'translateY(-50%) translateX(0)';
-      void wipeLeft.offsetWidth;
-      wipeLeft.style.transition = '';
-      wipeRight.style.transition = '';
-    }, 600);
-
-    setTimeout(() => {
-      pillEl.style.setProperty('--dematerialize-duration', '0.32s');
-      pillEl.classList.add('dematerialize');
-    }, 600);
-
-    setTimeout(onDone, 940);
+    runConvergingSweep(pillEl, wipeLeft, wipeRight,
+      () => {
+        const wordEl = document.getElementById('buzz-word');
+        wordEl.style.animation = 'none';
+        wordEl.style.opacity = '0';
+      },
+      () => {
+        pillEl.style.setProperty('--dematerialize-duration', '0.32s');
+        pillEl.classList.remove('materialize', 'materialize-tv');
+        pillEl.classList.add('dematerialize');
+        setTimeout(onDone, 340);
+      });
   }
 
   document.getElementById('btn-buzz-not-found').addEventListener('click', () => {
