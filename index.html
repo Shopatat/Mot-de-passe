@@ -336,6 +336,31 @@
     margin-top:12px; letter-spacing:0;
   }
 
+  /* Version réduite du rappel des interdits, affichée sur l'écran de jeu
+     quand le réglage "Aide" correspondant est activé. Même famille visuelle
+     que .forbidden-banner, mais condensée pour ne pas écraser l'écran. */
+  .forbidden-reminder-compact{
+    text-align:center; margin-top:10px;
+    background: radial-gradient(ellipse 100% 70% at 50% 0%, #2a120c 0%, #150a07 55%, #0c0402 100%);
+    border: 1px solid rgba(230,97,79,0.25);
+    border-radius: 14px; padding: 8px 12px;
+  }
+  .forbidden-reminder-title{
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
+    font-size:12px; letter-spacing:4px; color:#ff8a7a;
+    margin-bottom:6px;
+  }
+  .forbidden-reminder-list{
+    list-style:none; margin:0; padding:0;
+    display:flex; flex-wrap:wrap; justify-content:center; gap:6px 10px;
+  }
+  .forbidden-reminder-list li{
+    font-size:11px; font-weight:700; color:#eaf6ff;
+  }
+  .forbidden-reminder-list li:not(:last-child)::after{
+    content:'•'; margin-left:10px; color:rgba(234,246,255,0.35);
+  }
+
   .scorebar{
     display:flex; justify-content:space-between; align-items:stretch; gap:10px;
     padding: 10px 12px; background: var(--card); border: 1px solid var(--card-edge);
@@ -928,6 +953,15 @@
       </div>
       <input type="range" id="game-volume-slider" min="0" max="100" value="100">
 
+      <label class="field-label" style="margin-top:18px;">Aide</label>
+      <div class="sound-row">
+        <span>Afficher les interdits pendant la manche</span>
+        <div class="toggle-row sound-toggle" id="forbidden-reminder-toggle">
+          <div class="toggle-btn" data-val="on">Activé</div>
+          <div class="toggle-btn" data-val="off">Désactivé</div>
+        </div>
+      </div>
+
       <label class="field-label" style="margin-top:18px;">Fin de manche</label>
       <div class="sound-row">
         <span>Afficher le détail des mots (trouvés / ratés)</span>
@@ -1164,6 +1198,15 @@
     </div>
     <div class="blacklist-row" id="training-end-row" style="display:none;">
       <button class="text-action subtle" id="btn-training-end">🏁 Terminer la manche</button>
+    </div>
+    <div class="forbidden-reminder-compact" id="forbidden-reminder-compact" style="display:none;">
+      <div class="forbidden-reminder-title">INTERDITS</div>
+      <ul class="forbidden-reminder-list">
+        <li>Mot composé</li>
+        <li>Même famille</li>
+        <li>Même son au début</li>
+        <li>Mime</li>
+      </ul>
     </div>
   </section>
 
@@ -2630,7 +2673,7 @@
   // ---------- PRÉFÉRENCES UI ----------
   // Petites préférences d'affichage persistées, séparées des réglages sons.
   const UIPREFS = (function(){
-    const prefs = { showRoundRecap: true, hideWordOnPause: true };
+    const prefs = { showRoundRecap: true, hideWordOnPause: true, showForbiddenInPlay: false };
     try {
       const saved = JSON.parse(localStorage.getItem('mdp_ui_prefs') || 'null');
       if(saved) Object.assign(prefs, saved);
@@ -2643,8 +2686,17 @@
       setShowRoundRecap(v){ prefs.showRoundRecap = v; save(); },
       getHideWordOnPause(){ return prefs.hideWordOnPause; },
       setHideWordOnPause(v){ prefs.hideWordOnPause = v; save(); },
+      getShowForbiddenInPlay(){ return prefs.showForbiddenInPlay; },
+      setShowForbiddenInPlay(v){ prefs.showForbiddenInPlay = v; save(); },
     };
   })();
+
+  // Affiche ou cache le rappel compact des interdits sur l'écran de jeu,
+  // selon le réglage "Aide" > "Afficher les interdits pendant la manche".
+  function updateForbiddenReminderVisibility(){
+    const el = document.getElementById('forbidden-reminder-compact');
+    if(el) el.style.display = UIPREFS.getShowForbiddenInPlay() ? '' : 'none';
+  }
 
   // ---------- NOMS DES JOUEURS ----------
   // Mémorise les prénoms saisis pour ne pas avoir à les retaper à chaque partie.
@@ -3082,6 +3134,10 @@
   wireSoundToggle('game-sound-toggle', () => SFX.getSettings().gameOn, v => { SFX.setGameOn(v); MUSIC.applyVolume(); });
   wireSoundToggle('recap-detail-toggle', () => UIPREFS.getShowRoundRecap(), v => UIPREFS.setShowRoundRecap(v));
   wireSoundToggle('pause-hide-toggle', () => UIPREFS.getHideWordOnPause(), v => UIPREFS.setHideWordOnPause(v));
+  wireSoundToggle('forbidden-reminder-toggle', () => UIPREFS.getShowForbiddenInPlay(), v => {
+    UIPREFS.setShowForbiddenInPlay(v);
+    updateForbiddenReminderVisibility();
+  });
   document.getElementById('ui-volume-slider').addEventListener('input', e => {
     SFX.setUiVol(Number(e.target.value) / 100);
   });
@@ -3704,6 +3760,7 @@
       ? "Appuie sur le bouton bleu pour lancer le chrono et donner le 1er mot-indice"
       : "Tape sur le mot pour lancer le chrono";
     playHint.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
+    updateForbiddenReminderVisibility();
     showScreen('play');
 
     // Points de progression, cadre du mot, cadre à diodes (finale) et texte
