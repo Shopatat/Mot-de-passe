@@ -77,6 +77,11 @@
   .screen.active{ display:flex; flex-direction:column; align-items:stretch; gap:14px; }
   @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
+  /* Zone des boutons de test : cachée par défaut, révélée par un appui long
+     sur le panneau du titre (voir le handler plus bas). */
+  #debug-zone{ display:flex; flex-direction:column; gap:14px; }
+  #debug-zone[hidden]{ display:none; }
+
   .tile-row{
     display:flex; justify-content:center; align-items:center; gap:2px; flex-wrap:nowrap;
     margin: 10px 0 2px; padding: 16px 14px; position:relative;
@@ -1054,9 +1059,11 @@
       <p class="forbidden-consequence">⚠️ Un interdit prononcé = mot annulé aussitôt.</p>
     </div>
 
-    <!-- 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive -->
-    <button class="btn btn-ghost" id="btn-debug-finale" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct en finale</button>
-    <button class="btn btn-ghost" id="btn-debug-buzz" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct au tie-break buzz</button>
+    <!-- 🧪 BOUTONS DE TEST — cachés par défaut, révélés par un appui long sur le titre -->
+    <div id="debug-zone" hidden>
+      <button class="btn btn-ghost" id="btn-debug-finale" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct en finale</button>
+      <button class="btn btn-ghost" id="btn-debug-buzz" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct au tie-break buzz</button>
+    </div>
   </section>
 
   <!-- HANDOFF -->
@@ -2748,6 +2755,61 @@
   }
   renderTiles('title-tiles');
 
+  // ---- Boutons de test cachés : appui long de 1,2 s sur le panneau du titre ----
+  // Ils ne sont plus visibles à l'écran d'accueil par défaut. Un appui long les
+  // affiche, un second les re-cache. Rien n'est mémorisé : au prochain lancement
+  // de l'appli, ils sont de nouveau cachés.
+  (function initDebugLongPress(){
+    const titleEl = document.getElementById('title-tiles');
+    const zone = document.getElementById('debug-zone');
+    if(!titleEl || !zone) return;
+    const HOLD_MS = 1200;
+    const MOVE_TOLERANCE = 12; // px — au-delà, c'est un scroll, pas un appui
+    let timer = null, startX = 0, startY = 0;
+
+    function cancel(){
+      if(timer){ clearTimeout(timer); timer = null; }
+    }
+    function fire(){
+      timer = null;
+      zone.hidden = !zone.hidden;
+      // Petit retour haptique quand c'est pris en compte (ignoré si non supporté).
+      if(navigator.vibrate) { try{ navigator.vibrate(30); }catch(e){} }
+    }
+    function begin(x, y){
+      cancel();
+      startX = x; startY = y;
+      timer = setTimeout(fire, HOLD_MS);
+    }
+    function moved(x, y){
+      if(!timer) return;
+      if(Math.abs(x - startX) > MOVE_TOLERANCE || Math.abs(y - startY) > MOVE_TOLERANCE) cancel();
+    }
+
+    titleEl.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      begin(t.clientX, t.clientY);
+    }, { passive:true });
+    titleEl.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      moved(t.clientX, t.clientY);
+    }, { passive:true });
+    titleEl.addEventListener('touchend', cancel);
+    titleEl.addEventListener('touchcancel', cancel);
+
+    // Équivalent souris, pour tester depuis un navigateur de bureau.
+    titleEl.addEventListener('mousedown', e => begin(e.clientX, e.clientY));
+    titleEl.addEventListener('mousemove', e => moved(e.clientX, e.clientY));
+    titleEl.addEventListener('mouseup', cancel);
+    titleEl.addEventListener('mouseleave', cancel);
+
+    // Évite le menu contextuel iOS/Android (copier/partager) sur l'appui long.
+    titleEl.addEventListener('contextmenu', e => e.preventDefault());
+    titleEl.style.userSelect = 'none';
+    titleEl.style.webkitUserSelect = 'none';
+    titleEl.style.webkitTouchCallout = 'none';
+  })();
+
   // ---- Fond animé : halos flous en mouvement lent, différents à chaque lancement ----
   function initBackgroundHalos(){
     const colors = [
@@ -2797,6 +2859,7 @@
     currentTurn: null,
     pool: [], foundCount: 0, target: null, clueCount: 1,
     timeLeft: 0, timerHandle: null, turnStartTime: 0,
+    timerRef: 0, timerBase: 0,   // horloge de référence du chrono (voir startTimer/tick)
     dotsTotal: 0, dotsFound: 0, dotsLost: 0,
 
     soloFirstGiver: 0, // 0 ou 1 : qui fait deviner en premier (chacun pour soi, 2 joueurs uniquement)
@@ -2832,7 +2895,37 @@
     peek: document.getElementById('screen-peek'),
     final: document.getElementById('screen-final'),
   };
+  // Empêche l'écran de s'éteindre pendant la partie : sans ça le téléphone se
+  // verrouille entre deux manches ou pendant une discussion, et casse le rythme.
+  // API non supportée partout (et refusée hors HTTPS) : tout est encapsulé, un
+  // échec est silencieux et ne change rien au reste du jeu.
+  const WAKE = {
+    sentinel: null,
+    wanted: false,
+    async acquire(){
+      this.wanted = true;
+      if(!('wakeLock' in navigator) || this.sentinel) return;
+      try{
+        this.sentinel = await navigator.wakeLock.request('screen');
+        // Le système relâche le verrou tout seul quand l'appli part en
+        // arrière-plan : on oublie la sentinelle pour pouvoir en redemander une.
+        this.sentinel.addEventListener('release', () => { this.sentinel = null; });
+      }catch(e){ this.sentinel = null; }
+    },
+    release(){
+      this.wanted = false;
+      if(this.sentinel){
+        try{ this.sentinel.release(); }catch(e){}
+        this.sentinel = null;
+      }
+    },
+    // Rappelé au retour au premier plan : ne redemande que si la partie est
+    // toujours en cours.
+    refresh(){ if(this.wanted && !this.sentinel) this.acquire(); }
+  };
   function showScreen(name){
+    // Écran maintenu allumé sur tous les écrans de jeu, relâché au menu.
+    if(name === 'setup') WAKE.release(); else WAKE.acquire();
     Object.values(screens).forEach(s => s.classList.remove('active'));
     screens[name].classList.add('active');
     document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
@@ -3676,7 +3769,7 @@
       document.getElementById('word-pill').classList.remove('paused-hidden');
       document.getElementById('play-hint').textContent = "";
       setPlayControlsEnabled(true);
-      state.timerHandle = setInterval(tick, 1000);
+      startTimer();
       if(isFreshStart){
         state.turnMusicStarted = true;
         // Bascule vers la musique du timer, uniquement pour les qualifs et la
@@ -3769,16 +3862,27 @@
       document.getElementById('play-timer-num').classList.toggle('urgent', t <= Math.ceil(turn.time*0.25));
     }
   }
+  // Le chrono ne compte pas les ticks (ça dérive dès que l'appli passe une
+  // seconde en arrière-plan, ou que le navigateur ralentit les timers) : il
+  // mémorise l'heure réelle de départ et la valeur de départ, puis recalcule
+  // le temps restant à chaque passage. Quoi qu'il arrive entre deux ticks
+  // (veille, notification, onglet caché), l'affichage reste exact.
+  // On interroge l'horloge 4 fois par seconde pour que le changement de
+  // seconde tombe pile, mais on ne redessine que si la valeur a bougé.
+  function startTimer(){
+    clearInterval(state.timerHandle);
+    state.timerRef = Date.now();
+    state.timerBase = state.timeLeft;
+    state.timerHandle = setInterval(tick, 250);
+  }
   function tick(){
     const turn = state.currentTurn;
-    if(turn.chrono){
-      state.timeLeft += 1;
-      updateTimerUI();
-    } else {
-      state.timeLeft -= 1;
-      updateTimerUI();
-      if(state.timeLeft <= 0){ clearInterval(state.timerHandle); endTurn(); }
-    }
+    const elapsed = Math.floor((Date.now() - state.timerRef) / 1000);
+    const next = turn.chrono ? (state.timerBase + elapsed) : Math.max(0, state.timerBase - elapsed);
+    if(next === state.timeLeft) return;
+    state.timeLeft = next;
+    updateTimerUI();
+    if(!turn.chrono && state.timeLeft <= 0){ clearInterval(state.timerHandle); endTurn(); }
   }
   // Rejoue la traversée des chevrons comme un changement de mot normal, mais sans
   // révéler de nouveau mot : le cadre se referme (dématérialisation) pendant qu'il
@@ -4137,7 +4241,7 @@
       document.getElementById('word-pill').classList.remove('waiting', 'paused-hidden');
       document.getElementById('play-hint').textContent = "";
       setPlayControlsEnabled(true);
-      state.timerHandle = setInterval(tick, 1000);
+      startTimer();
       SFX.indice();
       state.clueCount += 1;
       renderChevrons();
@@ -5053,8 +5157,11 @@
     if(document.hidden){
       musicWasPlayingBeforeHidden = MUSIC.isPlaying();
       MUSIC.pause();
-    } else if(musicWasPlayingBeforeHidden){
-      MUSIC.resume();
+    } else {
+      if(musicWasPlayingBeforeHidden) MUSIC.resume();
+      // Le verrou d'écran a été relâché par le système pendant l'absence :
+      // on le redemande si on est toujours en partie.
+      WAKE.refresh();
     }
   });
 
