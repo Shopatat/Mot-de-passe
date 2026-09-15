@@ -209,19 +209,21 @@
   .sound-group-body{ max-height:0; overflow:hidden; transition: max-height .3s ease; }
   .chip{
     padding: 8px 13px; border-radius: 999px;
-    background: linear-gradient(180deg, var(--bg-alt), #05070c);
-    border: 1px solid var(--card-edge); color: var(--text-dim);
+    background:
+      linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
+      linear-gradient(180deg, #4a4842, #2a2925 48%, #1c1b18 52%, #3e3c37) border-box;
+    border: 1.5px solid transparent; color: var(--text-dim);
     font-size: 13px; font-weight:700; cursor:pointer; user-select:none; transition: all .15s ease;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
   }
   .chip:active{ transform: scale(0.96); }
   .chip.selected{
-    border: 1px solid transparent;
+    border: 2px solid transparent;
     background:
       linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
-      linear-gradient(135deg, var(--red), var(--gold)) border-box;
+      linear-gradient(180deg, #f6f3ec, #a8a39a 46%, #6d6862 54%, #e2ded5) border-box;
     color: #fff;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 0 10px rgba(232,228,221,0.28);
   }
   /* Tie-break buzz : le badge de l'équipe en train de jouer s'anime brièvement
      dès qu'on passe la main (bouton "Pas trouvé"), pour signaler le changement
@@ -243,11 +245,19 @@
   button.btn:active{ transform: scale(0.97); }
   button.btn:disabled{ opacity:0.4; cursor:default; pointer-events:none; }
   button.btn:disabled.no-dim{ opacity:1; }
+  /* Boutons principaux : cadre épais rouge-orangé en relief, façon le cadre du
+     mot sur le plateau de l'émission (dégradé vertical sombre → clair → sombre,
+     halo diffus autour, creux noir en haut à l'intérieur). */
   .btn-gold{
-    background: linear-gradient(180deg, #1c1c1c, #050505);
-    border: 2px solid var(--red);
+    background:
+      linear-gradient(180deg, #140807, #050303) padding-box,
+      linear-gradient(180deg, #8f1610 0%, #ff6b4a 45%, #ff8a62 55%, #a31c13 100%) border-box;
+    border: 5px solid transparent;
     color: #fff;
-    box-shadow: 0 0 20px rgba(255,59,48,0.55), inset 0 0 12px rgba(255,59,48,0.18);
+    box-shadow:
+      0 0 26px rgba(255,90,60,0.38),
+      0 0 10px rgba(255,90,60,0.30),
+      inset 0 4px 10px rgba(0,0,0,0.65);
   }
   .btn-correct{
     background: linear-gradient(180deg, #6ad696 0%, var(--correct) 55%, #3a9c60 100%);
@@ -762,21 +772,26 @@
   .footer-note{ text-align:center; color:var(--text-dim); font-size:11px; margin-top:2px; }
 
   .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  /* Cases du menu : liseré chromé façon boîtiers du décor de l'émission
+     (bandeau des pastilles, paliers de gains). Chrome sombre et mat au repos,
+     chrome brillant sur la case sélectionnée — le rouge reste réservé au jeu. */
   .toggle-btn{
     flex:1; min-width:44px; text-align:center; padding:10px 8px; border-radius:12px;
-    background: linear-gradient(180deg, var(--bg-alt), #05070c);
-    border:1px solid var(--card-edge); color:var(--text-dim);
+    background:
+      linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
+      linear-gradient(180deg, #4a4842, #2a2925 48%, #1c1b18 52%, #3e3c37) border-box;
+    border:1.5px solid transparent; color:var(--text-dim);
     font-weight:800; font-size:13px; cursor:pointer; user-select:none; transition: all .15s ease;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 4px rgba(0,0,0,0.25);
   }
   .toggle-btn:active{ transform: scale(0.96); }
   .toggle-btn.selected{
-    border: 1px solid transparent;
+    border: 2px solid transparent;
     background:
       linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
-      linear-gradient(135deg, var(--red), var(--gold)) border-box;
+      linear-gradient(180deg, #f6f3ec, #a8a39a 46%, #6d6862 54%, #e2ded5) border-box;
     color:#fff;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 0 10px rgba(232,228,221,0.28);
   }
   .toggle-btn.disabled{ opacity:0.3; pointer-events:none; }
   .team-name-block{ margin-bottom:12px; }
