@@ -587,15 +587,6 @@
   /* Matérialisation du cadre en début de manche : le cadre se déplie comme une TV
      qui s'allume (ligne fine -> plein écran), la lumière gagne toute la surface,
      puis s'atténue pour révéler le mot. */
-  /* Finale : seul le cadre se révèle, en fondu, pendant que les chevrons se
-     retirent. Pas d'étirement ni de flash — le mot est déjà là, posé au centre. */
-  .word-pill.materialize-frame{
-    animation: pillFrameReveal var(--materialize-duration, 0.28s) ease-out both;
-  }
-  @keyframes pillFrameReveal{
-    from{ opacity:0.35; transform: scaleY(0.88); }
-    to{ opacity:1; transform: scaleY(1); }
-  }
   .word-pill.materialize{
     animation: pillMaterialize 0.6s cubic-bezier(.22,.85,.25,1) both;
   }
@@ -753,7 +744,7 @@
      et vont se fondre dans les repères du côté opposé — ils ne reviennent
      jamais sur leurs pas. Même trame crème/ambre que le balayage des qualifs. */
   .chevron-travel{
-    position:absolute; top:50%; height:76px; display:flex;
+    position:absolute; top:50%; height:100%; display:flex;
     opacity:0; z-index:60; pointer-events:none;
     transition: transform var(--travel-duration, 0.46s) linear, opacity 0.12s ease-in-out;
   }
@@ -764,9 +755,9 @@
     filter: drop-shadow(0 0 8px rgba(var(--sweep-glow),0.85)) drop-shadow(0 0 22px rgba(var(--sweep-glow),0.5)) brightness(1.22) contrast(1.15);
   }
   .chevron-travel span:first-child{ margin-left:0; }
-  .chevron-travel.left{ left:0; transform: translateY(-50%) translateX(0); }
+  .chevron-travel.left{ right:100%; transform: translateY(-50%) translateX(0); }
   .chevron-travel.left span{ clip-path: polygon(0% 0%, 68% 0%, 100% 50%, 68% 100%, 0% 100%, 32% 50%); }
-  .chevron-travel.right{ right:0; transform: translateY(-50%) translateX(0); }
+  .chevron-travel.right{ left:100%; transform: translateY(-50%) translateX(0); }
   .chevron-travel.right span{ clip-path: polygon(100% 0%, 32% 0%, 0% 50%, 32% 100%, 100% 100%, 68% 50%); }
   .chevrons span.lit{
     color: var(--sweep-amber);
@@ -1275,13 +1266,13 @@
         <div class="word-wipe" id="word-wipe">
           <div class="wipe-half left"><div class="wipe-band left" id="wipe-left"></div></div>
           <div class="wipe-half right"><div class="wipe-band right" id="wipe-right"></div></div>
+          <div class="chevron-travel left" id="chevron-travel-left"><span></span><span></span><span></span></div>
+          <div class="chevron-travel right" id="chevron-travel-right"><span></span><span></span><span></span></div>
         </div>
         <div class="word-text" id="play-word">MOT</div>
         <div class="word-flare" id="word-flare"></div>
       </div>
       <div class="chevrons right" id="chevrons-right"></div>
-      <div class="chevron-travel left" id="chevron-travel-left"><span></span><span></span><span></span></div>
-      <div class="chevron-travel right" id="chevron-travel-right"><span></span><span></span><span></span></div>
     </div>
     <p class="footer-note" id="play-hint" style="min-height:2.8em; line-height:1.4;">Tape sur le mot pour lancer le chrono</p>
     <div class="controls-row">
@@ -3880,7 +3871,7 @@
     wordEl.style.opacity = '';
     wordEl.style.animation = '';
     inputLocked = false;
-    wordPillEl.classList.remove('materialize', 'materialize-tv', 'materialize-frame', 'dematerialize', 'paused-hidden');
+    wordPillEl.classList.remove('materialize', 'materialize-tv', 'dematerialize', 'paused-hidden');
     wordPillEl.style.opacity = '0'; // caché : le cadre + le mot n'apparaissent qu'après PLAY_REVEAL_DELAY
     wordPillEl.style.pointerEvents = 'none'; // pas tapable tant que rien n'est visible (sinon le chrono pourrait démarrer avant l'apparition)
     const playHint = document.getElementById('play-hint');
@@ -3903,15 +3894,12 @@
       wordPillEl.style.pointerEvents = '';
       playHint.style.opacity = '';
       void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
-      // Qualif / entraînement : apparition "plateau" (flash puis mot sec).
-      // Finale : pas de flash — les chevrons traversent le bandeau de part en
-      // part et le mot apparaît à leur croisement (voir openFinaleWordPill).
-      if(turn.style === 'clues'){
-        openFinaleWordPill(wordPillEl);
-      } else {
-        wordPillEl.classList.add('materialize-tv');
-        lightUpDots();
-      }
+      // Même apparition partout, finale comprise : point blanc, étirement,
+      // flash blanc puis mot sec, avec les diodes qui s'allument du centre vers
+      // l'extérieur. En finale, la traversée des chevrons ne sert plus qu'aux
+      // bascules de mot, pas à l'ouverture du palier.
+      wordPillEl.classList.add('materialize-tv');
+      lightUpDots();
       if(turn.kind !== 'final') wordPillEl.classList.add('waiting');
       if(turn.style === 'clues'){
         chevronsLeft.style.opacity = '1';
@@ -4219,21 +4207,16 @@
   const FIN_TRAVEL_MS = 460;
 
   function runFinaleTravel(pillEl, onCross, onDone){
-    const chevronsLeft = document.getElementById('chevrons-left');
-    const chevronsRight = document.getElementById('chevrons-right');
     const travelLeft = document.getElementById('chevron-travel-left');
     const travelRight = document.getElementById('chevron-travel-right');
-    // Distance : l'écart réel entre les deux rangées de repères, mesuré dans le
-    // DOM. Le déduire de la largeur du bandeau et des doublures faisait trop
-    // long (les doublures sont plus larges que les repères) et les chevrons
-    // ressortaient par les bords de l'écran au lieu de se fondre dans le repère
-    // opposé. Mesuré ainsi, le point d'arrivée coïncide avec le point de départ
-    // d'en face, quelle que soit la largeur de l'écran.
-    const dist = Math.max(0, chevronsRight.offsetLeft - chevronsLeft.offsetLeft);
+    // Distance : la largeur du bandeau, rien de plus. À l'antenne les chevrons
+    // mobiles ne sortent jamais du cadre — ils entrent par un bord, traversent
+    // et s'éteignent sur place à l'autre bord. Ils sont d'ailleurs placés dans
+    // le cache du bandeau, qui les clippe : ils ne peuvent plus déborder.
+    const dist = pillEl.offsetWidth + travelLeft.offsetWidth;
 
-    // Départ : les vrais repères s'effacent, les doublures prennent leur place.
-    chevronsLeft.style.opacity = '0';
-    chevronsRight.style.opacity = '0';
+    // Les repères d'indices restent visibles des deux côtés pendant toute la
+    // traversée : ils ne cèdent pas la place aux doublures.
     [travelLeft, travelRight].forEach(el => {
       el.style.transition = 'none';
       el.style.setProperty('--travel-duration', (FIN_TRAVEL_MS / 1000) + 's');
@@ -4252,13 +4235,11 @@
     waitForChevronCrossing(pillEl, travelLeft, () => { if(onCross) onCross(); });
 
     setTimeout(() => {
-      // Arrivée : les doublures se fondent dans les repères opposés, qui
-      // réapparaissent avec leur compte à jour.
+      // Arrivée : les doublures s'éteignent au bord opposé et les repères
+      // reprennent leur compte à jour.
       travelLeft.style.opacity = '0';
       travelRight.style.opacity = '0';
       renderChevrons();
-      chevronsLeft.style.opacity = '1';
-      chevronsRight.style.opacity = '1';
       // Repositionnement silencieux pour la traversée suivante.
       [travelLeft, travelRight].forEach(el => { el.style.transition = 'none'; });
       travelLeft.style.transform = 'translateY(-50%) translateX(0)';
@@ -4267,20 +4248,6 @@
       [travelLeft, travelRight].forEach(el => { el.style.transition = ''; });
       if(onDone) onDone();
     }, FIN_TRAVEL_MS);
-  }
-
-  // Ouverture d'une manche de finale : le bandeau naît pendant la traversée.
-  function openFinaleWordPill(pillEl){
-    const wordEl = document.getElementById('play-word');
-    wordEl.style.animation = 'none';
-    wordEl.style.opacity = '0';
-    runFinaleTravel(pillEl,
-      () => {
-        showWordNow('play-word');
-        pillEl.style.setProperty('--materialize-duration', '0.26s');
-        pillEl.classList.add('materialize-frame');
-      },
-      null);
   }
 
   // Pose le mot visible d'un coup (il apparaît au sein de la masse de chevrons,
@@ -4365,7 +4332,7 @@
         },
         () => {
           pillEl.style.setProperty('--dematerialize-duration', '0.32s');
-          pillEl.classList.remove('materialize', 'materialize-tv', 'materialize-frame');
+          pillEl.classList.remove('materialize', 'materialize-tv');
           pillEl.classList.add('dematerialize');
           chevronsLeft.style.opacity = '0';
           chevronsRight.style.opacity = '0';
