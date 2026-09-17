@@ -3944,7 +3944,20 @@
   // (opacity/animation inline jamais réinitialisés) jusqu'à la manche suivante.
   let inputLocked = false;
   function lockInput(){ inputLocked = true; setPlayControlsEnabled(false, false); }
-  function unlockInput(){ inputLocked = false; setPlayControlsEnabled(true); }
+  function unlockInput(){
+    inputLocked = false;
+    const turn = state.currentTurn;
+    if(turn && !state.turnMusicStarted){
+      // Le chrono de la manche n'a pas encore démarré (aucun mode) : même
+      // après un remplacement de mot via "Mot trop difficile", les boutons de
+      // jeu restent grisés. En finale, le bouton bleu "1er indice" reste
+      // l'exception, puisque c'est lui qui sert à lancer le chrono.
+      setPlayControlsEnabled(false);
+      if(turn.kind === 'final') document.getElementById('btn-not-found').disabled = false;
+    } else {
+      setPlayControlsEnabled(true);
+    }
+  }
 
   document.getElementById('word-pill').addEventListener('click', () => {
     if(state.currentTurn.kind === 'final' && !state.turnMusicStarted){
