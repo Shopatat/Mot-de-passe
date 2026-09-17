@@ -3197,6 +3197,7 @@
   document.getElementById('btn-quit-confirm').addEventListener('click', () => {
     document.getElementById('quit-confirm-overlay').classList.remove('visible');
     clearInterval(state.timerHandle);
+    document.getElementById('screen-play').classList.remove('finale-pending-start');
     showScreen('setup');
   });
   function escapeHtml(str){
@@ -3820,7 +3821,7 @@
     showScreen('handoff');
   }
 
-  document.getElementById('btn-back-to-setup').addEventListener('click', () => { showScreen('setup'); });
+  document.getElementById('btn-back-to-setup').addEventListener('click', () => { document.getElementById('screen-play').classList.remove('finale-pending-start'); showScreen('setup'); });
 
   document.getElementById('btn-ready').addEventListener('click', () => {
     // Son de lancement de la partie déclenché ici, au moment où le joueur valide
@@ -4794,6 +4795,7 @@
     goToPlay();
   });
   document.getElementById('btn-training-stop').addEventListener('click', () => {
+    document.getElementById('screen-play').classList.remove('finale-pending-start');
     showScreen('setup');
   });
 
@@ -5432,7 +5434,7 @@
     showScreen('final');
   }
 
-  document.getElementById('btn-replay').addEventListener('click', () => { showScreen('setup'); });
+  document.getElementById('btn-replay').addEventListener('click', () => { document.getElementById('screen-play').classList.remove('finale-pending-start'); showScreen('setup'); });
 
   // L'écran d'accueil est actif par défaut dans le HTML (pas de showScreen()
   // appelé au tout premier chargement), donc la musique de menu ne se
