@@ -3881,6 +3881,12 @@
     playHint.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
     updateForbiddenReminderVisibility();
     showScreen('play');
+    // Le premier calcul de taille (dans loadNextWord ci-dessus) a eu lieu
+    // avant que cet écran soit affiché : le cadre-mot faisait alors une
+    // largeur de 0, donc l'ajustement n'a rien pu mesurer et le mot est resté
+    // à sa taille maximale. On le relance maintenant que l'écran est visible
+    // et que le cadre a une vraie largeur.
+    fitWordText('play-word');
 
     // Points de progression, cadre du mot, cadre à diodes (finale) et texte
     // d'indication démarrent tous leur apparition ici, ensemble,
