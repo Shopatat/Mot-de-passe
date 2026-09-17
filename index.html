@@ -967,6 +967,16 @@
   }
   #btn-play-settings.visible{ display:flex; }
 
+  #btn-word-too-hard{
+    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:94px; z-index:3;
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
+    color:var(--text-dim); font-size:15px; font-weight:700; line-height:1;
+    align-items:center; justify-content:center; cursor:pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  #btn-word-too-hard.visible{ display:flex; }
+
   .quit-overlay{
     display:none; position:fixed; inset:0; z-index:10;
     background:rgba(0,0,0,0.62);
@@ -1003,6 +1013,7 @@
 
   <button id="btn-quit-game" title="Retour au menu principal">✕</button>
   <button id="btn-play-settings" title="Réglages">⚙️</button>
+  <button id="btn-word-too-hard" title="Mettre ce mot de côté (trop difficile)">?</button>
   <button id="btn-schedule" title="Qui joue avec qui">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
       <circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/>
@@ -1312,9 +1323,6 @@
         </svg>
         Passer
       </button>
-    </div>
-    <div class="blacklist-row">
-      <button class="text-action subtle" id="btn-word-too-hard">🚫 Mot trop difficile</button>
     </div>
     <div class="blacklist-row" id="training-end-row" style="display:none;">
       <button class="text-action subtle" id="btn-training-end">🏁 Terminer la manche</button>
@@ -3113,6 +3121,7 @@
     screens[name].classList.add('active');
     document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
     document.getElementById('btn-play-settings').classList.toggle('visible', name !== 'setup' && name !== 'final');
+    document.getElementById('btn-word-too-hard').classList.toggle('visible', name !== 'setup' && name !== 'final');
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && state.currentTurn.kind === 'qualif';
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
