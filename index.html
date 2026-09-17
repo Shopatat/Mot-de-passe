@@ -159,6 +159,22 @@
   .vswap-row .swap-btn{ width:28px; height:28px; font-size:14px; opacity:0.85; }
   .vswap-row .swap-spacer{ flex:0 0 34px; }
   .block-header{ display:flex; align-items:center; gap:8px; font-weight:800; font-size:14px; margin-bottom:4px; }
+
+  .settings-sticky-header{
+    position: sticky; top:-18px; z-index:1;
+    margin:-18px -18px 14px; padding:16px 18px 12px;
+    background: var(--card); border-radius: var(--radius) var(--radius) 0 0;
+    display:flex; align-items:center; justify-content:space-between;
+    font-weight:800; font-size:14px;
+    box-shadow: 0 6px 10px -6px rgba(0,0,0,0.4);
+  }
+  .settings-close-x{
+    width:28px; height:28px; border-radius:50%; flex-shrink:0;
+    background:rgba(255,255,255,0.06); border:1px solid var(--card-edge);
+    color:var(--text-dim); font-size:14px; line-height:1;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .settings-close-x:active{ opacity:0.6; }
   .dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; }
 
   .chip-group{ display:flex; flex-wrap:wrap; gap:8px; }
@@ -1012,7 +1028,7 @@
 <div id="app">
 
   <button id="btn-quit-game" title="Retour au menu principal">✕</button>
-  <button id="btn-play-settings" title="Réglages">⚙️</button>
+  <button id="btn-play-settings" title="Paramètres">⚙️</button>
   <button id="btn-word-too-hard" title="Mettre ce mot de côté (trop difficile)">?</button>
   <button id="btn-schedule" title="Qui joue avec qui">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -1068,7 +1084,10 @@
 
   <div class="quit-overlay" id="settings-overlay">
     <div class="card settings-modal">
-      <div class="block-header">⚙️ Réglages</div>
+      <div class="settings-sticky-header">
+        <span>⚙️ Paramètres</span>
+        <button class="settings-close-x" id="btn-close-settings" title="Fermer">✕</button>
+      </div>
       <label class="field-label">Sons</label>
       <div class="sound-row">
         <span>Sons d'interface (clics)</span>
@@ -1131,8 +1150,6 @@
       <label class="field-label" style="margin-top:18px;">📚 Réserve de mots</label>
       <p class="marquee-sub" style="text-align:left; font-style:normal; margin:-4px 0 8px;" id="word-pool-status"></p>
       <button class="text-action subtle" id="btn-reset-word-pool" style="margin-top:6px; opacity:0.85;">Réinitialiser maintenant</button>
-
-      <button class="btn btn-gold" id="btn-close-settings" style="margin-top:16px; width:100%;">OK</button>
     </div>
   </div>
 
