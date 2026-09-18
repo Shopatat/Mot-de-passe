@@ -8,7 +8,7 @@ const ASSETS = [
   './sounds/music-finale-late.mp3',
   './sounds/music-menu.mp3',
   './sounds/music-qualif-alt.mp3',
-  './sounds/music-qualif-wait.mp3',
+  './sounds/music-qualif-wait.wav',
   './sounds/music-qualif.mp3',
   './sounds/sfx-correct.wav',
   './sounds/sfx-finale-timeout.wav',
