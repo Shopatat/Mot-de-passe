@@ -2298,6 +2298,7 @@
   // niveau interface mais n'est pas encore branché sur cette lecture.
   const MUSIC_FILES = {
     menu:          'sounds/music-menu.mp3',
+    qualifWait:    'sounds/music-qualif-wait.mp3',
     qualif:        'sounds/music-qualif.mp3',
     finaleAmbient: 'sounds/music-finale-ambient.mp3',
     finaleEarly:   'sounds/music-finale-early.mp3',
@@ -2337,6 +2338,15 @@
       audio = new Audio(url);
       audio.loop = !!opts.loop;
       currentKey = key;
+      if(opts.fallback){
+        // Piste pas encore livrée (fichier absent) : repli propre plutôt que
+        // le silence — n'écoute que l'échec de CHARGEMENT (fichier manquant),
+        // pas une coupure normale déclenchée ailleurs entretemps.
+        const thisAudio = audio;
+        thisAudio.addEventListener('error', () => {
+          if(audio === thisAudio) play(opts.fallback, { loop:true });
+        }, { once:true });
+      }
       const ctx = getAudioCtx();
       if(ctx){
         if(ctx.state === 'suspended') ctx.resume();
@@ -2356,7 +2366,7 @@
       currentKey = null;
     }
     function pause(){ if(audio) audio.pause(); }
-    function resume(){ if(audio){ applyVolume(); audio.play().catch(()=>{}); } }
+    function resume(){ ensureAudioCtxRunning(); if(audio){ applyVolume(); audio.play().catch(()=>{}); } }
     function isPlaying(){ return !!(audio && !audio.paused); }
     // Permet de savoir quand la piste en cours se termine NATURELLEMENT (fin de
     // fichier, ex: timeout des qualifs dont le son de fin est inclus dans la
@@ -2392,6 +2402,18 @@
       audioCtx = AC ? new AC() : null;
     }
     return audioCtx;
+  }
+  // Sur iOS, l'AudioContext partagé peut rester "suspended" après un retour de
+  // l'appli en arrière-plan (verrouillage, changement d'appli...) sans jamais
+  // se relancer tout seul — tant qu'il l'est, TOUS les GainNode qui en
+  // dépendent (musique, bruitages) deviennent muets, y compris quand on
+  // touche un curseur de volume : la valeur change bien, mais rien n'est
+  // audible, ce qui donne l'impression que le réglage ne sert à rien (jusqu'au
+  // prochain relancement de l'appli, qui recrée un contexte tout neuf).
+  // On retente donc systématiquement à chaque interaction volume-related.
+  function ensureAudioCtxRunning(){
+    const ctx = getAudioCtx();
+    if(ctx && ctx.state !== 'running') ctx.resume().catch(()=>{});
   }
   const GAIN_BOOST = { indice: 1.6 }; // ajuster ici si besoin de plus/moins de punch
 
@@ -2509,6 +2531,7 @@
     { key:'finaleTimeout', label:'Palier perdu avant l\u2019heure (finale)', kind:'sfx', cat:'game' },
     { key:'jackpot',     label:'Victoire finale (5 paliers)',kind:'sfx',   cat:'game' },
     { key:'music-menu',           label:'Musique — Menu principal',            kind:'music', cat:'game' }, // en boucle propre (fondu au raccord) : la piste dure ~2min mais le menu peut rester ouvert bien plus longtemps
+    { key:'music-qualif-wait',    label:'Musique — Attente du 1er mot (qualifs)', kind:'music', cat:'game' }, // boucle courte, tourne tant que le mot n'a pas été tapé pour lancer le chrono
     { key:'music-qualif',         label:'Musique — Qualifications',            kind:'music', cat:'game' }, // pas une boucle : la piste dure exactement les 30s de la manche, synchro avec le chrono
     { key:'music-finale-ambient', label:'Musique — Attente en finale',         kind:'music', cat:'game' },
     { key:'music-finale-early',   label:'Musique — Finale, paliers 1 à 3',     kind:'music', cat:'game' },
@@ -2516,7 +2539,7 @@
   ];
   // Piste MUSIC (voir MUSIC_FILES) -> slot de réglage volume ci-dessus.
   const MUSIC_KEY_TO_SLOT = {
-    menu: 'music-menu', qualif: 'music-qualif',
+    menu: 'music-menu', qualifWait: 'music-qualif-wait', qualif: 'music-qualif',
     finaleAmbient: 'music-finale-ambient', finaleEarly: 'music-finale-early', finaleLate: 'music-finale-late',
   };
   // Volume individuel par piste (son ou musique), réglable dans le menu de
@@ -2623,8 +2646,12 @@
     function updatePreviewVolume(){
       if(!currentPreviewAudio || !currentPreviewKey) return;
       const slot = SOUND_SLOTS.find(s => s.key === currentPreviewKey);
-      const vol = volumeFor(slot ? slot.cat : 'game', currentPreviewKey);
-      currentPreviewAudio.volume = Math.max(0, Math.min(1, vol));
+      const vol = Math.max(0, Math.min(1, volumeFor(slot ? slot.cat : 'game', currentPreviewKey)));
+      // Safari iOS ignore silencieusement audio.volume (voir stopPreview
+      // ci-dessus et MUSIC plus haut) : on passe par le GainNode posé à la
+      // lecture quand Web Audio est disponible, .volume en repli sinon.
+      if(currentPreviewAudio._gainNode){ currentPreviewAudio._gainNode.gain.value = vol; }
+      else if(typeof currentPreviewAudio.volume === 'number'){ currentPreviewAudio.volume = vol; }
     }
     function trackPreview(key, audio){
       currentPreviewAudio = audio;
@@ -2637,10 +2664,22 @@
     }
     function playAudioForKey(key, url){
       const slot = SOUND_SLOTS.find(s => s.key === key);
-      const vol = volumeFor(slot ? slot.cat : 'game', key);
+      const vol = Math.max(0, Math.min(1, volumeFor(slot ? slot.cat : 'game', key)));
       if(vol <= 0) return null;
       const audio = new Audio(url);
-      audio.volume = Math.max(0, Math.min(1, vol));
+      // Même repli GainNode que MUSIC/FILE_SFX : sur Safari iOS, audio.volume
+      // seul ne fait rien une fois la lecture démarrée (voir updatePreviewVolume).
+      const ctx = getAudioCtx();
+      if(ctx){
+        if(ctx.state === 'suspended') ctx.resume();
+        const source = ctx.createMediaElementSource(audio);
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = vol;
+        source.connect(gainNode).connect(ctx.destination);
+        audio._gainNode = gainNode;
+      } else {
+        audio.volume = vol;
+      }
       audio.play().catch(()=>{});
       return audio;
     }
@@ -2791,6 +2830,7 @@
       const volumeSlider = row.querySelector('.volume-slider');
       const volumePct = row.querySelector('.volume-pct');
       volumeSlider.addEventListener('input', () => {
+        ensureAudioCtxRunning();
         const v = parseFloat(volumeSlider.value);
         SLOT_VOLUMES.set(slot.key, v);
         volumePct.textContent = Math.round(v*100) + '%';
@@ -3290,9 +3330,11 @@
     updateForbiddenReminderVisibility();
   });
   document.getElementById('ui-volume-slider').addEventListener('input', e => {
+    ensureAudioCtxRunning();
     SFX.setUiVol(Number(e.target.value) / 100);
   });
   document.getElementById('game-volume-slider').addEventListener('input', e => {
+    ensureAudioCtxRunning();
     SFX.setGameVol(Number(e.target.value) / 100);
     MUSIC.applyVolume();
   });
@@ -3860,6 +3902,12 @@
     state.dotsLost = 0;
     state.running = false;
     state.turnMusicStarted = false;
+
+    // Écran d'attente du premier mot des qualifs (mot affiché, chrono pas
+    // encore lancé) : bascule sur la piste dédiée au lieu de laisser tourner
+    // la musique de menu héritée du handoff. Coupée automatiquement au tap
+    // qui lance le chrono, puisque ce tap bascule vers 'qualif' (voir plus bas).
+    if(turn.kind === 'qualif') MUSIC.play('qualifWait', {loop:true, fallback:'menu'});
 
     const nameEl = document.getElementById('play-team-name');
     if(turn.kind === 'final'){
@@ -5470,6 +5518,12 @@
       musicWasPlayingBeforeHidden = MUSIC.isPlaying();
       MUSIC.pause();
     } else {
+      // Retour au premier plan : l'AudioContext peut être resté "suspended"
+      // (voir ensureAudioCtxRunning) — hors geste utilisateur, iOS refuse
+      // parfois de le relancer ici, donc on retente aussi au prochain tap.
+      ensureAudioCtxRunning();
+      document.addEventListener('click', ensureAudioCtxRunning, { once:true });
+      document.addEventListener('touchstart', ensureAudioCtxRunning, { once:true, passive:true });
       if(musicWasPlayingBeforeHidden) MUSIC.resume();
       // Le verrou d'écran a été relâché par le système pendant l'absence :
       // on le redemande si on est toujours en partie.
