@@ -467,6 +467,12 @@
   .handoff-role{ font-size:14px; color:var(--text-dim); }
   .handoff-role b{ color: var(--text); }
   .handoff-target{ font-size:14px; color: var(--gold); font-weight:800; margin-top:4px; }
+  .handoff-final-reminder{
+    font-size:12.5px; color: var(--text-dim); line-height:1.5; max-width:320px;
+    margin-top:14px; padding:10px 14px; border-radius:10px;
+    background: rgba(90,169,230,0.10); border:1px solid rgba(90,169,230,0.35);
+  }
+  .handoff-final-reminder b{ color: var(--text); }
 
   .countdown-num{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:90px; color: var(--red); text-shadow: 0 0 30px rgba(255,59,48,0.6); }
 
@@ -1280,6 +1286,9 @@
       <div class="handoff-team" id="handoff-team-name"></div>
       <div class="handoff-role" id="handoff-role"></div>
       <div class="handoff-target" id="handoff-target"></div>
+      <div class="handoff-final-reminder" id="handoff-final-reminder" style="display:none;">
+        Le bouton bleu lance le chrono et donne aussitôt le 1<sup>er</sup> mot-indice. Il en redonne un à chaque appui (3 max), puis devient <b>Pas trouvé</b> : le mot est perdu pour de bon.
+      </div>
     </div>
     <button class="btn btn-gold" id="btn-ready">C'est parti</button>
     <button class="btn btn-ghost" id="btn-back-to-setup" style="display:none; margin-top:8px;">‹ Retour</button>
@@ -3936,6 +3945,10 @@
       document.getElementById('handoff-scorebar').style.display = '';
       renderScorebar('handoff-scorebar', turn.colorIdx);
     }
+    // Rappel du fonctionnement du bouton bleu (1er indice -> ... -> Pas trouvé)
+    // et de la limite de 3 indices : peu clair pour des joueurs qui découvrent
+    // la finale, donc rappelé ici plutôt que seulement dans les règles du menu.
+    document.getElementById('handoff-final-reminder').style.display = (turn.kind === 'final') ? '' : 'none';
     // "Retour" vers le setup : uniquement au tout premier "Prêt ?" de la partie
     // (rien n'a encore été joué, donc rien à perdre) — pas sur les suivants,
     // qui abandonneraient un score/tournoi en cours (c'est déjà le rôle du ✕).
