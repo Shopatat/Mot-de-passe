@@ -2985,8 +2985,12 @@
     function fire(){
       timer = null;
       zone.hidden = !zone.hidden;
-      // Petit retour haptique quand c'est pris en compte (ignoré si non supporté).
+      // Petit retour haptique quand c'est pris en compte (ignoré si non supporté,
+      // notamment sur iOS/Safari qui n'implémente pas l'API de vibration).
       if(navigator.vibrate) { try{ navigator.vibrate(30); }catch(e){} }
+      // Retour sonore (le même que l'affichage du 1er mot d'un palier), pour
+      // confirmer le déclenchement même quand la vibration n'est pas dispo.
+      try{ SFX.wordReveal(); }catch(e){}
     }
     function begin(x, y){
       cancel();
