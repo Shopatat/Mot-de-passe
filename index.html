@@ -2305,9 +2305,21 @@
     finaleLate:    'sounds/music-finale-late.mp3',
   };
   const MUSIC = (function(){
-    let audio = null;
+    let audio = null;         // <audio> en cours (mode 'element')
+    let bufferSource = null;  // AudioBufferSourceNode en cours (mode 'buffer', boucle sans accroc)
+    let mode = null;          // 'element' | 'buffer'
     let currentKey = null;
     let gainNode = null;
+    let bufferStartCtxTime = 0; // ctx.currentTime au (re)lancement du buffer, pour retrouver la position en pause
+    let bufferPauseOffset = 0;
+    let bufferDuration = 0;
+    const decodedBuffers = {}; // cache clé -> AudioBuffer déjà décodé (évite de retélécharger/redécoder)
+    // Pistes courtes qui bouclent souvent (ex: attente qualifs, ~13s) : le
+    // <audio loop> natif recrée un petit accroc à chaque tour, imperceptible
+    // sur une longue piste mais très audible ici. On les décode entièrement en
+    // AudioBuffer et on boucle via Web Audio (AudioBufferSourceNode), qui est
+    // sample-accurate et donc parfaitement gapless.
+    const GAPLESS_KEYS = new Set(['qualifWait']);
     // Les musiques d'ambiance (menu + attente de la finale) restent en permanence
     // à un quart de leur volume max, quel que soit l'écran — pour rester en
     // retrait. Les musiques de chrono (qualif/finale) et les bruitages, eux,
@@ -2329,15 +2341,24 @@
       if(gainNode){ gainNode.gain.value = vol; }
       else if(audio){ audio.volume = vol; } // repli si Web Audio indisponible
     }
+    function isPlaying(){
+      if(mode === 'buffer') return !!bufferSource;
+      return !!(audio && !audio.paused);
+    }
     function play(key, opts){
       opts = opts || {};
-      if(currentKey === key && audio && !audio.paused) return; // déjà en cours, on ne relance pas
+      if(currentKey === key && isPlaying()) return; // déjà en cours, on ne relance pas
       stop();
       const url = MUSIC_FILES[key];
       if(!url) return;
+      currentKey = key;
+      if(GAPLESS_KEYS.has(key)) playGapless(key, url, opts);
+      else playElement(key, url, opts);
+    }
+    function playElement(key, url, opts){
+      mode = 'element';
       audio = new Audio(url);
       audio.loop = !!opts.loop;
-      currentKey = key;
       if(opts.fallback){
         // Piste pas encore livrée (fichier absent) : repli propre plutôt que
         // le silence — n'écoute que l'échec de CHARGEMENT (fichier manquant),
@@ -2359,18 +2380,72 @@
       applyVolume();
       audio.play().catch(()=>{}); // le navigateur peut refuser avant une interaction utilisateur, sans gravité
     }
+    async function playGapless(key, url, opts){
+      const ctx = getAudioCtx();
+      if(!ctx){ playElement(key, url, { loop:true, fallback:opts.fallback }); return; } // repli si Web Audio indisponible
+      ensureAudioCtxRunning();
+      try {
+        let buffer = decodedBuffers[key];
+        if(!buffer){
+          const res = await fetch(url);
+          if(!res.ok) throw new Error('fichier introuvable');
+          const arr = await res.arrayBuffer();
+          buffer = await ctx.decodeAudioData(arr);
+          decodedBuffers[key] = buffer;
+        }
+        // Le décodage est asynchrone : la piste demandée a pu changer entretemps
+        // (nouvel appel à play() pendant le fetch/decode) — on abandonne alors.
+        if(currentKey !== key) return;
+        mode = 'buffer';
+        bufferDuration = buffer.duration;
+        startBufferSource(buffer, 0);
+      } catch(e){
+        if(currentKey === key && opts.fallback) play(opts.fallback, { loop:true });
+      }
+    }
+    function startBufferSource(buffer, offsetSec){
+      const ctx = getAudioCtx();
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      gainNode = ctx.createGain();
+      source.connect(gainNode).connect(ctx.destination);
+      applyVolume();
+      const offset = buffer.duration ? (offsetSec % buffer.duration) : 0;
+      source.start(0, offset);
+      bufferSource = source;
+      bufferStartCtxTime = ctx.currentTime - offset;
+    }
     function stop(){
       if(audio){ audio.pause(); audio.currentTime = 0; }
+      if(bufferSource){ try{ bufferSource.stop(); }catch(e){} }
       audio = null;
+      bufferSource = null;
+      mode = null;
       gainNode = null;
       currentKey = null;
     }
-    function pause(){ if(audio) audio.pause(); }
-    function resume(){ ensureAudioCtxRunning(); if(audio){ applyVolume(); audio.play().catch(()=>{}); } }
-    function isPlaying(){ return !!(audio && !audio.paused); }
+    function pause(){
+      if(mode === 'buffer'){
+        if(!bufferSource) return;
+        const ctx = getAudioCtx();
+        bufferPauseOffset = bufferDuration ? (((ctx.currentTime - bufferStartCtxTime) % bufferDuration) + bufferDuration) % bufferDuration : 0;
+        try{ bufferSource.stop(); }catch(e){}
+        bufferSource = null;
+      } else if(audio){ audio.pause(); }
+    }
+    function resume(){
+      ensureAudioCtxRunning();
+      if(mode === 'buffer'){
+        const buffer = currentKey && decodedBuffers[currentKey];
+        if(buffer) startBufferSource(buffer, bufferPauseOffset);
+      } else if(audio){ applyVolume(); audio.play().catch(()=>{}); }
+    }
     // Permet de savoir quand la piste en cours se termine NATURELLEMENT (fin de
     // fichier, ex: timeout des qualifs dont le son de fin est inclus dans la
     // musique) — pas via un stop() manuel, qui ne déclenche jamais 'ended'.
+    // Sans objet pour les pistes 'buffer' : toujours en boucle volontaire,
+    // jamais censées se terminer seules.
     function onEnded(cb){
       if(!audio || audio.ended){ cb(); return; }
       audio.addEventListener('ended', cb, { once:true });
