@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mot-de-passe-v2';
+const CACHE_NAME = 'mot-de-passe-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -38,9 +38,7 @@ self.addEventListener('activate', (event) => {
 
 // Le code du jeu (page + manifest) est vérifié en ligne à chaque ouverture avec
 // internet, pour que les mises à jour du jeu apparaissent sans jamais avoir à
-// vider un cache manuellement. Les sons, eux, changent rarement : on les sert
-// depuis le cache en priorité pour économiser de la bande passante, avec repli
-// sur le réseau seulement si absents.
+// vider un cache manuellement.
 const NETWORK_FIRST = ['/index.html', '/manifest.json', '/sw.js'];
 
 self.addEventListener('fetch', (event) => {
@@ -62,7 +60,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Les sons : servis depuis le cache tout de suite si présents (rapide, marche
+  // hors-ligne), MAIS une requête réseau part quand même en parallèle pour
+  // rafraîchir le cache en vue de la prochaine ouverture ("stale-while-
+  // revalidate"). Un simple cache-first ne se met jamais à jour tout seul : un
+  // fichier son modifié ne serait jamais revu par un joueur qui l'a déjà en
+  // cache, sans bump manuel de CACHE_NAME à chaque changement.
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    caches.match(event.request).then((cached) => {
+      const network = fetch(event.request).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return res;
+      }).catch(() => cached);
+      return cached || network;
+    })
   );
 });
