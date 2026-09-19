@@ -789,14 +789,15 @@
   .chevrons{ display:none; flex-shrink:0; flex-direction:row; gap:0; position:relative; z-index:50; align-self:center; transition: opacity 0.15s ease; }
   .chevrons.active{ display:flex; }
   /* Chevrons d'indices de la finale. Sur le plateau ils ne sont pas rouges mais
-     orange cuivré, et un chevron consommé ne devient pas gris : il s'estompe
-     presque totalement, à la limite du visible — pas juste "éteint", vraiment
-     disparu, pour que la différence avec un chevron encore actif saute aux yeux. */
+     orange cuivré, et un chevron consommé ne laisse aucune trace : il disparaît
+     complètement, comme à l'antenne. Le span garde sa place dans la rangée
+     (couleur transparente, pas display:none) pour que les chevrons restants ne
+     se décalent pas. */
   .chevrons span{
     width:32px; height:76px; margin-left:-15px;
     background-image: radial-gradient(circle at center, currentColor 40%, transparent 45%);
     background-size: 4.5px 4.5px;
-    color: rgba(196,196,190,0.06);
+    color: transparent;
     transition: color 0.3s ease, filter 0.3s ease;
   }
   .chevrons span:first-child{ margin-left:0; }
@@ -841,9 +842,9 @@
     50%{ color: #f2b070; filter: drop-shadow(0 0 16px rgba(var(--sweep-glow),0.95)); }
   }
   /* Consommation d'un indice, en trois temps : le chevron flashe en blanc
-     éclatant sur place (85 ms), file vers le mot et s'y enfonce, puis
-     réapparaît quasi invisible à sa place — jamais éteint d'un coup, comme sur
-     le plateau. Trois animations distinctes pour que le trajet (--travel) et sa
+     éclatant sur place (85 ms), file vers le mot et s'y enfonce, puis sa place
+     est remise à zéro sans qu'il réapparaisse — il ne reste aucune trace, comme
+     sur le plateau. Trois animations distinctes pour que le trajet (--travel) et sa
      durée (--glide) varient d'un chevron à l'autre sans toucher au flash ni à la
      queue. Les trois chevrons s'arrêtent au même point, celui du dernier (collé
      au mot, qui entre un peu dans le cadre) : le pas entre deux chevrons est de
@@ -871,8 +872,7 @@
     100%{ opacity:0;   transform: translateX(calc(var(--dir) * var(--travel))) scaleX(1.1); }
   }
   @keyframes chevronGhost{
-    from{ opacity:0; transform: translateX(0) scaleX(1); color: rgba(196,196,190,0.06); filter: drop-shadow(0 0 2px rgba(0,0,0,0.45)); }
-    to{   opacity:1; transform: translateX(0) scaleX(1); color: rgba(196,196,190,0.06); filter: drop-shadow(0 0 2px rgba(0,0,0,0.45)); }
+    from,to{ opacity:1; transform: translateX(0) scaleX(1); color: transparent; filter: none; }
   }
   .controls-row{ display:flex; gap:10px; }
   .controls-row button{ flex:1; }
