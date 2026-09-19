@@ -840,16 +840,39 @@
     0%,100%{ color: var(--sweep-amber); filter: drop-shadow(0 0 6px rgba(var(--sweep-glow),0.6)); }
     50%{ color: #f2b070; filter: drop-shadow(0 0 16px rgba(var(--sweep-glow),0.95)); }
   }
-  /* Consommation d'un indice : le chevron flashe en blanc éclatant ~50 ms avant
-     de s'estomper presque entièrement — c'est ce qu'on voit sur le plateau, le
-     chevron ne s'éteint jamais d'un coup, mais finit quasi invisible. */
+  /* Consommation d'un indice, en trois temps : le chevron flashe en blanc
+     éclatant sur place (85 ms), file vers le mot et s'y enfonce, puis
+     réapparaît quasi invisible à sa place — jamais éteint d'un coup, comme sur
+     le plateau. Trois animations distinctes pour que le trajet (--travel) et sa
+     durée (--glide) varient d'un chevron à l'autre sans toucher au flash ni à la
+     queue. Les trois chevrons s'arrêtent au même point, celui du dernier (collé
+     au mot, qui entre un peu dans le cadre) : le pas entre deux chevrons est de
+     17 px, donc 38 / 55 / 72 px, parcourus à la même vitesse (~0,47 px/ms).
+     Pas de fill-mode "backwards" sur la queue, sinon elle masquerait le chevron
+     dès le premier instant. */
+  .chevrons.left{ --dir: 1; }
+  .chevrons.right{ --dir: -1; }
+  .chevrons.left  span:nth-child(3), .chevrons.right span:nth-child(1){ --travel:38px; --glide:80ms; }
+  .chevrons.left  span:nth-child(2), .chevrons.right span:nth-child(2){ --travel:55px; --glide:116ms; }
+  .chevrons.left  span:nth-child(1), .chevrons.right span:nth-child(3){ --travel:72px; --glide:151ms; }
   .chevrons span.spent{
-    animation: chevronSpend 0.42s ease-out both;
+    animation-name: chevronFlash, chevronGlide, chevronGhost;
+    animation-duration: 85ms, var(--glide), 190ms;
+    animation-delay: 0s, 85ms, calc(85ms + var(--glide));
+    animation-timing-function: linear, ease-in, ease-out;
+    animation-fill-mode: forwards, forwards, forwards;
   }
-  @keyframes chevronSpend{
-    0%{   color:#ffffff; filter: drop-shadow(0 0 20px rgba(255,255,255,1)) drop-shadow(0 0 34px rgba(255,255,255,0.7)); }
-    12%{  color:#ffffff; filter: drop-shadow(0 0 20px rgba(255,255,255,1)) drop-shadow(0 0 34px rgba(255,255,255,0.7)); }
-    100%{ color: rgba(196,196,190,0.06); filter: drop-shadow(0 0 2px rgba(0,0,0,0.45)); }
+  @keyframes chevronFlash{
+    from,to{ color:#ffffff; filter: drop-shadow(0 0 20px rgba(255,255,255,1)) drop-shadow(0 0 34px rgba(255,255,255,0.7)); }
+  }
+  @keyframes chevronGlide{
+    0%{   opacity:1;   transform: translateX(0) scaleX(1); animation-timing-function: ease-in; }
+    65%{  opacity:.85; transform: translateX(calc(var(--dir) * var(--travel) * .58)) scaleX(1.05); animation-timing-function: ease-in; }
+    100%{ opacity:0;   transform: translateX(calc(var(--dir) * var(--travel))) scaleX(1.1); }
+  }
+  @keyframes chevronGhost{
+    from{ opacity:0; transform: translateX(0) scaleX(1); color: rgba(196,196,190,0.06); filter: drop-shadow(0 0 2px rgba(0,0,0,0.45)); }
+    to{   opacity:1; transform: translateX(0) scaleX(1); color: rgba(196,196,190,0.06); filter: drop-shadow(0 0 2px rgba(0,0,0,0.45)); }
   }
   .controls-row{ display:flex; gap:10px; }
   .controls-row button{ flex:1; }
