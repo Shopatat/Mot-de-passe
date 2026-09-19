@@ -306,6 +306,23 @@
     color:#fffdf2;
     filter: drop-shadow(0 0 3px #fff6d9) drop-shadow(0 0 8px rgba(255,214,120,0.85)) drop-shadow(0 0 14px rgba(255,190,80,0.55));
   }
+  /* "Passer" en finale : le mot est perdu pour de bon, donc le bouton ne doit
+     pas avoir l'air aussi anodin qu'en qualifs — rouge sang plus sombre,
+     liseré et halo rouges, icône de danger. Il se met à battre quand le mot
+     est déjà "en danger" (3 indices consommés). */
+  #screen-play.finale-style #btn-not-found{
+    background: linear-gradient(180deg, #d8402f 0%, #a3160f 55%, #6d0b07 100%);
+    border: 2px solid #ff5a4a;
+    box-shadow: 0 3px 0 #3f0603, 0 0 14px rgba(255,59,48,0.55), 0 5px 12px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  #screen-play.finale-style #btn-not-found:active{ box-shadow: 0 1px 0 #3f0603, 0 0 10px rgba(255,59,48,0.5), inset 0 1px 0 rgba(255,255,255,0.2); }
+  #screen-play.finale-style #btn-not-found.clue-danger{ animation: dangerPulse 0.9s ease-in-out infinite; }
+  @keyframes dangerPulse{
+    0%,100%{ box-shadow: 0 3px 0 #3f0603, 0 0 12px rgba(255,59,48,0.45), 0 5px 12px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25); }
+    50%{ box-shadow: 0 3px 0 #3f0603, 0 0 26px rgba(255,59,48,0.95), 0 5px 12px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25); }
+  }
+  .danger-icon{ color:#fff; filter: drop-shadow(0 0 4px rgba(255,120,100,0.9)); }
   .btn-ghost{ background: transparent; border: 1px solid var(--card-edge); color: var(--text-dim); }
   .btn-ghost:active{ background: rgba(255,255,255,0.06); }
 
@@ -4015,8 +4032,11 @@
     // et finale) : en finale, les indices se donnent en tapant le mot
     // lui-même (voir son clic), donc ce bouton n'a plus qu'un seul rôle,
     // abandonner le mot — plus besoin de le faire changer de libellé.
-    notFoundBtn.innerHTML = '<svg class="skip-icon-glow" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align:-2px; margin-right:5px;" aria-hidden="true"><polygon points="2,5 2,19 11,12"/><polygon points="11,5 11,19 20,12"/></svg>Passer';
+    notFoundBtn.innerHTML = (turn.style === 'clues')
+      ? '<svg class="danger-icon" viewBox="0 0 24 24" width="17" height="17" style="vertical-align:-3px; margin-right:6px;" aria-hidden="true"><path d="M12 2 L23 21 H1 Z" fill="currentColor"/><rect x="10.9" y="8.5" width="2.2" height="6.5" rx="1.1" fill="#8a0f08"/><circle cx="12" cy="18" r="1.3" fill="#8a0f08"/></svg>Passer'
+      : '<svg class="skip-icon-glow" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align:-2px; margin-right:5px;" aria-hidden="true"><polygon points="2,5 2,19 11,12"/><polygon points="11,5 11,19 20,12"/></svg>Passer';
     notFoundBtn.classList.add('btn-wrong');
+    notFoundBtn.classList.remove('clue-danger');
     document.getElementById('word-pill').classList.remove('clue-danger');
     if(turn.style === 'clues'){
       chevronsLeft.classList.add('active'); chevronsRight.classList.add('active');
@@ -4195,7 +4215,9 @@
   // 1 à 4) ; au-delà, le mot est en "danger" — un tap de plus l'abandonne.
   function renderChevrons(){
     if(state.currentTurn.style !== 'clues') return;
-    document.getElementById('word-pill').classList.toggle('clue-danger', state.clueCount > MAX_CLUES);
+    const inDanger = state.clueCount > MAX_CLUES;
+    document.getElementById('word-pill').classList.toggle('clue-danger', inDanger);
+    document.getElementById('btn-not-found').classList.toggle('clue-danger', inDanger);
     const lit = MAX_CLUES - (state.clueCount - 1);
     // Gauche : la flèche adjacente au mot est la dernière (index le plus élevé),
     // donc l'extinction part bien de l'extérieur vers le mot, comme à l'antenne.
