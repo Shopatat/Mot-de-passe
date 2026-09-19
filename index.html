@@ -495,11 +495,12 @@
   .handoff-role b{ color: var(--text); }
   .handoff-target{ font-size:14px; color: var(--gold); font-weight:800; margin-top:4px; }
   .handoff-final-reminder{
-    font-size:12.5px; color: var(--text-dim); line-height:1.5; max-width:320px;
-    margin-top:14px; padding:10px 14px; border-radius:10px;
-    background: rgba(90,169,230,0.10); border:1px solid rgba(90,169,230,0.35);
+    font-size:14px; color: var(--text); line-height:1.55; max-width:340px;
+    margin-top:14px; padding:13px 16px; border-radius:12px;
+    background: rgba(90,169,230,0.16); border:1.5px solid rgba(120,195,255,0.75);
+    box-shadow: 0 0 14px rgba(90,169,230,0.35), inset 0 0 12px rgba(90,169,230,0.10);
   }
-  .handoff-final-reminder b{ color: var(--text); }
+  .handoff-final-reminder b{ color: #fff; }
 
   .countdown-num{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:90px; color: var(--red); text-shadow: 0 0 30px rgba(255,59,48,0.6); }
 
@@ -3154,13 +3155,15 @@
   })();
 
   // ---- Boutons de test cachés : appui long de 1,2 s sur le panneau du titre ----
-  // Ils ne sont plus visibles à l'écran d'accueil par défaut. Un appui long les
-  // affiche, un second les re-cache. Rien n'est mémorisé : au prochain lancement
-  // de l'appli, ils sont de nouveau cachés.
+  // Ils ne sont pas visibles à l'écran d'accueil par défaut. Un appui long les
+  // affiche, un second les re-cache. L'état (ouvert/replié) est mémorisé : si on
+  // les laisse ouverts, ils le sont toujours au prochain lancement de l'appli,
+  // pour enchaîner les tests sans refaire l'appui long à chaque fois.
   (function initDebugLongPress(){
     const titleEl = document.getElementById('title-tiles');
     const zone = document.getElementById('debug-zone');
     if(!titleEl || !zone) return;
+    try { zone.hidden = localStorage.getItem('mdp_debug_zone_open') !== '1'; } catch(e){}
     const HOLD_MS = 1200;
     const MOVE_TOLERANCE = 12; // px — au-delà, c'est un scroll, pas un appui
     let timer = null, startX = 0, startY = 0;
@@ -3171,6 +3174,7 @@
     function fire(){
       timer = null;
       zone.hidden = !zone.hidden;
+      try { localStorage.setItem('mdp_debug_zone_open', zone.hidden ? '0' : '1'); } catch(e){}
       // Petit retour haptique quand c'est pris en compte (ignoré si non supporté,
       // notamment sur iOS/Safari qui n'implémente pas l'API de vibration).
       if(navigator.vibrate) { try{ navigator.vibrate(30); }catch(e){} }
