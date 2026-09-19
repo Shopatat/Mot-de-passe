@@ -88,6 +88,13 @@
 
   /* Zone des boutons de test : cachée par défaut, révélée par un appui long
      sur le panneau du titre (voir le handler plus bas). */
+  #test-mode-banner{
+    position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:9999;
+    background:#c1121f; color:#fff; font-size:10.5px; font-weight:800; letter-spacing:0.6px;
+    padding:3px 12px; border-radius:0 0 10px 10px; pointer-events:none; white-space:nowrap;
+    box-shadow:0 2px 8px rgba(0,0,0,0.5);
+  }
+  #test-mode-banner[hidden]{ display:none; }
   #debug-zone{ display:flex; flex-direction:column; gap:14px; }
   #debug-zone[hidden]{ display:none; }
 
@@ -1057,6 +1064,7 @@
 
   <button id="btn-quit-game" title="Retour au menu principal">✕</button>
   <button id="btn-play-settings" title="Paramètres">⚙️</button>
+  <div id="test-mode-banner" hidden>🧪 MODE TEST — seul le mot « TEST » est tiré</div>
   <button id="btn-word-too-hard" title="Mettre ce mot de côté (trop difficile)">?</button>
   <button id="btn-schedule" title="Qui joue avec qui">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -1292,6 +1300,7 @@
     <div id="debug-zone" hidden>
       <button class="btn btn-ghost" id="btn-debug-finale" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct en finale</button>
       <button class="btn btn-ghost" id="btn-debug-buzz" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct au tie-break buzz</button>
+      <button class="btn btn-ghost" id="btn-debug-wordmode" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;"></button>
     </div>
   </section>
 
@@ -2261,7 +2270,22 @@
   })();
   const TOTAL_WORD_COUNT = Object.keys(WORD_BANK).reduce((n, cat) => n + WORD_BANK[cat].length, 0);
 
+  // Mode test (option cachée du titre) : plus qu'un seul mot, "TEST", à faire
+  // deviner — les essais de fonctionnalités ne grignotent plus le pool de vrais
+  // mots. Mémorisé d'une session à l'autre, d'où le bandeau "MODE TEST" affiché
+  // tant qu'il est actif (voir initTestWordMode).
+  const TEST_WORD = 'TEST';
+  const TEST_WORD_MODE = (function(){
+    let on = false;
+    try { on = localStorage.getItem('mdp_test_word_mode') === '1'; } catch(e){}
+    return {
+      isOn(){ return on; },
+      set(v){ on = !!v; try { localStorage.setItem('mdp_test_word_mode', on ? '1' : '0'); } catch(e){} },
+    };
+  })();
+
   function drawTieredWords(n, tiers){
+    if(TEST_WORD_MODE.isOn()) return Array(n).fill(TEST_WORD); // ne touche ni PLAYED_WORDS ni le cycle de recyclage
     // Réserve fraîche trop basse pour toute la base : on relance le cycle avant
     // même de construire le pool de ce tirage.
     if((TOTAL_WORD_COUNT - PLAYED_WORDS.count()) <= WORD_RECYCLE_THRESHOLD) PLAYED_WORDS.reset();
@@ -3102,6 +3126,21 @@
       </svg>`;
   }
   renderTiles('title-tiles');
+
+  // Interrupteur "mots figés" de la zone de test + bandeau d'avertissement.
+  (function initTestWordMode(){
+    const btn = document.getElementById('btn-debug-wordmode');
+    const banner = document.getElementById('test-mode-banner');
+    function render(){
+      const on = TEST_WORD_MODE.isOn();
+      btn.textContent = on
+        ? '🧪 Mots figés sur « TEST » : ACTIVÉ (toucher pour couper)'
+        : '🧪 Mots figés sur « TEST » : désactivé';
+      banner.hidden = !on;
+    }
+    btn.addEventListener('click', () => { TEST_WORD_MODE.set(!TEST_WORD_MODE.isOn()); render(); });
+    render();
+  })();
 
   // ---- Boutons de test cachés : appui long de 1,2 s sur le panneau du titre ----
   // Ils ne sont plus visibles à l'écran d'accueil par défaut. Un appui long les
@@ -4783,9 +4822,10 @@
     if(inputLocked) return;
     const turn = state.currentTurn;
     const word = state.pool[0];
-    WORD_BLACKLIST.add(word);
+    // Mode test : "TEST" ne doit jamais finir dans les mots écartés pour de bon.
+    if(!TEST_WORD_MODE.isOn()) WORD_BLACKLIST.add(word);
     SFX.pass();
-    const replacement = drawReplacementWord(turn);
+    const replacement = TEST_WORD_MODE.isOn() ? TEST_WORD : drawReplacementWord(turn);
     state.pool.shift();
     if(replacement) state.pool.unshift(replacement);
     // Pas de dotsLost/wordsFailed ici : ce n'est pas compté comme une mauvaise réponse.
