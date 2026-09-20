@@ -1007,6 +1007,22 @@
   .final-rank .name{ font-weight:800; flex:1; font-size:13px; }
   .final-rank .pts{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:18px; }
   .footer-note{ text-align:center; color:var(--text-dim); font-size:11px; margin-top:2px; }
+  #play-hint{ min-height:2.8em; line-height:1.4; }
+  /* Consigne de la finale, sous le mot : grand texte crème au halo chaud (comme
+     le mot), rouge quand le mot passe au rouge. Une seule ligne, centrée, avec
+     une hauteur réservée pour que rien ne bouge d'un état à l'autre. */
+  #play-hint.hint-finale{
+    display:flex; align-items:center; justify-content:center;
+    min-height:2.9em; margin:6px 0 8px; padding:0 6px;
+    font-size:17px; font-weight:800; letter-spacing:.2px; line-height:1.3;
+    color:var(--sweep-hot); text-shadow:0 0 14px rgba(var(--sweep-glow),.55);
+    text-wrap:balance; transition:color .3s ease, text-shadow .3s ease;
+  }
+  #play-hint.hint-finale.danger{ color:#ff7a6e; text-shadow:0 0 14px rgba(255,59,48,.6); }
+  #play-hint .hint-in{ animation:hintIn .25s ease; }
+  #play-hint .hint-arrow{ display:inline-block; margin-right:7px; color:var(--gold); font-weight:800; }
+  @keyframes hintIn{ from{ opacity:0; transform:translateY(2px); } to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion:reduce){ #play-hint .hint-in{ animation:none; } }
 
   .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
   /* Cases du menu : liseré chromé façon boîtiers du décor de l'émission
@@ -1184,6 +1200,13 @@
       <div class="sound-row">
         <span>Afficher les interdits pendant la manche</span>
         <div class="toggle-row sound-toggle" id="forbidden-reminder-toggle">
+          <div class="toggle-btn" data-val="on">Activé</div>
+          <div class="toggle-btn" data-val="off">Désactivé</div>
+        </div>
+      </div>
+      <div class="sound-row">
+        <span>Consigne sous le mot en finale<small style="display:block; margin-top:3px; font-size:10.5px; opacity:.65;">Le message du mot rouge reste toujours affiché.</small></span>
+        <div class="toggle-row sound-toggle" id="finale-help-toggle">
           <div class="toggle-btn" data-val="on">Activé</div>
           <div class="toggle-btn" data-val="off">Désactivé</div>
         </div>
@@ -1381,7 +1404,7 @@
       </div>
       <div class="chevrons right" id="chevrons-right"></div>
     </div>
-    <p class="footer-note" id="play-hint" style="min-height:2.8em; line-height:1.4;">Tape sur le mot pour lancer le chrono</p>
+    <p class="footer-note" id="play-hint">Tape sur le mot pour lancer le chrono</p>
     <div class="controls-row">
       <button class="btn btn-wrong" id="btn-not-found">✗ Pas trouvé</button>
       <button class="btn btn-correct" id="btn-correct"><span class="check-glow">✓</span> Trouvé</button>
@@ -3420,7 +3443,7 @@
   // ---------- PRÉFÉRENCES UI ----------
   // Petites préférences d'affichage persistées, séparées des réglages sons.
   const UIPREFS = (function(){
-    const prefs = { showRoundRecap: true, hideWordOnPause: true, showForbiddenInPlay: false };
+    const prefs = { showRoundRecap: true, hideWordOnPause: true, showForbiddenInPlay: false, showFinaleHelp: true };
     try {
       const saved = JSON.parse(localStorage.getItem('mdp_ui_prefs') || 'null');
       if(saved) Object.assign(prefs, saved);
@@ -3435,6 +3458,8 @@
       setHideWordOnPause(v){ prefs.hideWordOnPause = v; save(); },
       getShowForbiddenInPlay(){ return prefs.showForbiddenInPlay; },
       setShowForbiddenInPlay(v){ prefs.showForbiddenInPlay = v; save(); },
+      getShowFinaleHelp(){ return prefs.showFinaleHelp; },
+      setShowFinaleHelp(v){ prefs.showFinaleHelp = v; save(); },
     };
   })();
 
@@ -3908,6 +3933,10 @@
   wireSoundToggle('forbidden-reminder-toggle', () => UIPREFS.getShowForbiddenInPlay(), v => {
     UIPREFS.setShowForbiddenInPlay(v);
     updateForbiddenReminderVisibility();
+  });
+  wireSoundToggle('finale-help-toggle', () => UIPREFS.getShowFinaleHelp(), v => {
+    UIPREFS.setShowFinaleHelp(v);
+    updateFinaleHint();
   });
   document.getElementById('ui-volume-slider').addEventListener('input', e => {
     ensureAudioCtxRunning();
@@ -4547,9 +4576,13 @@
     wordPillEl.style.opacity = '0'; // caché : le cadre + le mot n'apparaissent qu'après PLAY_REVEAL_DELAY
     wordPillEl.style.pointerEvents = 'none'; // pas tapable tant que rien n'est visible (sinon le chrono pourrait démarrer avant l'apparition)
     const playHint = document.getElementById('play-hint');
-    playHint.textContent = (turn.kind === 'final')
-      ? "Tape sur le mot pour lancer le chrono et donner le 1er indice"
-      : "Tape sur le mot pour lancer le chrono";
+    delete playHint.dataset.hintKey; // force le nouveau rendu de la ligne
+    if(turn.style === 'clues'){
+      updateFinaleHint();
+    } else {
+      playHint.classList.remove('hint-finale', 'danger');
+      playHint.textContent = "Tape sur le mot pour lancer le chrono";
+    }
     playHint.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
     updateForbiddenReminderVisibility();
     showScreen('play');
@@ -4697,8 +4730,47 @@
   }
   // Chaque tap sur le mot donne un indice (MAX_CLUES = 3, donc clueCount va de
   // 1 à 4) ; au-delà, le mot est en "danger" — un tap de plus l'abandonne.
+  // Ligne sous le mot en finale. L'aide (réglable dans "Aide") donne la consigne
+  // à chaque étape ; une fois coupée, il ne reste que le message du mot rouge,
+  // le seul qu'on ne peut pas deviner (il tombe à n'importe quel mot).
+  function updateFinaleHint(){
+    const turn = state.currentTurn;
+    if(!turn || turn.style !== 'clues') return;
+    const el = document.getElementById('play-hint');
+    const inDanger = state.clueCount > MAX_CLUES;
+    let text = '';
+    if(inDanger){
+      text = 'Pas trouvé ? Passe le mot';
+    } else if(UIPREFS.getShowFinaleHelp()){
+      // Espaces insécables avant ? et : (typographie française) : la ponctuation
+      // ne se retrouve jamais seule en début de ligne quand le texte passe à la ligne.
+      if(!state.turnMusicStarted)      text = 'Tape sur le mot pour lancer le chrono et donner le 1er indice';
+      else if(state.clueCount === 1)   text = 'Tape sur le mot pour donner le 1er indice';
+      else if(state.clueCount === 2)   text = 'Il se trompe ? Tape encore sur le mot';
+      else                             text = 'Dernier indice possible : tape encore sur le mot';
+    }
+    const key = (inDanger ? '!' : '') + text;
+    if(el.dataset.hintKey === key) return; // rien de neuf : pas de nouvelle animation
+    el.dataset.hintKey = key;
+    el.classList.add('hint-finale');
+    el.classList.toggle('danger', inDanger);
+    el.textContent = '';
+    if(!text) return;
+    const line = document.createElement('span');
+    line.className = 'hint-in';
+    if(!inDanger){
+      const arrow = document.createElement('span');
+      arrow.className = 'hint-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '↑';
+      line.appendChild(arrow);
+    }
+    line.appendChild(document.createTextNode(text));
+    el.appendChild(line);
+  }
   function renderChevrons(){
     if(state.currentTurn.style !== 'clues') return;
+    updateFinaleHint();
     const inDanger = state.clueCount > MAX_CLUES;
     document.getElementById('word-pill').classList.toggle('clue-danger', inDanger);
     document.getElementById('btn-correct').classList.toggle('clue-danger', inDanger);
