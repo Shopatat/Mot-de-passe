@@ -1013,8 +1013,8 @@
      une hauteur réservée pour que rien ne bouge d'un état à l'autre. */
   #play-hint.hint-finale{
     display:flex; align-items:center; justify-content:center;
-    min-height:2.9em; margin:6px 0 8px; padding:0 6px;
-    font-size:17px; font-weight:800; letter-spacing:.2px; line-height:1.3;
+    min-height:2.9em; margin:6px 0 8px; padding:0;
+    font-size:16px; font-weight:800; letter-spacing:.2px; line-height:1.3;
     color:var(--sweep-hot); text-shadow:0 0 14px rgba(var(--sweep-glow),.55);
     text-wrap:balance; transition:color .3s ease, text-shadow .3s ease;
   }
@@ -4746,9 +4746,11 @@
       // les trois états disent donc la même chose, avec le numéro de l'indice.
       // Seul l'appui suivant, une fois les 3 donnés, veut dire "raté" (voir ci-dessus).
       if(!state.turnMusicStarted)      text = 'Tape sur le mot pour lancer le chrono et donner le 1er indice';
-      else if(state.clueCount === 1)   text = 'Tape sur le mot pour donner le 1er indice';
-      else if(state.clueCount === 2)   text = 'Tape sur le mot pour donner le 2e indice';
-      else                             text = 'Tape sur le mot pour donner le dernier indice';
+      // (sans "donner" : avec, la ligne dépasse la largeur d'un téléphone et
+      // passe sur deux lignes ; ainsi elle tient sur une seule, jusqu'à 375 px)
+      else if(state.clueCount === 1)   text = 'Tape sur le mot pour le 1er indice';
+      else if(state.clueCount === 2)   text = 'Tape sur le mot pour le 2e indice';
+      else                             text = 'Tape sur le mot pour le dernier indice';
     }
     const key = (inDanger ? '!' : '') + text;
     if(el.dataset.hintKey === key) return; // rien de neuf : pas de nouvelle animation
