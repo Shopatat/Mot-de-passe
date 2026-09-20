@@ -954,6 +954,28 @@
     #btn-interdit, #btn-interdit .voyant-lamp, #btn-interdit .voyant-halo{ animation:none; }
   }
 
+  /* Mode arbitre (réglage "Aide", désactivé par défaut) : le joueur garde le
+     téléphone et ne s'occupe que du mot (et des indices en finale) ; quelqu'un à
+     côté valide. Vu de côté on ne vise pas, donc de grosses cibles : "Trouvé", le
+     geste le plus fréquent, en très grand, "Passer" et "Interdit" dessous. Les
+     deux rangées deviennent transparentes (display:contents) pour que les trois
+     boutons se rangent dans une même grille, sans toucher au DOM ni au JS. */
+  #screen-play.arbitre-mode .play-controls{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;
+  }
+  #screen-play.arbitre-mode .play-controls .controls-row,
+  #screen-play.arbitre-mode #final-extra-row{ display:contents; }
+  #screen-play.arbitre-mode .play-controls button{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; padding:0 8px; border-radius:20px; text-align:center;
+  }
+  #screen-play.arbitre-mode #btn-correct{ grid-column:1 / -1; grid-row:1; height:170px; font-size:22px; }
+  #screen-play.arbitre-mode #btn-correct .check-glow{ font-size:46px; line-height:1; }
+  #screen-play.arbitre-mode #btn-not-found{ grid-column:1; grid-row:2; height:88px; font-size:15px; }
+  #screen-play.arbitre-mode #btn-not-found svg{ margin-right:0 !important; width:28px; height:28px; }
+  #screen-play.arbitre-mode #btn-interdit{ grid-column:2; grid-row:2; height:88px; font-size:12px; }
+  #screen-play.arbitre-mode #btn-interdit svg{ width:30px; height:30px; }
+
   .summary-icon{ font-size:40px; text-align:center; }
   .summary-title{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:24px; text-align:center; letter-spacing:0.5px; }
   .summary-sub{ text-align:center; color: var(--text-dim); font-size:14px; }
@@ -1247,6 +1269,13 @@
           <div class="toggle-btn" data-val="off">Désactivé</div>
         </div>
       </div>
+      <div class="sound-row">
+        <span>Mode arbitre<small style="display:block; margin-top:3px; font-size:10.5px; opacity:.65;">Gros boutons pour quelqu'un qui valide à côté du joueur : « Trouvé » en très grand, « Passer » et « Interdit » dessous.</small></span>
+        <div class="toggle-row sound-toggle" id="arbitre-mode-toggle">
+          <div class="toggle-btn" data-val="on">Activé</div>
+          <div class="toggle-btn" data-val="off">Désactivé</div>
+        </div>
+      </div>
 
       <label class="field-label" style="margin-top:18px;">Fin de manche</label>
       <div class="sound-row">
@@ -1441,6 +1470,7 @@
       <div class="chevrons right" id="chevrons-right"></div>
     </div>
     <p class="footer-note" id="play-hint">Tape sur le mot pour lancer le chrono</p>
+    <div class="play-controls" id="play-controls">
     <div class="controls-row">
       <button class="btn btn-wrong" id="btn-not-found">✗ Pas trouvé</button>
       <button class="btn btn-correct" id="btn-correct"><span class="check-glow">✓</span> Trouvé</button>
@@ -1470,6 +1500,7 @@
         </svg>
         Interdit
       </button>
+    </div>
     </div>
     <div class="blacklist-row" id="training-end-row" style="display:none;">
       <button class="text-action subtle" id="btn-training-end">🏁 Terminer la manche</button>
@@ -3479,7 +3510,7 @@
   // ---------- PRÉFÉRENCES UI ----------
   // Petites préférences d'affichage persistées, séparées des réglages sons.
   const UIPREFS = (function(){
-    const prefs = { showRoundRecap: true, hideWordOnPause: true, showForbiddenInPlay: false, showFinaleHelp: true };
+    const prefs = { showRoundRecap: true, hideWordOnPause: true, showForbiddenInPlay: false, showFinaleHelp: true, arbitreMode: false };
     try {
       const saved = JSON.parse(localStorage.getItem('mdp_ui_prefs') || 'null');
       if(saved) Object.assign(prefs, saved);
@@ -3496,6 +3527,8 @@
       setShowForbiddenInPlay(v){ prefs.showForbiddenInPlay = v; save(); },
       getShowFinaleHelp(){ return prefs.showFinaleHelp; },
       setShowFinaleHelp(v){ prefs.showFinaleHelp = v; save(); },
+      getArbitreMode(){ return prefs.arbitreMode; },
+      setArbitreMode(v){ prefs.arbitreMode = v; save(); },
     };
   })();
 
@@ -3974,6 +4007,16 @@
     UIPREFS.setShowFinaleHelp(v);
     updateFinaleHint();
   });
+  // Mode arbitre : réorganise les boutons de l'écran de jeu (voir le CSS
+  // "#screen-play.arbitre-mode"). Appliqué au démarrage, puis à chaque changement.
+  function applyArbitreMode(){
+    document.getElementById('screen-play').classList.toggle('arbitre-mode', UIPREFS.getArbitreMode());
+  }
+  wireSoundToggle('arbitre-mode-toggle', () => UIPREFS.getArbitreMode(), v => {
+    UIPREFS.setArbitreMode(v);
+    applyArbitreMode();
+  });
+  applyArbitreMode();
   document.getElementById('ui-volume-slider').addEventListener('input', e => {
     ensureAudioCtxRunning();
     SFX.setUiVol(Number(e.target.value) / 100);
