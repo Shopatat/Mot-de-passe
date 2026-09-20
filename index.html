@@ -918,6 +918,42 @@
     .voyant-lamp, .voyant-halo{ animation:none; }
   }
 
+  /* "Interdit" de l'écran de jeu : un vrai bandeau pleine largeur (à peu près la
+     hauteur de l'ancienne icône, mais une cible bien nette) dont le fond, le
+     contour et la lueur respirent comme un feu d'alarme, au rythme du voyant.
+     Le tie-break garde son propre bouton (voir plus bas). */
+  #final-extra-row{ margin-top:10px; gap:0; }
+  #btn-interdit{
+    width:100%; height:50px; padding:0; justify-content:center; gap:12px;
+    border-radius:14px; border:2px solid #7a1410; background-color:#180a08;
+    color:#ffc3bb; font-size:13px; letter-spacing:.8px; text-transform:uppercase;
+    box-shadow:0 0 8px rgba(255,59,48,.18);
+    animation: interditAlarm 2.2s ease-in-out infinite;
+  }
+  #btn-interdit svg{ overflow:visible; }
+  #btn-interdit .voyant-lamp{ animation: interditLamp 2.2s ease-in-out infinite; }
+  #btn-interdit .voyant-halo{ animation: interditHalo 2.2s ease-in-out infinite; }
+  @keyframes interditAlarm{
+    0%,100%{ background-color:#180a08; border-color:#7a1410; box-shadow:0 0 8px rgba(255,59,48,.18), inset 0 0 0 rgba(255,59,48,0); }
+    50%    { background-color:#2c0e0a; border-color:#d63a2d; box-shadow:0 0 20px rgba(255,59,48,.5), inset 0 0 18px rgba(255,59,48,.32); }
+  }
+  @keyframes interditLamp{
+    0%,100%{ opacity:.6; filter:brightness(1); }
+    50%    { opacity:1;  filter:brightness(1.7); }
+  }
+  @keyframes interditHalo{
+    0%,100%{ opacity:.3; transform:scale(1); }
+    50%    { opacity:1;  transform:scale(1.7); }
+  }
+  /* Grisé (chrono pas lancé) : plus d'animation. Pendant le court verrou entre
+     deux mots (no-dim), il continue de respirer, comme avant. */
+  #btn-interdit:disabled:not(.no-dim),
+  #btn-interdit:disabled:not(.no-dim) .voyant-lamp,
+  #btn-interdit:disabled:not(.no-dim) .voyant-halo{ animation:none; }
+  @media (prefers-reduced-motion: reduce){
+    #btn-interdit, #btn-interdit .voyant-lamp, #btn-interdit .voyant-halo{ animation:none; }
+  }
+
   .summary-icon{ font-size:40px; text-align:center; }
   .summary-title{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:24px; text-align:center; letter-spacing:0.5px; }
   .summary-sub{ text-align:center; color: var(--text-dim); font-size:14px; }
