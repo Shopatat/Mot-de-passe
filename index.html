@@ -1478,7 +1478,7 @@
       <div class="handoff-final-reminder" id="handoff-final-reminder" style="display:none;">
         Première finale ? Petit rappel :<br>
         • Tape le mot pour donner un indice (3 max) — les flèches à côté comptent ce qu'il reste.<br>
-        • Toujours pas trouvé après le 3<sup>ème</sup> ? Le mot passe en rouge : le tap suivant l'abandonne pour de bon, contrairement aux qualifs.
+        • Toujours pas trouvé après le 3<sup>e</sup> ? Le mot passe en rouge : le tap suivant l'abandonne pour de bon, contrairement aux qualifs.
       </div>
     </div>
     <button class="btn btn-gold" id="btn-ready">C'est parti</button>
@@ -1608,7 +1608,7 @@
   <!-- TIE-BREAK BUZZ : ANNONCE -->
   <section class="screen" id="screen-buzz-intro">
     <div class="card handoff-wrap">
-      <div class="summary-title">Tie Break</div>
+      <div class="summary-title">Tie-break</div>
       <div class="tiebreak-text">Un seul mot pour toutes les équipes.</div>
       <div class="tiebreak-text">À son tour, chacune donne un mot-indice pour son équipe. Si le mot est trouvé, l'équipe marque le point. Sinon, ce mot passe à l'équipe suivante. Un interdit prononcé élimine l'équipe.</div>
       <div class="handoff-team" id="buzz-intro-teams" style="font-size:17px;"></div>
@@ -1756,7 +1756,7 @@
       {w:"Bisou",d:1},{w:"Ami",d:1},{w:"Printemps",d:1},{w:"Été",d:1},
       {w:"Automne",d:1},{w:"Hiver",d:1},{w:"Glaçon",d:1},
       {w:"Boue",d:1},{w:"Poussière",d:1},{w:"Fumée",d:1},{w:"Cendre",d:1},
-      {w:"Corde",d:1},{w:"Noeud",d:1},{w:"Trou",d:1},{w:"Courrier",d:1},
+      {w:"Corde",d:1},{w:"Nœud",d:1},{w:"Trou",d:1},{w:"Courrier",d:1},
       {w:"Bibliothèque",d:2},{w:"Horloge",d:2},{w:"Escalier",d:2},{w:"Fusée",d:2},
       {w:"Trésor",d:2},{w:"Ombre",d:2},{w:"Aurore",d:2},{w:"Horizon",d:2},
       {w:"Carrefour",d:2},{w:"Impasse",d:2},{w:"Quartier",d:2},
@@ -6307,21 +6307,21 @@
 
     if(wonAll){
       document.getElementById('final-trophy').textContent = "🏆";
-      document.getElementById('final-title').textContent = `${label} remporte la partie !`;
+      document.getElementById('final-title').textContent = `${label} remportent la partie !`;
       document.getElementById('final-sub').textContent = `Les 5 paliers franchis d'affilée.`;
     } else if(state.endedByStop){
       document.getElementById('final-trophy').textContent = "🤝";
-      document.getElementById('final-title').textContent = `${label} s'arrête au palier ${state.currentLevel}`;
+      document.getElementById('final-title').textContent = `${label} s'arrêtent au palier ${state.currentLevel}`;
       document.getElementById('final-sub').textContent = `Décision prise de sécuriser les gains plutôt que de tout remettre en jeu.`;
     } else {
       document.getElementById('final-trophy').textContent = "🎬";
-      document.getElementById('final-title').textContent = `${label} échoue au palier ${last.level}`;
+      document.getElementById('final-title').textContent = `${label} échouent au palier ${last.level}`;
       document.getElementById('final-sub').textContent =
-        `${last.found} mot${last.found>1?'s':''} sur ${last.target} trouvés parmi ${last.pool}.`;
+        `${last.found} mot${last.found>1?'s':''} sur ${last.target} trouvé${last.found>1?'s':''} parmi ${last.pool}.`;
     }
     document.getElementById('final-title').style.color = '';
     document.getElementById('final-bank').innerHTML =
-      amount > 0 ? `Repart avec <b>${euro(amount)}</b>` : `Repart sans gain`;
+      amount > 0 ? `Repartent avec <b>${euro(amount)}</b>` : `Repartent sans gain`;
 
     const ranking = document.getElementById('final-ranking');
     ranking.innerHTML = "";
