@@ -577,16 +577,20 @@
   .word-pill{
     position:relative; z-index:1; order:2;
     flex:1; min-width:0;
-    background:#0c0302; border:6px solid transparent; border-radius:999px;
+    /* Cadre des qualifs, de l'entraînement et du tie-break : intérieur sombre
+       creusé, anneau en relief dans un "rouge profond" (dégradé vertical, comme
+       le bouton doré mais plus sombre), sans halo. La finale garde son cadre
+       argent (voir plus bas). */
+    background: linear-gradient(180deg, #140807, #050303); border:6px solid transparent; border-radius:999px;
     padding: 20px 22px; text-align:center;
     margin: 2px 0;
     cursor: pointer; user-select: none;
-    box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.5);
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.65);
   }
   .word-pill::before{
     content:"";
     position:absolute; inset:-6px; border-radius:inherit; padding:6px;
-    background: conic-gradient(from var(--shine-angle), var(--red-dim) 0deg, #ff6357 180deg, var(--red-dim) 360deg);
+    background: linear-gradient(180deg, #5e0d0d 0%, #b52a22 45%, #c93a30 55%, #6a1210 100%);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
@@ -602,6 +606,7 @@
      sombre et rouge. */
   #screen-play.finale-style .word-pill{
     background: linear-gradient(105deg, #1d0e05 0%, #3d2210 42%, #4a2b15 58%, #241107 100%);
+    box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.5);
   }
   #screen-play.finale-style .word-pill::before{
     background: conic-gradient(from var(--shine-angle), #56565b 0deg, #a6a6a0 180deg, #56565b 360deg);
@@ -975,6 +980,34 @@
   #screen-play.arbitre-mode #btn-not-found svg{ margin-right:0 !important; width:28px; height:28px; }
   #screen-play.arbitre-mode #btn-interdit{ grid-column:2; grid-row:2; height:88px; font-size:12px; }
   #screen-play.arbitre-mode #btn-interdit svg{ width:30px; height:30px; }
+
+  /* Retour visuel au toucher ("flash") : un éclair clair traverse l'élément touché
+     et un halo de sa teinte s'élargit autour, puis tout s'éteint (~0,5 s). Posé
+     par un écouteur global (voir le script) sur tout ce qui est cliquable, sans
+     son. La teinte vient de --tap-tint, définie par type de bouton. */
+  :root{ --tap-tint: 255,200,150; }
+  .btn-correct{ --tap-tint: 106,214,150; }
+  .btn-wrong, #btn-interdit{ --tap-tint: 255,90,74; }
+  .btn-gold{ --tap-tint: 255,120,80; }
+  .word-pill{ --tap-tint: 255,150,70; }
+  .toggle-btn{ --tap-tint: 242,201,76; }
+  .chip{ --tap-tint: 90,169,230; }
+  .btn-ghost, .text-action, .swap-btn, .icon-action-btn{ --tap-tint: 200,205,215; }
+  .tap-flash{
+    position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:6;
+    animation: tapFlashHalo .55s ease-out forwards;
+  }
+  .tap-flash::after{
+    content:''; position:absolute; inset:0; border-radius:inherit;
+    background: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,.16));
+    animation: tapFlashFill .38s ease-out forwards;
+  }
+  @keyframes tapFlashHalo{
+    0%  { opacity:1; box-shadow: 0 0 0 0 rgba(var(--tap-tint),.9), 0 0 26px 6px rgba(var(--tap-tint),.85); }
+    100%{ opacity:0; box-shadow: 0 0 0 14px rgba(var(--tap-tint),0), 0 0 58px 22px rgba(var(--tap-tint),0); }
+  }
+  @keyframes tapFlashFill{ 0%{ opacity:.7; } 100%{ opacity:0; } }
+  @media (prefers-reduced-motion: reduce){ .tap-flash{ display:none; } }
 
   .summary-icon{ font-size:40px; text-align:center; }
   .summary-title{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:24px; text-align:center; letter-spacing:0.5px; }
@@ -4017,6 +4050,40 @@
     applyArbitreMode();
   });
   applyArbitreMode();
+
+  // ---------- Retour visuel au toucher ("flash") ----------
+  // Un seul écouteur global : tout élément cliquable (boutons, interrupteurs,
+  // puces, cadre du mot...) reçoit un éclair de sa teinte, sans rien modifier
+  // bouton par bouton. Purement visuel, aucun son. Le calque est retiré aussitôt
+  // (fin d'animation, nouveau toucher, ou geste annulé : défilement d'une liste).
+  (function(){
+    const CLICKABLE = 'button, [role="button"], .toggle-btn, .chip, .word-pill, .settings-card';
+    const reduceMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    let current = null;
+    function clearFlash(){
+      if(!current) return;
+      clearTimeout(current.timer);
+      current.node.remove();
+      if(current.prevPos !== null) current.el.style.position = current.prevPos;
+      current = null;
+    }
+    document.addEventListener('pointerdown', e => {
+      if(reduceMotion() || !e.target || !e.target.closest) return;
+      const el = e.target.closest(CLICKABLE);
+      if(!el || el.disabled || el.getAttribute('aria-disabled') === 'true') return;
+      clearFlash();
+      // Le calque se place par rapport à l'élément : on ne change sa position
+      // que si elle est "static" (sinon on ne touche à rien, ex. boutons fixes).
+      let prevPos = null;
+      if(getComputedStyle(el).position === 'static'){ prevPos = el.style.position; el.style.position = 'relative'; }
+      const node = document.createElement('span');
+      node.className = 'tap-flash';
+      node.setAttribute('aria-hidden', 'true');
+      el.appendChild(node);
+      current = { el, node, prevPos, timer: setTimeout(clearFlash, 650) };
+    }, true);
+    document.addEventListener('pointercancel', clearFlash, true);
+  })();
   document.getElementById('ui-volume-slider').addEventListener('input', e => {
     ensureAudioCtxRunning();
     SFX.setUiVol(Number(e.target.value) / 100);
