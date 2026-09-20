@@ -3234,12 +3234,14 @@
   // Volume individuel par piste (son ou musique), réglable dans le menu de
   // personnalisation et persisté — un "fader" par piste, multiplié avec le
   // volume "jeu" global (comme une console de mixage : master + tranches).
+  // Réglages de départ (1er lancement) : ne servent que tant que l'utilisateur n'a pas touché le curseur.
+  const DEFAULT_SLOT_VOLUMES = { wordReveal: 0.2, 'music-qualif-wait': 0.2, 'music-qualif': 0.2, 'music-finale-ambient': 0.2, 'music-finale-early': 0.2, 'music-finale-late': 0.2 };
   const SLOT_VOLUMES = (function(){
     let vols = {};
     try { vols = JSON.parse(localStorage.getItem('mdp_slot_volumes') || '{}'); } catch(e){}
     function save(){ try { localStorage.setItem('mdp_slot_volumes', JSON.stringify(vols)); } catch(e){} }
     return {
-      get(key){ const v = vols[key]; return (typeof v === 'number') ? v : 1; },
+      get(key){ const v = vols[key]; return (typeof v === 'number') ? v : (key in DEFAULT_SLOT_VOLUMES ? DEFAULT_SLOT_VOLUMES[key] : 1); },
       set(key, v){ vols[key] = Math.max(0, Math.min(1, v)); save(); },
     };
   })();
