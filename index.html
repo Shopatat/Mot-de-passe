@@ -2263,7 +2263,195 @@
     };
   })();
 
-  function drawTieredWords(n, tiers){
+  // Mots très proches (même famille de mots, contraires, synonymes, même petit
+  // univers) : jamais dans la même manche, pour qu'un mot ne serve pas d'indice
+  // évident (ou interdit) à l'autre. Deux mots sont proches s'ils partagent un
+  // groupe ; un mot peut figurer dans plusieurs groupes.
+  const CLOSE_GROUPS = [
+    ["Parapluie","Pluie"],
+    ["Table","Tablette","Tableau","Cartable"],
+    ["Porte","Portefeuille"],
+    ["Journal","Journaliste"],
+    ["Photo","Photographe","Photographie"],
+    ["Cuisine","Cuisinier","Cuisiner"],
+    ["Restaurant","Restauration"],
+    ["Pharmacie","Pharmacien"],
+    ["Danse","Danser"],
+    ["Rêve","Rêver","Réveil","Réveillon"],
+    ["Escalier","Escalator","Escalade","Escale"],
+    ["Réponse","Répondre"],
+    ["Cendre","Cendrier"],
+    ["Horloge","Horloger"],
+    ["Toit","Toiture"],
+    ["Secret","Secrétaire"],
+    ["Divorce","Divorcer"],
+    ["Adoption","Adopter"],
+    ["Excuse","Excuser"],
+    ["Promesse","Promettre"],
+    ["Pari","Parier"],
+    ["Piège","Piéger"],
+    ["Devinette","Deviner"],
+    ["Naufrage","Naufragé"],
+    ["Sorcière","Sorcier"],
+    ["Espionnage","Espion"],
+    ["Couronnement","Couronne"],
+    ["Clocher","Cloche"],
+    ["Chat","Chaton"],
+    ["Poule","Poulet","Poussin","Coq"],
+    ["Ours","Nounours"],
+    ["Sauterelle","Saut","Sauter"],
+    ["Méchant","Méchanceté"],
+    ["Cascadeur","Cascade"],
+    ["Cerise","Cerisier"],
+    ["Chocolat","Chocolatier"],
+    ["Frite","Frites","Chips"],
+    ["Entrée","Entrer","Rentrée"],
+    ["Pêche","Pêcheur"],
+    ["Peintre","Peinture"],
+    ["Chanteur","Chanter","Chanson"],
+    ["Chasseur","Chasse"],
+    ["Bûcheron","Bûche"],
+    ["Jardin","Jardinier","Jardinage"],
+    ["Plombier","Plomberie"],
+    ["Dentiste","Dent","Dentifrice"],
+    ["Bijoutier","Bijou"],
+    ["Serrurier","Serrure"],
+    ["Couturier","Couture"],
+    ["Fleuriste","Fleur"],
+    ["Chercheur","Chercher"],
+    ["Banquier","Banque"],
+    ["Casserole","Casser"],
+    ["Oreiller","Oreille"],
+    ["Sifflet","Siffler"],
+    ["Chandelier","Chandelle","Chandeleur"],
+    ["Balance","Balançoire"],
+    ["Berceau","Berceuse"],
+    ["Paratonnerre","Tonnerre"],
+    ["Coupe","Couper"],
+    ["Haltérophilie","Haltère"],
+    ["Joue","Jouet","Jouer"],
+    ["Micro","Microscope"],
+    ["Écouteur","Écouter"],
+    ["Tourisme","Touriste"],
+    ["Décollage","Décoller"],
+    ["Réparation","Réparer"],
+    ["Pourboire","Boire"],
+    ["Apprendre","Prendre"],
+    ["Donner","Pardonner"],
+    ["Chaussure","Chaussette","Chausson"],
+    ["Chemise","Chemisier"],
+    ["Casquette","Casque"],
+    ["Antarctique","Arctique"],
+    ["Rire","Sourire"],
+    ["Ville","Village"],
+    ["Livre","Livreur"],
+    ["Vent","Ventilateur"],
+    ["Cheval","Chevalier"],
+    ["Caissier","Caisse"],
+    ["Bonheur","Malheur","Joie","Tristesse"],
+    ["Victoire","Défaite"],
+    ["Question","Réponse","Problème","Solution","Erreur"],
+    ["Câlin","Baiser","Bisou","Tendresse","Amour"],
+    ["Tendresse","Gentillesse"],
+    ["Courage","Prudence"],
+    ["Été","Hiver","Printemps","Automne"],
+    ["Matin","Nuit"],
+    ["Ouvrir","Fermer"],
+    ["Monter","Tomber"],
+    ["Donner","Prendre","Demander"],
+    ["Regarder","Écouter"],
+    ["Manger","Boire"],
+    ["Poussière","Cendre","Fumée"],
+    ["Football","Handball","Basket","Volley","Rugby","Ballon"],
+    ["Tennis","Badminton","Raquette","Filet"],
+    ["Judo","Karaté","Boxe"],
+    ["Marathon","Course","Sprint","Athlétisme","Piste"],
+    ["Médaille","Coupe","Champion"],
+    ["Arbitre","Stade","Équipe","But","Maillot"],
+    ["Ski","Golf"],
+    ["France","Paris"],
+    ["Italie","Rome"],
+    ["Allemagne","Berlin"],
+    ["Brésil","Rio"],
+    ["Europe","Afrique"],
+    ["Belgique","France"],
+    ["Corbeau","Pie"],
+    ["Cheval","Poney","Poulain","Âne"],
+    ["Vache","Veau","Taureau"],
+    ["Mouton","Agneau","Bouc","Chèvre"],
+    ["Cochon","Truie"],
+    ["Canard","Oie","Cygne"],
+    ["Hibou","Chouette"],
+    ["Abeille","Guêpe","Ruche"],
+    ["Chien","Chiot","Loup"],
+    ["Chat","Chien"],
+    ["Souris","Rat","Hamster"],
+    ["Mouche","Moustique","Puce","Tique","Fourmi"],
+    ["Lion","Tigre"],
+    ["Requin","Dauphin","Baleine"],
+    ["Aigle","Faucon"],
+    ["Pigeon","Hirondelle","Oiseau"],
+    ["Fourchette","Couteau","Cuillère","Assiette"],
+    ["Verre","Tasse","Bol","Bouteille"],
+    ["Stylo","Crayon","Gomme","Règle","Trousse","Cahier","Craie"],
+    ["Baignoire","Douche","Lavabo","Évier","Savon","Shampoing"],
+    ["Clou","Vis","Boulon","Écrou","Marteau"],
+    ["Peinture","Pinceau","Rouleau","Vernis"],
+    ["Lit","Oreiller","Couverture","Pyjama"],
+    ["Porte","Serrure","Verrou","Clé","Sonnette"],
+    ["Fenêtre","Volet","Rideau"],
+    ["Radiateur","Ventilateur"],
+    ["Aiguille","Épingle","Bouton"],
+    ["Voiture","Camion","Moto","Bus","Taxi","Route","Garage"],
+    ["Vélo","Trottinette","Skate"],
+    ["Train","Gare","Métro"],
+    ["Avion","Pilote","Hôtesse","Passager","Bagage"],
+    ["Bateau","Croisière","Marin"],
+    ["Hôpital","Médecin","Infirmier","Pharmacie","Fièvre","Rhume"],
+    ["École","Élève","Professeur","Maîtresse","Classe","Cantine","Devoir","Leçon","Récréation"],
+    ["Cinéma","Film","Acteur","Écran","Salle","Caméra","Série","Épisode","Saison","Public"],
+    ["Musique","Chanson","Concert","Chanteur","Musicien","Groupe","Album","Micro","Refrain","Rythme"],
+    ["Guitare","Piano","Violon","Flûte","Trompette"],
+    ["Rap","Jazz"],
+    ["Boulanger","Baguette","Pain","Croissant"],
+    ["Policier","Avocat","Militaire","Soldat"],
+    ["Banque","Argent","Salaire","Prêt","Impôt","Chèque"],
+    ["Chômage","Retraite","Congé","Promotion","Démission","Réunion","Bureau","Patron","Directeur","Employé"],
+    ["Facteur","Courrier"],
+    ["Vacances","Camping","Plage","Sable","Vague","Coquillage","Bronzage","Hôtel","Souvenir"],
+    ["Noël","Cadeau","Guirlande","Dinde","Anniversaire"],
+    ["Halloween","Citrouille","Masque","Carnaval"],
+    ["Ordinateur","Clavier","Internet","Wifi","Bluetooth","Message","Vidéo","Téléphone","Tablette","Webcam","Manette","Console"],
+    ["Pile","Batterie","Chargeur","Câble"],
+    ["Arbre","Forêt","Feuille","Branche","Tronc","Fleur","Pétale","Graine","Pelouse","Gazon"],
+    ["Chêne","Sapin","Saule","Érable","Olivier","Palmier","Cerisier","Pommier"],
+    ["Rose","Tulipe","Tournesol","Muguet","Lavande","Iris"],
+    ["Fraise","Framboise","Cerise","Raisin"],
+    ["Orange","Citron"],
+    ["Pomme","Poire"],
+    ["Main","Doigt","Ongle","Bras","Coude","Épaule"],
+    ["Pied","Genou","Jambe"],
+    ["Tête","Front","Joue","Menton","Nez","Bouche","Lèvre","Dent","Langue","Œil","Sourcil","Cil","Oreille","Cheveux","Barbe","Moustache","Poil"],
+    ["Pantalon","Jean","Short","Jupe","Robe"],
+    ["Chapeau","Casquette","Bonnet","Béret"],
+    ["Manteau","Veste","Blouson","Gilet","Pull"],
+    ["Gant","Écharpe","Foulard"],
+    ["Chaussure","Chaussette","Botte","Pantoufle"],
+  ];
+  const CLOSE_INDEX = (function(){
+    const idx = new Map();
+    CLOSE_GROUPS.forEach((g, gi) => g.forEach(w => {
+      if(!idx.has(w)) idx.set(w, []);
+      idx.get(w).push(gi);
+    }));
+    return idx;
+  })();
+  function wordsAreClose(a, b){
+    const ga = CLOSE_INDEX.get(a), gb = CLOSE_INDEX.get(b);
+    return !!(ga && gb && ga.some(g => gb.includes(g)));
+  }
+
+  function drawTieredWords(n, tiers, avoid = []){
     if(TEST_WORD_MODE.isOn()) return Array(n).fill(TEST_WORD); // ne touche ni PLAYED_WORDS ni le cycle de recyclage
     // Réserve fraîche trop basse pour toute la base : on relance le cycle avant
     // même de construire le pool de ce tirage.
@@ -2305,8 +2493,18 @@
         return p;
       }, []));
     }
+    // On prend les mots dans l'ordre du mélange en écartant ceux trop proches
+    // d'un mot déjà retenu (ou de `avoid`, les mots déjà en jeu). Si le pool ne
+    // permet pas d'en trouver assez, on complète avec les mots écartés plutôt
+    // que de tirer moins de mots.
     const result = [];
-    for(let i=0;i<n;i++) result.push(pool[i % pool.length]);
+    const skipped = [];
+    for(const w of pool){
+      if(result.length >= n) break;
+      if(avoid.some(x => wordsAreClose(w, x)) || result.some(x => wordsAreClose(w, x))) skipped.push(w);
+      else result.push(w);
+    }
+    for(let i=0; result.length < n; i++) result.push(i < skipped.length ? skipped[i] : pool[i % pool.length]);
     result.forEach(w => PLAYED_WORDS.add(w));
     return result;
   }
@@ -4789,7 +4987,7 @@
   // longueur, donc l'objectif de la manche reste inchangé.
   function drawReplacementWord(turn){
     const tiers = turn.kind === 'final' ? FINAL_LEVEL_TIERS[turn.level] : QUALIF_TIERS;
-    const candidates = drawTieredWords(state.pool.length + 5, tiers).filter(w => !state.pool.includes(w));
+    const candidates = drawTieredWords(state.pool.length + 5, tiers, state.pool).filter(w => !state.pool.includes(w));
     return candidates.length ? candidates[0] : null;
   }
   document.getElementById('btn-word-too-hard').addEventListener('click', () => {
