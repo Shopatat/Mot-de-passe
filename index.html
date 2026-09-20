@@ -4740,14 +4740,15 @@
     const inDanger = state.clueCount > MAX_CLUES;
     let text = '';
     if(inDanger){
-      text = 'Pas trouvé ? Passe le mot';
+      text = 'Pas trouvé ? Tape sur le mot pour passer';
     } else if(UIPREFS.getShowFinaleHelp()){
-      // Espaces insécables avant ? et : (typographie française) : la ponctuation
-      // ne se retrouve jamais seule en début de ligne quand le texte passe à la ligne.
+      // Taper le mot = DONNER l'indice n°X (pas signaler que l'autre s'est trompé) :
+      // les trois états disent donc la même chose, avec le numéro de l'indice.
+      // Seul l'appui suivant, une fois les 3 donnés, veut dire "raté" (voir ci-dessus).
       if(!state.turnMusicStarted)      text = 'Tape sur le mot pour lancer le chrono et donner le 1er indice';
       else if(state.clueCount === 1)   text = 'Tape sur le mot pour donner le 1er indice';
-      else if(state.clueCount === 2)   text = 'Il se trompe ? Tape encore sur le mot';
-      else                             text = 'Dernier indice possible : tape encore sur le mot';
+      else if(state.clueCount === 2)   text = 'Tape sur le mot pour donner le 2e indice';
+      else                             text = 'Tape sur le mot pour donner le dernier indice';
     }
     const key = (inDanger ? '!' : '') + text;
     if(el.dataset.hintKey === key) return; // rien de neuf : pas de nouvelle animation
