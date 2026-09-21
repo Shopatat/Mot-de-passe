@@ -3668,14 +3668,46 @@
   const SAFE_LEVEL = 2; // palier de sécurité : gains acquis + joker débloqué
 
   // Titre "MOT DE PASSE" reproduit comme le panneau lumineux du plateau :
-  // cadre chrome -> anneau rouge -> fond noir -> texte recouvert d'un masque
-  // en damier qui simule les diodes. Tout est en SVG inline : aucune image a
-  // charger, et le rendu reste net a n'importe quelle taille d'ecran.
-  // textLength force la largeur du texte : le panneau garde exactement la meme
-  // allure que la police Anton soit chargee (en ligne) ou non (repli Impact).
+  // cadre chrome -> anneau rouge -> fond noir -> LED posees une a une sur une
+  // grille (TITLE_LED, dessinee a la main par Fabien : '#' = LED allumee, '.' =
+  // eteinte ; les LED eteintes forment un motif discret). Tout est en SVG
+  // inline : aucune image a charger, et le rendu reste net a n'importe quelle
+  // taille d'ecran. Les lettres sont a 1 LED d'ecart, les mots a 6, et le bloc
+  // est centre (4 LED de marge de chaque cote) : pour retoucher, garder ces
+  // proportions et la meme largeur (86 caracteres par ligne).
+  const TITLE_LED = [
+    '......................................................................................',
+    '....##...##..####..######......####...#####......#####...####...#####..#####.#####....',
+    '....##...##.######.######......#####..#####......######.######.######.######.#####....',
+    '....###.###.##..##...##........##..##.##.........##..##.##..##.##.....##.....##.......',
+    '....#######.##..##...##........##..##.##.........##..##.##..##.##.....##.....##.......',
+    '....##.#.##.##..##...##........##..##.##.........##..##.##..##.##.....##.....##.......',
+    '....##...##.##..##...##........##..##.####.......######.######.#####..#####..####.....',
+    '....##...##.##..##...##........##..##.####.......#####..######..#####..#####.####.....',
+    '....##...##.##..##...##........##..##.##.........##.....##..##.....##.....##.##.......',
+    '....##...##.##..##...##........##..##.##.........##.....##..##.....##.....##.##.......',
+    '....##...##.##..##...##........##..##.##.........##.....##..##.....##.....##.##.......',
+    '....##...##.######...##........#####..#####......##.....##..##.######.######.#####....',
+    '....##...##..####....##........####...#####......##.....##..##.#####..#####..#####....',
+    '......................................................................................',
+  ];
+  const TITLE_LED_PITCH = 3.3;       // ecart entre deux LED, dans le repere du SVG (380 x 150)
+  const TITLE_LED_COLOR = '#fff4ec'; // blanc chaud
+  const TITLE_LED_GEOM = (() => {
+    const rows = TITLE_LED.length, cols = TITLE_LED[0].length, p = TITLE_LED_PITCH;
+    const w = cols * p, h = rows * p, x0 = 190 - w / 2, y0 = 75 - h / 2;
+    let lit = '';
+    for(let r = 0; r < rows; r++){
+      for(let c = 0; c < cols; c++){
+        if(TITLE_LED[r][c] === '#') lit += `<circle cx="${(x0 + (c + 0.5) * p).toFixed(2)}" cy="${(y0 + (r + 0.5) * p).toFixed(2)}" r="${(p * 0.43).toFixed(2)}"/>`;
+      }
+    }
+    return { x0, y0, w, h, lit };
+  })();
   function renderTiles(containerId){
     const el = document.getElementById(containerId);
     const uid = containerId;
+    const g = TITLE_LED_GEOM, p = TITLE_LED_PITCH;
     el.classList.add('led-panel');
     el.innerHTML = `
       <svg class="led-sign" viewBox="0 0 380 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mot de Passe">
@@ -3691,23 +3723,19 @@
             <stop offset="50%" stop-color="#d42a18"/>
             <stop offset="100%" stop-color="#8f1610"/>
           </linearGradient>
-          <pattern id="dots-${uid}" width="3.2" height="3.2" patternUnits="userSpaceOnUse">
-            <rect width="3.2" height="3.2" fill="#000"/>
-            <rect x="0.35" y="0.35" width="2.1" height="2.1" fill="#fff"/>
+          <pattern id="off-${uid}" x="${g.x0}" y="${g.y0}" width="${p}" height="${p}" patternUnits="userSpaceOnUse">
+            <circle cx="${p / 2}" cy="${p / 2}" r="${(p * 0.3).toFixed(2)}" fill="#7a3a30" opacity="0.32"/>
           </pattern>
-          <mask id="led-${uid}">
-            <rect x="0" y="0" width="380" height="150" fill="url(#dots-${uid})"/>
-          </mask>
+          <filter id="glow-${uid}" x="-5%" y="-15%" width="110%" height="130%">
+            <feGaussianBlur stdDeviation="1.1" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
         </defs>
         <rect x="18" y="18" width="344" height="114" rx="34" fill="url(#chrome-${uid})"/>
         <rect x="27" y="27" width="326" height="96" rx="27" fill="url(#ring-${uid})"/>
         <rect x="38" y="38" width="304" height="74" rx="18" fill="#080505"/>
-        <g mask="url(#led-${uid})">
-          <text x="190" y="75" text-anchor="middle" dominant-baseline="central"
-                textLength="268" lengthAdjust="spacingAndGlyphs"
-                font-family="Anton, Impact, 'Arial Narrow', sans-serif"
-                font-size="52" fill="#ff8a62">MOT DE PASSE</text>
-        </g>
+        <rect x="${g.x0}" y="${g.y0}" width="${g.w}" height="${g.h}" fill="url(#off-${uid})"/>
+        <g filter="url(#glow-${uid})" fill="${TITLE_LED_COLOR}">${g.lit}</g>
       </svg>`;
   }
   renderTiles('title-tiles');
