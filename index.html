@@ -1273,15 +1273,6 @@
       </div>
       <label class="field-label">Sons</label>
       <div class="sound-row">
-        <span>Sons d'interface (clics)</span>
-        <div class="toggle-row sound-toggle" id="ui-sound-toggle">
-          <div class="toggle-btn" data-val="on">Activé</div>
-          <div class="toggle-btn" data-val="off">Désactivé</div>
-        </div>
-      </div>
-      <input type="range" id="ui-volume-slider" min="0" max="100" value="100">
-
-      <div class="sound-row" style="margin-top:14px;">
         <span>Sons de jeu (réponses, interdits...)</span>
         <div class="toggle-row sound-toggle" id="game-sound-toggle">
           <div class="toggle-btn" data-val="on">Activé</div>
@@ -3167,7 +3158,7 @@
   // Sons courts : uniquement des fichiers (FILE_SFX ci-dessus). Plus aucune
   // synthèse Web Audio — tout est passé aux vrais fichiers de Fabien.
   const SFX = (function(){
-    const settings = { uiOn:true, uiVol:1, gameOn:true, gameVol:1 };
+    const settings = { gameOn:true, gameVol:1 };
     try {
       const saved = JSON.parse(localStorage.getItem('mdp_sound_settings') || 'null');
       if(saved) Object.assign(settings, saved);
@@ -3194,10 +3185,8 @@
         if(node){ node.addEventListener('ended', () => FILE_SFX('finaleTimeout'), { once:true }); }
         else { FILE_SFX('finaleTimeout'); }
       },
-      getSettings(){ return { uiOn: settings.uiOn, uiVol: settings.uiVol, gameOn: settings.gameOn, gameVol: settings.gameVol }; },
-      setUiOn(v){ settings.uiOn = v; save(); },
+      getSettings(){ return { gameOn: settings.gameOn, gameVol: settings.gameVol }; },
       setGameOn(v){ settings.gameOn = v; save(); },
-      setUiVol(v){ settings.uiVol = v; save(); },
       setGameVol(v){ settings.gameVol = v; save(); },
     };
   })();
@@ -3331,7 +3320,7 @@
     }
     function volumeFor(cat, key){
       const s = SFX.getSettings();
-      const base = cat === 'ui' ? (s.uiOn ? s.uiVol : 0) : (s.gameOn ? s.gameVol : 0);
+      const base = s.gameOn ? s.gameVol : 0;
       return base * SLOT_VOLUMES.get(key);
     }
     function updatePreviewVolume(){
@@ -4032,9 +4021,7 @@
     });
   }
   const initialSfxSettings = SFX.getSettings();
-  document.getElementById('ui-volume-slider').value = Math.round(initialSfxSettings.uiVol * 100);
   document.getElementById('game-volume-slider').value = Math.round(initialSfxSettings.gameVol * 100);
-  wireSoundToggle('ui-sound-toggle', () => SFX.getSettings().uiOn, v => SFX.setUiOn(v));
   wireSoundToggle('game-sound-toggle', () => SFX.getSettings().gameOn, v => { SFX.setGameOn(v); MUSIC.applyVolume(); });
   wireSoundToggle('recap-detail-toggle', () => UIPREFS.getShowRoundRecap(), v => UIPREFS.setShowRoundRecap(v));
   wireSoundToggle('pause-hide-toggle', () => UIPREFS.getHideWordOnPause(), v => UIPREFS.setHideWordOnPause(v));
@@ -4090,10 +4077,6 @@
     }, true);
     document.addEventListener('pointercancel', clearFlash, true);
   })();
-  document.getElementById('ui-volume-slider').addEventListener('input', e => {
-    ensureAudioCtxRunning();
-    SFX.setUiVol(Number(e.target.value) / 100);
-  });
   document.getElementById('game-volume-slider').addEventListener('input', e => {
     ensureAudioCtxRunning();
     SFX.setGameVol(Number(e.target.value) / 100);
@@ -4413,7 +4396,7 @@
     const pct = v => Math.round(v * 100) + ' %';
     function buildText(){
       const s = SFX.getSettings();
-      const sound = { uiOn: s.uiOn, uiVol: s.uiVol, gameOn: s.gameOn, gameVol: s.gameVol };
+      const sound = { gameOn: s.gameOn, gameVol: s.gameVol };
       const slots = {};
       SOUND_SLOTS.forEach(sl => { slots[sl.key] = Math.round(SLOT_VOLUMES.get(sl.key) * 100) / 100; });
       const imported = SOUND_SLOTS.filter(sl => CUSTOM_SOUNDS.has(sl.key))
@@ -4422,7 +4405,6 @@
         '=== Réglages Mot de passe (copiés le ' + new Date().toLocaleString('fr-FR') + ') ===',
         '',
         'VOLUMES GÉNÉRAUX',
-        '- Sons d’interface : ' + (sound.uiOn ? 'activés' : 'désactivés') + ', ' + pct(sound.uiVol),
         '- Sons de jeu : ' + (sound.gameOn ? 'activés' : 'désactivés') + ', ' + pct(sound.gameVol),
         '',
         'VOLUME DE CHAQUE SON ET MUSIQUE',
