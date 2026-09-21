@@ -365,32 +365,51 @@
   .rules-list{ font-size:13px; color:var(--text-dim); line-height:1.6; margin:0; padding-left:18px; }
   .rules-list li b{ color: var(--text); }
 
+  /* Bloc "INTERDITS" du menu, d'après l'écran de l'émission : cadre blanc lumineux
+     autour d'un intérieur brun-noir ; titre en points LED dans une pilule à liseré
+     argent (même recette que la piste de LED du jeu) ; règles en majuscules ; la
+     conséquence dans une seconde pilule. Le mot en LED est dessiné point par point
+     (voir FORBIDDEN_LED plus bas). */
   .forbidden-banner{
-    text-align:center;
-    background: radial-gradient(ellipse 100% 70% at 50% 0%, #2a120c 0%, #150a07 55%, #0c0402 100%);
-    border: 1px solid rgba(230,97,79,0.25);
-    border-radius: 18px; padding: 4px 16px 16px;
+    padding:5px; border-radius:26px; background:#f2ece2;
+    box-shadow: 0 0 14px rgba(255,255,255,0.45), 0 0 34px rgba(255,235,210,0.18);
   }
-  .forbidden-title{
-    display:block; width:82%; box-sizing:border-box; margin: 12px auto 12px;
-    font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
-    font-size:21px; letter-spacing:7px; color:#fff; text-align:center;
-    background: linear-gradient(180deg, #7a2119, #3a0e0a);
-    border: 1px solid rgba(255,140,120,0.35);
-    border-radius:999px; padding:6px 14px;
-    text-shadow: 0 0 8px rgba(255,150,120,0.7), 0 0 16px rgba(255,80,60,0.5);
+  .forbidden-inner{
+    text-align:center; padding:4px 16px 16px; border-radius:21px;
+    background: linear-gradient(165deg, #332321 0%, #170c0b 45%, #0b0504 100%);
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.6);
   }
+  .fb-pill{
+    position:relative; border:3px solid transparent; border-radius:999px;
+    background: linear-gradient(180deg, #341813 0%, #180a08 60%, #100605 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -3px 5px rgba(0,0,0,0.5);
+  }
+  .fb-pill::before{
+    content:""; position:absolute; inset:-3px; border-radius:inherit; padding:3px; pointer-events:none;
+    background: conic-gradient(from var(--shine-angle), #4c4c50 0deg, #9a9aa0 180deg, #4c4c50 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: word-pill-shine 14s linear infinite;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  @media (prefers-reduced-motion: reduce){ .fb-pill::before{ animation:none; } }
+  .forbidden-title{ display:block; width:92%; margin:14px auto; padding:12px 22px; }
+  .forbidden-title svg{ display:block; width:100%; height:auto; overflow:visible; filter: drop-shadow(0 0 2.5px rgba(255,60,40,0.6)); }
+  .fb-led-on{ fill: rgb(249,185,185); }
+  .fb-led-off{ fill:#7a3a30; opacity:0.26; }
   .forbidden-list{
     list-style:none; margin:0; padding:0;
     display:flex; flex-direction:column; gap:9px;
   }
   .forbidden-list li{
-    font-size:13px; font-weight:700; letter-spacing:0.3px;
+    font-size:12.5px; font-weight:800; letter-spacing:0.2px; text-transform:uppercase;
     color:#eaf6ff; text-shadow: 0 0 6px rgba(150,220,255,0.35);
   }
   .forbidden-consequence{
-    text-align:center; font-size:11px; font-weight:600; color:var(--text-dim);
-    margin-top:12px; letter-spacing:0;
+    display:block; width:82%; margin:14px auto 0; padding:8px 14px; text-align:center;
+    font-size:11.5px; font-weight:800; letter-spacing:0.4px; text-transform:uppercase;
+    color:#eaf6ff; text-shadow: 0 0 6px rgba(150,220,255,0.35);
   }
 
   /* Version réduite du rappel des interdits, affichée sur l'écran de jeu
@@ -1438,14 +1457,16 @@
     </div>
 
     <div class="forbidden-banner">
-      <div class="forbidden-title">INTERDITS</div>
-      <ul class="forbidden-list">
-        <li>Pas de mot composé</li>
-        <li>Pas de mot de la même famille</li>
-        <li>Pas de mot commençant par le même son</li>
-        <li>Pas de mime</li>
-      </ul>
-      <p class="forbidden-consequence">⚠️ Un interdit prononcé = mot annulé aussitôt.</p>
+      <div class="forbidden-inner">
+        <div class="fb-pill forbidden-title" id="forbidden-title" role="img" aria-label="Interdits"></div>
+        <ul class="forbidden-list">
+          <li>Pas de mot composé</li>
+          <li>Pas de mot de la même famille</li>
+          <li>Pas de mot commençant par le même son</li>
+          <li>Pas de mime</li>
+        </ul>
+        <p class="fb-pill forbidden-consequence">Sinon : mot annulé aussitôt</p>
+      </div>
     </div>
 
     <!-- 🧪 BOUTONS DE TEST — cachés par défaut, révélés par un appui long sur le titre -->
@@ -4168,6 +4189,38 @@
   document.getElementById('settings-overlay').addEventListener('click', (e) => {
     if(e.target.id === 'settings-overlay') closeSettingsOverlay();
   });
+
+  // ---- Titre "INTERDITS" en points LED (bloc des interdits du menu) ----
+  // Dessiné à la main, point par point (65 colonnes x 10 rangées) : '#' = LED
+  // allumée, '.' = éteinte. Les LED allumées occupent les colonnes 2-3, 7-12,
+  // 15-20, 23-27, 30-35, 38-43, 47-48, 51-56 et 59-64 : I, N, T, E, R, D, I, T, S.
+  // Pour retoucher une lettre, modifier ces rangées (elles doivent garder 65
+  // caractères ; les colonnes 1 et 65 restent éteintes pour centrer le mot).
+  const FORBIDDEN_LED = [
+    '.##...##..##..######..#####..#####...#####....##..######...#####.',
+    '.##...##..##..######..#####..######..######...##..######..######.',
+    '.##...##..##....##....##.....##..##..##..##...##....##....##.....',
+    '.##...###.##....##....##.....##..##..##..##...##....##....##.....',
+    '.##...######....##....####...#####...##..##...##....##....#####..',
+    '.##...######....##....####...#####...##..##...##....##.....#####.',
+    '.##...##.###....##....##.....##..##..##..##...##....##........##.',
+    '.##...##..##....##....##.....##..##..##..##...##....##........##.',
+    '.##...##..##....##....#####..##..##..######...##....##....######.',
+    '.##...##..##....##....#####..##..##..#####....##....##....#####..',
+  ];
+  (() => {
+    const rows = FORBIDDEN_LED.length, cols = FORBIDDEN_LED[0].length;
+    let on = '', off = '';
+    for(let r = 0; r < rows; r++){
+      for(let c = 0; c < cols; c++){
+        const lit = FORBIDDEN_LED[r][c] === '#';
+        const dot = `<circle cx="${c + 0.5}" cy="${r + 0.5}" r="${lit ? 0.43 : 0.3}"/>`;
+        if(lit) on += dot; else off += dot;
+      }
+    }
+    document.getElementById('forbidden-title').innerHTML =
+      `<svg viewBox="0 0 ${cols} ${rows}" aria-hidden="true"><g class="fb-led-off">${off}</g><g class="fb-led-on">${on}</g></svg>`;
+  })();
 
   // ---- Pavé des règles, dépliable ----
   (() => {
