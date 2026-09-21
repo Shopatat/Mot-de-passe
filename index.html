@@ -1273,7 +1273,7 @@
       </div>
       <label class="field-label">Sons</label>
       <div class="sound-row">
-        <span>Sons de jeu (réponses, interdits...)</span>
+        <span>Volume général (musiques et bruitages)</span>
         <div class="toggle-row sound-toggle" id="game-sound-toggle">
           <div class="toggle-btn" data-val="on">Activé</div>
           <div class="toggle-btn" data-val="off">Désactivé</div>
@@ -4405,7 +4405,7 @@
         '=== Réglages Mot de passe (copiés le ' + new Date().toLocaleString('fr-FR') + ') ===',
         '',
         'VOLUMES GÉNÉRAUX',
-        '- Sons de jeu : ' + (sound.gameOn ? 'activés' : 'désactivés') + ', ' + pct(sound.gameVol),
+        '- Volume général : ' + (sound.gameOn ? 'activé' : 'désactivé') + ', ' + pct(sound.gameVol),
         '',
         'VOLUME DE CHAQUE SON ET MUSIQUE',
         ...SOUND_SLOTS.map(sl => '- ' + sl.label + ' : ' + pct(slots[sl.key])),
