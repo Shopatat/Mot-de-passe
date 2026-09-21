@@ -362,8 +362,18 @@
     font-size:17px; margin-right:8px;
   }
 
-  .rules-list{ font-size:13px; color:var(--text-dim); line-height:1.6; margin:0; padding-left:18px; }
-  .rules-list li b{ color: var(--text); }
+  /* Règles du menu : crème lumineux plutôt que gris-bleu, mots clés en blanc qui
+     rayonne, puces dorées (même texte qu'avant, à peine plus haut). */
+  .rules-list{
+    list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;
+    font-size:13.5px; line-height:1.5; font-weight:500; color:#dedacd;
+  }
+  .rules-list li{ position:relative; padding-left:14px; }
+  .rules-list li::before{
+    content:""; position:absolute; left:0; top:0.6em; width:6px; height:6px; border-radius:50%;
+    background: var(--gold); box-shadow: 0 0 6px rgba(242,201,76,0.7);
+  }
+  .rules-list li b{ color:#fff; font-weight:800; text-shadow: 0 0 8px rgba(255,255,255,0.28); }
 
   /* Bloc "INTERDITS" du menu, d'après l'écran de l'émission : cadre blanc lumineux
      autour d'un intérieur brun-noir ; titre en points LED dans une pilule à liseré
@@ -521,8 +531,8 @@
   .handoff-final-reminder{
     font-size:14px; color: var(--text); line-height:1.55; max-width:340px;
     margin-top:14px; padding:13px 16px; border-radius:12px;
-    background: rgba(90,169,230,0.16); border:1.5px solid rgba(120,195,255,0.75);
-    box-shadow: 0 0 14px rgba(90,169,230,0.35), inset 0 0 12px rgba(90,169,230,0.10);
+    background: rgba(200,205,215,0.10); border:1.5px solid rgba(190,194,204,0.6);
+    box-shadow: 0 0 14px rgba(200,205,215,0.16), inset 0 0 12px rgba(200,205,215,0.06);
   }
   .handoff-final-reminder b{ color: #fff; }
 
