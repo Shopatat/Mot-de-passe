@@ -362,18 +362,20 @@
     font-size:17px; margin-right:8px;
   }
 
-  /* Règles du menu : crème lumineux plutôt que gris-bleu, mots clés en blanc qui
-     rayonne, puces dorées (même texte qu'avant, à peine plus haut). */
-  .rules-list{
-    list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;
-    font-size:13.5px; line-height:1.5; font-weight:500; color:#dedacd;
+  /* Règles du menu : blocs titrés (Le principe / Qualifications / Finale /
+     Gains), titres dorés centrés en Anton avec filet des deux côtés, texte
+     crème lumineux, mots clés en blanc qui rayonne. */
+  .rules-blocks{ display:flex; flex-direction:column; gap:15px; }
+  .rules-blocks section{ display:flex; flex-direction:column; gap:7px; }
+  .rules-blocks h3{
+    margin:0; font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-weight:400; font-size:14.5px; letter-spacing:2px;
+    color:var(--gold); text-shadow:0 0 10px rgba(242,201,76,0.4); text-align:center;
+    display:flex; align-items:center; gap:10px;
   }
-  .rules-list li{ position:relative; padding-left:14px; }
-  .rules-list li::before{
-    content:""; position:absolute; left:0; top:0.6em; width:6px; height:6px; border-radius:50%;
-    background: var(--gold); box-shadow: 0 0 6px rgba(242,201,76,0.7);
-  }
-  .rules-list li b{ color:#fff; font-weight:800; text-shadow: 0 0 8px rgba(255,255,255,0.28); }
+  .rules-blocks h3::before, .rules-blocks h3::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg, rgba(242,201,76,0), rgba(242,201,76,0.45)); }
+  .rules-blocks h3::after{ background:linear-gradient(90deg, rgba(242,201,76,0.45), rgba(242,201,76,0)); }
+  .rules-blocks p{ margin:0; font-size:13.5px; line-height:1.6; font-weight:500; color:#dedacd; }
+  .rules-blocks p b{ color:#fff; font-weight:800; text-shadow: 0 0 8px rgba(255,255,255,0.28); }
 
   /* Bloc "INTERDITS" du menu, d'après l'écran de l'émission : cadre blanc lumineux
      autour d'un intérieur brun-noir ; titre en points LED dans une pilule à liseré
@@ -1441,13 +1443,24 @@
       </div>
       <div class="word-recap-body">
         <div class="card">
-          <ul class="rules-list" id="rules-list">
-            <li><b>Qualification</b> : des manches de <b>30 secondes</b> où il faut faire deviner 5 mots. Indices illimités ; un mot passé peut revenir plus tard dans la même manche. En équipe : chaque équipe joue <b>4 manches</b> (2 chacun), en alternant qui fait deviner.</li>
-            <li>Seul le meilleur total en qualification (équipe ou joueur) se qualifie pour la finale.</li>
-            <li><b>Finale</b> : 5 paliers de <b>1min30</b>. Il faut deviner 5 mots à chaque palier, mais le choix de mots proposés rétrécit à chaque palier : 9, puis 8, 7, 6, et enfin 5 — plus on avance, plus c'est serré.</li>
-            <li>En finale : <b>3 indices maximum</b> par mot, et un mot passé est perdu pour de bon. Si les mots restants ne suffisent plus pour atteindre les 5, la manche s'arrête aussitôt.</li>
-            <li>Après chaque palier, on peut s'arrêter et garder ses gains, ou continuer en remettant tout en jeu. Le palier 2 est le <b>palier de sécurité</b> : les gains sont acquis et un <b>joker</b> est débloqué.</li>
-          </ul>
+          <div class="rules-blocks" id="rules-list">
+            <section>
+              <h3>LE PRINCIPE</h3>
+              <p>Vous jouez en binôme : l'un donne les indices, l'autre devine. À chaque tour, le donneur propose <b>un seul mot-indice</b> en lien avec le mot secret — jamais une phrase, jamais un mime. Le devineur doit alors répondre par un seul mot ou par <b>« passe »</b> s'il ne trouve pas : c'est seulement après cette réponse que le donneur peut proposer un nouvel indice, ou choisir d'abandonner le mot pour passer au suivant. Impossible d'enchaîner deux indices sans réponse entre les deux. Un <b>interdit</b> (mot composé, même famille, même son de départ, mime) invalide aussitôt le mot en cours.</p>
+            </section>
+            <section>
+              <h3>QUALIFICATIONS</h3>
+              <p>Chaque manche dure <b>30 secondes</b> et il y a <b>jusqu'à 5 mots</b> à deviner pour autant de points. Passer un mot le met à la fin de la liste. Le <b>meilleur duo</b> (ou en mode chacun pour soi celui constitué du meilleur donneur et du meilleur devineur) se qualifie pour la finale.</p>
+            </section>
+            <section>
+              <h3>FINALE</h3>
+              <p>L'objectif ultime de la finale est de réussir ses <b>5 paliers</b> de <b>1min30</b> d'affilée. Pour franchir un palier, il faut deviner <b>5 mots</b>, mais la liste des mots proposés se resserre : 5 mots à trouver sur 9, puis sur 8, 7, 6, et enfin 5 mots sur 5 ! — <b>3 indices maximum</b> par mot, chaque mot passé est <b>perdu</b>.</p>
+            </section>
+            <section>
+              <h3>GAINS</h3>
+              <p>Après chaque palier réussi, deux choix : <b>s'arrêter</b> et garder ses gains, ou <b>continuer</b> en remettant tout en jeu pour viser plus haut. Le <b>palier 2</b> est le <b>palier de sécurité</b> : les gains sont acquis quoi qu'il arrive, et un <b>joker</b> devient disponible (permettant de voir à l'avance les 5 premiers mots d'une manche).</p>
+            </section>
+          </div>
         </div>
       </div>
     </div>
