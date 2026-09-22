@@ -1577,28 +1577,14 @@
     </div>
   </section>
 
-  <!-- ROLE CHOICE (chacun pour soi, double champion) -->
-  <section class="screen" id="screen-role-choice">
-    <div class="phase-tag final">La finale</div>
-    <div class="card handoff-wrap">
-      <div class="summary-icon">🌟</div>
-      <div class="handoff-label">Meilleur partout !</div>
-      <div class="handoff-team" id="role-choice-name" style="color:var(--gold);"></div>
-      <div class="handoff-role">Cette personne termine à la fois meilleur donneur d'indices et meilleur devineur. Elle choisit son rôle pour la finale.</div>
-    </div>
-    <div class="controls-row">
-      <button class="btn btn-gold" id="btn-choice-giver">Je fais deviner</button>
-      <button class="btn btn-gold" id="btn-choice-guesser">Je devine</button>
-    </div>
-  </section>
-
-  <!-- ÉGALITÉ SOLO : CHOIX MANUEL (remplace l'ancien tie-break chronométré) -->
+  <!-- ÉGALITÉ SOLO : CHOIX DU PARTENAIRE NEUTRE POUR LE DUEL (donneur prioritaire,
+       jamais de choix de rôle arbitraire : un duel départage toujours) -->
   <section class="screen" id="screen-solo-tie-choice">
     <div class="phase-tag">Égalité</div>
     <div class="card handoff-wrap">
       <div class="summary-icon">🤝</div>
       <div class="handoff-label" id="solo-tie-label"></div>
-      <div class="handoff-role">Qui continue ?</div>
+      <div class="handoff-role" id="solo-tie-question"></div>
     </div>
     <div class="controls-row" id="solo-tie-buttons"></div>
   </section>
@@ -3879,7 +3865,6 @@
     play: document.getElementById('screen-play'),
     summary: document.getElementById('screen-summary'),
     trainingSummary: document.getElementById('screen-training-summary'),
-    roleChoice: document.getElementById('screen-role-choice'),
     soloTieChoice: document.getElementById('screen-solo-tie-choice'),
     buzzIntro: document.getElementById('screen-buzz-intro'),
     buzzPlay: document.getElementById('screen-buzz-play'),
@@ -5992,8 +5977,11 @@
   }
 
   // ---- Solo mode ----
-  // Machine à états : on fixe d'abord le meilleur donneur, puis le meilleur devineur,
-  // chacun pouvant déclencher son propre départage, avant de vérifier la double couronne.
+  // Le donneur est réglé en premier et prime : une fois fixé, le devineur est
+  // le meilleur restant EN EXCLUANT ce donneur. Ça règle tout seul le cas où
+  // la même personne serait techniquement la meilleure des deux : elle reste
+  // donneuse, et le rôle de devineur glisse au 2e meilleur devineur — sans
+  // écran de choix, sans retournement de situation.
   function resolveSoloPhase(){
     state._pendingGivers = state.soloStats.map((p,i)=>({idx:i, score:p.giverScore, time:p.giverTime}))
       .sort((a,b)=> b.score - a.score || a.time - b.time);
@@ -6004,66 +5992,105 @@
     proceedSoloResolution();
   }
 
-  function proceedSoloResolution(){
-    if(state._resolvedGiver === undefined){
-      const givers = state._pendingGivers;
-      const tied = givers.filter(g => g.score === givers[0].score && g.time === givers[0].time).map(g => g.idx);
-      if(tied.length > 1){ showSoloTieChoice(tied, 'giver'); return; }
-      state._resolvedGiver = givers[0].idx;
-    }
-    if(state._resolvedGuesser === undefined){
-      const guessers = state._pendingGuessers;
-      const tied = guessers.filter(g => g.score === guessers[0].score && g.time === guessers[0].time).map(g => g.idx);
-      if(tied.length > 1){ showSoloTieChoice(tied, 'guesser'); return; }
-      state._resolvedGuesser = guessers[0].idx;
-    }
-    const bestGiver = state._resolvedGiver, bestGuesser = state._resolvedGuesser;
-    if(bestGiver === bestGuesser){
-      showRoleChoice(bestGiver);
-    } else {
-      finalizeSoloFinalists(bestGiver, bestGuesser);
-    }
+  function topTied(list){
+    if(!list.length) return [];
+    const top = list[0];
+    return list.filter(g => g.score === top.score && g.time === top.time).map(g => g.idx);
   }
 
-  // ---- Égalité solo : choix manuel (au lieu d'une mini-manche chronométrée) ----
-  function showSoloTieChoice(tiedIdxs, role){
-    state._tieChoiceRole = role;
+  function proceedSoloResolution(){
+    if(state._resolvedGiver === undefined){
+      const tied = topTied(state._pendingGivers);
+      if(tied.length > 1){ resolveTie(tied, 'giver'); return; }
+      state._resolvedGiver = state._pendingGivers[0].idx;
+    }
+    if(state._resolvedGuesser === undefined){
+      const pool = state._pendingGuessers.filter(g => g.idx !== state._resolvedGiver);
+      const tied = topTied(pool);
+      if(tied.length > 1){ resolveTie(tied, 'guesser'); return; }
+      state._resolvedGuesser = pool[0].idx;
+    }
+    finalizeSoloFinalists(state._resolvedGiver, state._resolvedGuesser);
+  }
+
+  // ---- Égalité solo : un duel tranche, jamais un choix arbitraire ----
+  // S'il y a un partenaire neutre (pas concerné par l'égalité) dispo, il/elle
+  // sert de devineur (ou donneur) commun pour départager d'un mot en plus par
+  // candidat. Sans neutre (2 joueurs, ou tout le monde à égalité), les joueurs
+  // à égalité se départagent entre eux, un aller-retour classique.
+  function resolveTie(tiedIdxs, role){
+    const neutrals = state.soloStats.map((_,i)=>i).filter(i => !tiedIdxs.includes(i));
+    if(neutrals.length === 0){ startDuel(buildCrossDuelTurns(tiedIdxs, role)); return; }
+    if(neutrals.length === 1){ startDuel(buildNeutralDuelTurns(tiedIdxs, role, neutrals[0])); return; }
+    showNeutralChoice(tiedIdxs, role, neutrals);
+  }
+
+  function duelProgressLabel(role){
+    return role === 'giver' ? "Duel — qui fait deviner en finale ?" : "Duel — qui devine en finale ?";
+  }
+  function buildNeutralDuelTurns(tiedIdxs, role, neutralIdx){
+    return tiedIdxs.map(pid => {
+      const giverIdx = role === 'giver' ? pid : neutralIdx;
+      const guesserIdx = role === 'giver' ? neutralIdx : pid;
+      return {
+        kind:'qualif', style:'cycle', giverIdx, guesserIdx,
+        giverName: state.soloStats[giverIdx].name, guesserName: state.soloStats[guesserIdx].name,
+        colorIdx: state.soloStats[giverIdx].colorIdx,
+        poolSize: QUALIF_WORDS, target: QUALIF_WORDS, time: QUALIF_TIME,
+        progressLabel: duelProgressLabel(role)
+      };
+    });
+  }
+  function buildCrossDuelTurns(tiedIdxs, role){
+    // Même mécanique que le tirage des qualifs, restreinte aux seuls joueurs
+    // à égalité : à 2, ça donne exactement l'aller-retour (A→B puis B→A).
+    return buildSoloSchedule(tiedIdxs.length).map(pair => {
+      const giverIdx = tiedIdxs[pair.giver], guesserIdx = tiedIdxs[pair.guesser];
+      return {
+        kind:'qualif', style:'cycle', giverIdx, guesserIdx,
+        giverName: state.soloStats[giverIdx].name, guesserName: state.soloStats[guesserIdx].name,
+        colorIdx: state.soloStats[giverIdx].colorIdx,
+        poolSize: QUALIF_WORDS, target: QUALIF_WORDS, time: QUALIF_TIME,
+        progressLabel: duelProgressLabel(role)
+      };
+    });
+  }
+  function startDuel(turns){
+    const startIdx = state.turnQueue.length;
+    state.turnQueue = state.turnQueue.concat(turns);
+    state.currentTurnIndex = startIdx;
+    goToHandoff();
+  }
+
+  // Écran affiché seulement quand il y a le choix entre au moins deux
+  // partenaires neutres possibles (sinon resolveTie() démarre le duel direct).
+  function showNeutralChoice(tiedIdxs, role, neutrals){
+    const names = tiedIdxs.map(i => state.soloStats[i].name).join(' et ');
     document.getElementById('solo-tie-label').textContent =
-      role === 'giver' ? "Égalité pour meilleur donneur d'indices" : "Égalité pour meilleur devineur";
+      role === 'giver' ? `Égalité pour meilleur donneur d'indices : ${names}` : `Égalité pour meilleur devineur : ${names}`;
+    document.getElementById('solo-tie-question').textContent =
+      role === 'giver' ? "Qui sera le devineur neutre pour les départager ?" : "Qui sera le donneur neutre pour les départager ?";
     const row = document.getElementById('solo-tie-buttons');
     row.innerHTML = "";
-    tiedIdxs.forEach(idx => {
+    neutrals.forEach(idx => {
       const p = state.soloStats[idx];
       const btn = document.createElement('button');
       btn.className = 'btn btn-gold';
       btn.textContent = p.name;
       btn.style.color = PLAYER_COLORS[p.colorIdx];
-      btn.addEventListener('click', () => {
-        if(role === 'giver') state._resolvedGiver = idx;
-        else state._resolvedGuesser = idx;
-        proceedSoloResolution(); // fixe l'autre rôle (avec son propre choix si besoin), puis vérifie la double couronne
-      });
+      btn.addEventListener('click', () => startDuel(buildNeutralDuelTurns(tiedIdxs, role, idx)));
       row.appendChild(btn);
     });
+    const randomBtn = document.createElement('button');
+    randomBtn.className = 'btn';
+    randomBtn.textContent = 'Au hasard';
+    randomBtn.addEventListener('click', () => {
+      const pick = neutrals[Math.floor(Math.random() * neutrals.length)];
+      startDuel(buildNeutralDuelTurns(tiedIdxs, role, pick));
+    });
+    row.appendChild(randomBtn);
     showScreen('soloTieChoice');
   }
-
-  function showRoleChoice(playerIdx){
-    document.getElementById('role-choice-name').textContent = state.soloStats[playerIdx].name;
-    document.getElementById('role-choice-name').style.color = PLAYER_COLORS[state.soloStats[playerIdx].colorIdx];
-    state._roleChoicePlayer = playerIdx;
-    showScreen('roleChoice');
-  }
-  document.getElementById('btn-choice-giver').addEventListener('click', () => {
-    const idx = state._roleChoicePlayer;
-    const nextGuesser = state._pendingGuessers.find(g => g.idx !== idx).idx;
-    finalizeSoloFinalists(idx, nextGuesser);
-  });
-  document.getElementById('btn-choice-guesser').addEventListener('click', () => {
-    const idx = state._roleChoicePlayer;
-    const nextGiver = state._pendingGivers.find(g => g.idx !== idx).idx;
-    finalizeSoloFinalists(nextGiver, idx);
-  });
 
   function finalizeSoloFinalists(giverIdx, guesserIdx){
     announceFinaleReached();
