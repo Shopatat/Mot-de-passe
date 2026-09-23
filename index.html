@@ -543,13 +543,83 @@
   .handoff-role{ font-size:14px; color:var(--text-dim); }
   .handoff-role b{ color: var(--text); }
   .handoff-target{ font-size:14px; color: var(--gold); font-weight:800; margin-top:4px; }
+  /* Rappel de la finale (palier 1) : encadré bleu nuit. */
   .handoff-final-reminder{
-    font-size:14px; color: var(--text); line-height:1.55; max-width:340px;
-    margin-top:14px; padding:13px 16px; border-radius:12px;
-    background: rgba(200,205,215,0.10); border:1.5px solid rgba(190,194,204,0.6);
-    box-shadow: 0 0 14px rgba(200,205,215,0.16), inset 0 0 12px rgba(200,205,215,0.06);
+    font-size:13.5px; color: #e4ecfa; line-height:1.55; align-self:center; max-width:360px;
+    padding:12px 16px; border-radius:14px; text-align:left;
+    background: linear-gradient(180deg, rgba(28,52,110,0.55), rgba(12,26,64,0.65));
+    border:1px solid rgba(96,140,230,0.55);
+    box-shadow: 0 0 16px rgba(50,100,220,0.22), inset 0 1px 0 rgba(150,190,255,0.12);
   }
   .handoff-final-reminder b{ color: #fff; }
+
+  /* ---- Avant-manche (écran "handoff") : face-à-face des deux prénoms ----
+     L'écran occupe toute la hauteur : le haut (manche + scores), la scène au
+     centre, le bouton en bas (au-dessus des petits boutons ✕ ⚙ ≡). */
+  #screen-handoff.active{ flex:1; padding-bottom:34px; }
+  .ho-top{ display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; }
+  .ho-kicker{ font-size:11.5px; font-weight:800; letter-spacing:3px; text-transform:uppercase; color: var(--gold-dim); }
+  .ho-kicker.gold{ color: var(--gold); }
+  .ho-scores{ display:flex; flex-wrap:wrap; justify-content:center; gap:4px 16px; font-size:12.5px; font-weight:600; color: var(--text-dim); }
+  .ho-scores .cur{ color: var(--text); }
+  .ho-scores b{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-weight:400; font-size:15px; letter-spacing:.5px; margin-left:5px; color: var(--text); }
+  .ho-duo{ font-size:13px; color: var(--text-dim); }
+  .ho-scores .ho-duo b{ font-family:inherit; font-size:inherit; font-weight:800; letter-spacing:0; margin:0; color: var(--text); }
+  .ho-stage{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:240px; }
+  .ho-person{ display:flex; flex-direction:column; align-items:center; gap:3px; max-width:100%; }
+  .ho-name{
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:52px; line-height:1.02; letter-spacing:1px;
+    color:#fff4ec; text-shadow: 0 0 24px rgba(255,210,140,0.2); text-transform:uppercase;
+    max-width:100%; overflow-wrap:anywhere;
+  }
+  .ho-person.guesser .ho-name{ opacity:.92; }
+  .ho-role{ font-size:11px; font-weight:800; letter-spacing:2.8px; text-transform:uppercase; color: var(--text-dim); }
+  .ho-person.giver .ho-role{ color:#ffb49c; }
+  .ho-chev{ display:flex; flex-direction:column; align-items:center; margin:18px 0 16px; }
+  .ho-chev span{
+    width:30px; height:15px; margin-top:-3px;
+    background: linear-gradient(180deg, #ffd9b0, var(--red));
+    clip-path: polygon(0 0, 50% 60%, 100% 0, 100% 40%, 50% 100%, 0 40%);
+    filter: drop-shadow(0 0 6px rgba(255,80,50,0.8));
+  }
+  .ho-chev span:nth-child(2){ opacity:.7; }
+  .ho-chev span:nth-child(3){ opacity:.4; }
+  .ho-note{ margin-top:14px; font-size:13px; color: var(--text-dim); }
+  /* Finale, paliers 2 à 5 : le gain en vedette */
+  .ho-amount{
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:72px; line-height:1; letter-spacing:2px;
+    color:#ffd76a; text-shadow: 0 0 28px rgba(242,201,76,0.45), 0 0 2px rgba(255,240,200,0.8); margin:10px 0 14px;
+  }
+  .ho-amount.plain{ color:#fff4ec; text-shadow: 0 0 24px rgba(255,210,140,0.2); }
+  .ho-steps{ display:flex; gap:7px; justify-content:center; margin-bottom:14px; }
+  .ho-steps i{ width:34px; height:7px; border-radius:4px; background:#2a1512; border:1px solid #4a1a16; }
+  .ho-steps i.done{ background: var(--correct); border-color:#2f8a55; box-shadow:0 0 6px rgba(79,191,122,0.5); }
+  .ho-steps i.cur{ background: var(--gold); border-color:#ffe08a; box-shadow:0 0 8px rgba(242,201,76,0.7); }
+  .ho-obj{ font-size:15px; font-weight:700; color:#e2dfd6; }
+  .ho-obj b{ color: var(--text); }
+  .ho-safe{ margin-top:6px; font-size:12.5px; color: var(--text-dim); }
+  #screen-handoff #btn-back-to-setup{ margin-top:0 !important; }
+  /* Apparition : premier prénom, chevrons en cascade vers le bas, second prénom. */
+  #screen-handoff.ho-anim .ho-person.giver{ animation: hoIn .38s ease-out both; }
+  #screen-handoff.ho-anim .ho-chev span{ animation: hoChev .3s ease-out both; }
+  #screen-handoff.ho-anim .ho-chev span:nth-child(1){ animation-delay:.28s; }
+  #screen-handoff.ho-anim .ho-chev span:nth-child(2){ animation-delay:.38s; }
+  #screen-handoff.ho-anim .ho-chev span:nth-child(3){ animation-delay:.48s; }
+  #screen-handoff.ho-anim .ho-person.guesser{ animation: hoIn .38s ease-out .56s both; }
+  #screen-handoff.ho-anim .ho-note{ animation: hoFade .4s ease-out .8s both; }
+  #screen-handoff.ho-anim .ho-amount{ animation: hoLight .6s ease-out .1s both; }
+  #screen-handoff.ho-anim .ho-steps i{ animation: hoFade .25s ease-out both; }
+  #screen-handoff.ho-anim .ho-steps i:nth-child(2){ animation-delay:.08s; }
+  #screen-handoff.ho-anim .ho-steps i:nth-child(3){ animation-delay:.16s; }
+  #screen-handoff.ho-anim .ho-steps i:nth-child(4){ animation-delay:.24s; }
+  #screen-handoff.ho-anim .ho-steps i:nth-child(5){ animation-delay:.32s; }
+  @keyframes hoIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+  @keyframes hoChev{ from{ opacity:0; transform:translateY(-6px); } }
+  @keyframes hoFade{ from{ opacity:0; } }
+  @keyframes hoLight{ 0%{ opacity:0; filter:brightness(.4); } 60%{ opacity:1; filter:brightness(1.35); } 100%{ opacity:1; filter:none; } }
+  @media (prefers-reduced-motion: reduce){
+    #screen-handoff.ho-anim *{ animation:none !important; }
+  }
 
   .countdown-num{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:90px; color: var(--red); text-shadow: 0 0 30px rgba(255,59,48,0.6); }
 
@@ -1564,13 +1634,26 @@
 
   <!-- HANDOFF -->
   <section class="screen" id="screen-handoff">
-    <div class="phase-tag" id="handoff-phase-tag"></div>
-    <div class="scorebar" id="handoff-scorebar"></div>
-    <div class="card handoff-wrap">
-      <div class="handoff-label" id="handoff-manche-label"></div>
-      <div class="handoff-team" id="handoff-team-name"></div>
-      <div class="handoff-role" id="handoff-role"></div>
-      <div class="handoff-target" id="handoff-target"></div>
+    <div class="ho-top">
+      <div class="ho-kicker" id="ho-kicker"></div>
+      <div class="ho-scores" id="ho-scores"></div>
+    </div>
+    <!-- Face-à-face : qualifs, duels, et palier 1 de la finale -->
+    <div class="ho-stage" id="ho-duel">
+      <div class="ho-person giver"><div class="ho-name" id="ho-giver"></div><div class="ho-role">fait deviner</div></div>
+      <div class="ho-chev" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="ho-person guesser"><div class="ho-name" id="ho-guesser"></div><div class="ho-role">devine</div></div>
+      <div class="ho-note" id="ho-note">pour toute la finale</div>
+    </div>
+    <!-- Paliers 2 à 5 (le duo ne change plus) et entraînement : l'enjeu en vedette -->
+    <div class="ho-stage" id="ho-palier">
+      <div class="ho-kicker gold" id="ho-palier-kicker"></div>
+      <div class="ho-amount" id="ho-amount"></div>
+      <div class="ho-steps" id="ho-steps"></div>
+      <div class="ho-obj" id="ho-obj"></div>
+      <div class="ho-safe" id="ho-safe"></div>
+    </div>
+    <div>
       <div class="handoff-final-reminder" id="handoff-final-reminder" style="display:none;">
         Première finale ? Petit rappel :<br>
         • Tape le mot pour donner un indice (3 max) — les flèches à côté comptent ce qu'il reste.<br>
@@ -4980,7 +5063,7 @@
         giverName: state.soloStats[pair.giver].name, guesserName: state.soloStats[pair.guesser].name,
         colorIdx: state.soloStats[pair.giver].colorIdx,
         poolSize: QUALIF_WORDS, target: QUALIF_WORDS, time: QUALIF_TIME,
-        progressLabel: `Duo ${idx+1} / ${schedule.length}`
+        progressLabel: `Duo ${idx+1} sur ${schedule.length}`
       }));
     }
     state.currentTurnIndex = 0;
@@ -5054,59 +5137,89 @@
   function goToHandoff(){
     const turn = state.turnQueue[state.currentTurnIndex];
     state.currentTurn = turn;
-    const tag = document.getElementById('handoff-phase-tag');
-    const label = document.getElementById('handoff-manche-label');
-    const teamEl = document.getElementById('handoff-team-name');
-    const roleEl = document.getElementById('handoff-role');
-    const targetEl = document.getElementById('handoff-target');
-    const color = PLAYER_COLORS[turn.colorIdx];
-
-    if(turn.kind === 'final'){
-      tag.style.display = 'none';
-      label.textContent = `Palier ${turn.level} — ${euro(PALIERS[turn.level-1].gain)}`;
-    } else if(turn.kind === 'training'){
-      tag.style.display = '';
-      tag.textContent = "Entraînement";
-      tag.classList.remove('final');
-      label.textContent = "Prêt ?";
-    } else {
-      tag.style.display = '';
-      tag.textContent = turn.progressLabel || "Qualification";
-      tag.classList.remove('final');
-      label.textContent = "Au tour de :";
-    }
-
-    if(turn.kind === 'training'){
-      teamEl.style.display = 'none';
-      roleEl.textContent = "Indices illimités, les mots passés reviennent dans la rotation.";
-      targetEl.textContent = `${turn.target} mots à faire deviner — chronomètre`;
-    } else {
-      teamEl.style.display = '';
-      teamEl.textContent = `${turn.giverName} et ${turn.guesserName}`;
-      teamEl.style.color = color;
-      roleEl.innerHTML = `<b>${escapeHtml(turn.giverName)}</b> fait deviner à <b>${escapeHtml(turn.guesserName)}</b>`;
-      targetEl.textContent = turn.target
-        ? `${turn.target} mots à trouver parmi ${turn.poolSize} — ${turn.time>=60 ? '1min30' : turn.time+'s'}`
-        : `Qui trouvera le plus de mots sur ${turn.poolSize} ? — ${turn.time}s`;
-    }
-
-    if(turn.kind === 'final' || turn.kind === 'training'){
-      document.getElementById('handoff-scorebar').style.display = 'none';
-    } else {
-      document.getElementById('handoff-scorebar').style.display = '';
-      renderScorebar('handoff-scorebar', turn.colorIdx);
-    }
-    // Rappel du fonctionnement du tap sur le mot (donne un indice, 3 max) et
-    // de la perte définitive du mot au-delà : peu clair pour des joueurs qui
-    // découvrent la finale, donc rappelé ici plutôt que seulement dans les
-    // règles du menu.
-    document.getElementById('handoff-final-reminder').style.display = (turn.kind === 'final') ? '' : 'none';
+    renderHandoff(turn);
     // "Retour" vers le setup : uniquement au tout premier "Prêt ?" de la partie
     // (rien n'a encore été joué, donc rien à perdre) — pas sur les suivants,
     // qui abandonneraient un score/tournoi en cours (c'est déjà le rôle du ✕).
     document.getElementById('btn-back-to-setup').style.display = (state.currentTurnIndex === 0) ? '' : 'none';
     saveGameProgress({ at:'handoff' });
     showScreen('handoff');
+  }
+
+  // Avant-manche. Deux mises en scène :
+  // - face-à-face (qualifs, duels, palier 1 de la finale) : les deux prénoms en
+  //   grand, chacun au-dessus de son rôle, reliés par les chevrons ;
+  // - l'enjeu en vedette (paliers 2 à 5, où le duo ne change plus, et
+  //   entraînement) : le gain en doré, l'échelle des paliers, l'objectif
+  //   formulé comme à l'émission ("5 mots sur 7 à trouver").
+  function renderHandoff(turn){
+    const kicker = document.getElementById('ho-kicker');
+    const scores = document.getElementById('ho-scores');
+    const duel = document.getElementById('ho-duel');
+    const palier = document.getElementById('ho-palier');
+    const note = document.getElementById('ho-note');
+    const reminder = document.getElementById('handoff-final-reminder');
+    const isFinal = turn.kind === 'final';
+    const showDuel = turn.kind === 'qualif' || (isFinal && turn.level === 1);
+    duel.style.display = showDuel ? '' : 'none';
+    palier.style.display = showDuel ? 'none' : '';
+    note.style.display = isFinal ? '' : 'none';
+    // Rappel du tap sur le mot (indices, abandon après le 3e) : une fois, au
+    // palier 1 — c'est le même duo pour toute la finale.
+    reminder.style.display = (isFinal && turn.level === 1) ? '' : 'none';
+    kicker.className = 'ho-kicker';
+    scores.innerHTML = '';
+
+    if(showDuel){
+      document.getElementById('ho-giver').textContent = turn.giverName;
+      document.getElementById('ho-guesser').textContent = turn.guesserName;
+      if(isFinal){
+        kicker.classList.add('gold');
+        kicker.textContent = `La finale · Palier 1 · ${euro(PALIERS[0].gain)}`;
+      } else if(state.subMode === 'team' && turn.manche){
+        kicker.textContent = `Manche ${turn.manche} sur 4`;
+      } else {
+        kicker.textContent = turn.progressLabel || 'Qualification';
+      }
+      // Scores des équipes en une ligne (celle qui joue un peu plus claire).
+      if(turn.kind === 'qualif' && state.subMode === 'team'){
+        scores.innerHTML = state.teams.map((t, i) =>
+          `<span class="${i === turn.teamIdx ? 'cur' : ''}">${escapeHtml(t.giverName)} et ${escapeHtml(t.guesserName)}<b>${t.score}</b></span>`
+        ).join('');
+      }
+    } else if(isFinal){
+      const p = PALIERS[turn.level-1];
+      kicker.innerHTML = '';
+      scores.innerHTML = `<span class="ho-duo"><b>${escapeHtml(turn.giverName)}</b> fait deviner à <b>${escapeHtml(turn.guesserName)}</b></span>`;
+      document.getElementById('ho-palier-kicker').textContent = `Palier ${turn.level} sur ${PALIERS.length}`;
+      const amount = document.getElementById('ho-amount');
+      amount.className = 'ho-amount';
+      amount.textContent = euro(p.gain);
+      document.getElementById('ho-steps').style.display = '';
+      document.getElementById('ho-steps').innerHTML = PALIERS.map(x => {
+        const won = state.finalHistory.some(h => h.level === x.level && h.success);
+        return `<i class="${won ? 'done' : (x.level === turn.level ? 'cur' : '')}"></i>`;
+      }).join('');
+      document.getElementById('ho-obj').innerHTML = `<b>${turn.target} mots sur ${turn.poolSize}</b> à trouver · 1 min 30`;
+      let safe = state.safeBank > 0 ? `${euro(state.safeBank)} assurés` : 'Aucun gain assuré pour l’instant';
+      if(state.jokerAvailable && !state.jokerUsed) safe += ' · joker disponible';
+      document.getElementById('ho-safe').textContent = safe;
+    } else {
+      // Entraînement
+      kicker.textContent = 'Entraînement';
+      document.getElementById('ho-palier-kicker').textContent = '';
+      const amount = document.getElementById('ho-amount');
+      amount.className = 'ho-amount plain';
+      amount.textContent = 'Prêt ?';
+      document.getElementById('ho-steps').style.display = 'none';
+      document.getElementById('ho-obj').innerHTML = `<b>${turn.target} mots</b> à faire deviner · chronomètre`;
+      document.getElementById('ho-safe').textContent = 'Indices illimités, les mots passés reviennent.';
+    }
+    // Rejoue l'apparition à chaque avant-manche.
+    const screen = document.getElementById('screen-handoff');
+    screen.classList.remove('ho-anim');
+    void screen.offsetWidth;
+    screen.classList.add('ho-anim');
   }
 
   document.getElementById('btn-back-to-setup').addEventListener('click', () => {
