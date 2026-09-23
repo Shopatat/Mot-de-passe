@@ -510,6 +510,19 @@
   .word-recap-chip.missed{ color: var(--wrong); border:1px solid rgba(230,97,79,0.35); }
   .word-recap-chip.unused{ color: var(--text-dim); border:1px solid rgba(255,255,255,0.12); }
   .word-recap-empty{ color: var(--text-dim); font-size:12.5px; font-style:italic; }
+  /* Version discrète (fins de manche / de palier) : une simple ligne grise
+     sans cadre, qu'on remarque sans qu'elle prenne la place du résultat. */
+  .word-recap.discreet .word-recap-toggle{
+    background:none; border:none; padding:6px 4px; justify-content:center; opacity:.6;
+  }
+  .word-recap.discreet .word-recap-toggle-label{ font-size:11px; font-weight:700; }
+  .word-recap.discreet .word-recap-toggle-counts{ font-size:11px; }
+  .word-recap.discreet.expanded .word-recap-toggle{ opacity:.85; }
+  .word-recap.discreet.expanded .word-recap-body{ margin-top:4px; }
+  .word-recap-hint{ margin:0; text-align:center; font-size:11.5px; color: var(--text-dim); }
+  button.word-recap-chip{ font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .word-recap-chip.set-aside{ text-decoration:line-through; opacity:.5; }
+  .word-recap-chip.set-aside::after{ content:'· de côté'; display:inline-block; margin-left:4px; text-decoration:none; font-size:10.5px; font-weight:600; }
 
   .phase-tag{
     align-self:center; background: rgba(199,159,46,0.14); border: 1.5px solid var(--gold-dim);
@@ -1182,16 +1195,6 @@
   }
   #btn-play-settings.visible{ display:flex; }
 
-  #btn-word-too-hard{
-    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:94px; z-index:3;
-    width:32px; height:32px; border-radius:50%;
-    background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
-    color:var(--text-dim); font-size:15px; font-weight:700; line-height:1;
-    align-items:center; justify-content:center; cursor:pointer;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
-  }
-  #btn-word-too-hard.visible{ display:flex; }
-
   .quit-overlay{
     display:none; position:fixed; inset:0; z-index:10;
     background:rgba(0,0,0,0.62);
@@ -1229,7 +1232,6 @@
   <button id="btn-quit-game" title="Retour au menu principal">✕</button>
   <button id="btn-play-settings" title="Paramètres">⚙️</button>
   <div id="test-mode-banner" hidden><span>🧪 MODE TEST — seul le mot « TEST » est tiré</span></div>
-  <button id="btn-word-too-hard" title="Mettre ce mot de côté (trop difficile)">?</button>
   <button id="btn-schedule" title="Qui joue avec qui">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
       <circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/>
@@ -1247,16 +1249,6 @@
       <div class="controls-row">
         <button class="btn btn-ghost" id="btn-quit-cancel">Annuler</button>
         <button class="btn btn-gold" id="btn-quit-confirm">Quitter</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="quit-overlay" id="blacklist-confirm-overlay">
-    <div class="card quit-confirm-card">
-      <p>Mettre ce mot de côté ? Il ne sera plus proposé, sans compter comme une mauvaise réponse.</p>
-      <div class="controls-row">
-        <button class="btn btn-ghost" id="btn-blacklist-cancel">Annuler</button>
-        <button class="btn btn-gold" id="btn-blacklist-confirm">Mettre de côté</button>
       </div>
     </div>
   </div>
@@ -1321,15 +1313,6 @@
         </div>
       </div>
 
-      <label class="field-label" style="margin-top:18px;">Fin de manche</label>
-      <div class="sound-row">
-        <span>Afficher le détail des mots (trouvés / ratés)</span>
-        <div class="toggle-row sound-toggle" id="recap-detail-toggle">
-          <div class="toggle-btn" data-val="on">Activé</div>
-          <div class="toggle-btn" data-val="off">Désactivé</div>
-        </div>
-      </div>
-
       <label class="field-label" style="margin-top:18px;">Pause en cours de manche</label>
       <div class="sound-row">
         <span>Masquer le mot pendant la pause</span>
@@ -1347,7 +1330,7 @@
 
       <label class="field-label" style="margin-top:18px;">🚫 Mots mis de côté</label>
       <p class="marquee-sub" style="text-align:left; font-style:normal; margin:-4px 0 8px;">
-        Mots marqués "trop difficile" en cours de partie : ils ne sont plus proposés tant qu'ils restent dans cette liste.
+        Mots touchés dans le détail des mots en fin de manche : ils ne sont plus proposés tant qu'ils restent dans cette liste.
       </p>
       <div id="blacklist-word-list"></div>
       <button class="text-action subtle" id="btn-export-blacklist" style="margin-top:6px; opacity:0.85;">Copier la liste</button>
@@ -1702,6 +1685,7 @@
     <div class="summary-sub" id="final-sub"></div>
     <div class="bank-line" id="final-bank" style="margin-top:6px;"></div>
     <div id="final-ranking" style="display:flex; flex-direction:column; gap:8px; margin-top:6px;"></div>
+    <div class="word-recap" id="final-recap"></div>
     <button class="btn btn-gold" id="btn-replay" style="margin-top:6px;">Rejouer</button>
     <p class="footer-note">Nouvelle partie, mêmes joueurs ou nouvelle config.</p>
   </section>
@@ -2448,13 +2432,13 @@
   const QUALIF_TIERS = ALL_TIERS;
   const FINAL_LEVEL_TIERS = { 1:ALL_TIERS, 2:ALL_TIERS, 3:ALL_TIERS, 4:ALL_TIERS, 5:ALL_TIERS };
 
-  // Mots mis de côté via le bouton "Mot trop difficile" : jamais retirés de
+  // Mots mis de côté depuis le détail des mots en fin de manche : jamais retirés de
   // WORD_BANK (la suppression définitive du texte se fait à part, en édition
   // du fichier), simplement filtrés à chaque tirage tant qu'ils restent ici.
   // Persisté sur l'appareil, comme les autres réglages.
   const WORD_BLACKLIST = (function(){
     let list = [];
-    try { list = JSON.parse(localStorage.getItem('mdp_word_blacklist') || '[]'); } catch(e){}
+    try { list = JSON.parse(localStorage.getItem('mdp_word_blacklist') || '[]').filter(w => typeof w === 'string'); } catch(e){} // (un ancien bug a pu y glisser un mot vide)
     function save(){ try { localStorage.setItem('mdp_word_blacklist', JSON.stringify(list)); } catch(e){} }
     return {
       has(word){ return list.includes(word); },
@@ -2891,9 +2875,8 @@
   // fichiers audio hébergés dans un dossier sounds/ à côté d'index.html.
   // Un seul morceau de musique joue à la fois ; les SFX (plus bas) se
   // superposent toujours par-dessus sans jamais la couper.
-  // NB : ces musiques ne sont pas encore personnalisables (contrairement aux
-  // SFX ci-dessous) — l'import de musique perso dans les réglages existe déjà
-  // niveau interface mais n'est pas encore branché sur cette lecture.
+  // Une musique importée dans les réglages (Personnalisation sonore) remplace
+  // le fichier par défaut de sa piste (voir urlFor ci-dessous).
   const MUSIC_FILES = {
     menu:          'sounds/music-menu.mp3',
     qualifWait:    'sounds/music-qualif-wait.wav',
@@ -2943,13 +2926,22 @@
       if(mode === 'buffer') return !!bufferSource;
       return !!(audio && !audio.paused);
     }
+    let currentOpts = null;
+    let currentBufferUrl = null; // fichier du buffer en cours (clé de decodedBuffers)
+    // Fichier à jouer pour une piste : la musique importée dans les réglages
+    // (Personnalisation sonore) si il y en a une, sinon celle du jeu.
+    function urlFor(key){
+      const custom = (typeof CUSTOM_SOUNDS !== 'undefined') && CUSTOM_SOUNDS.get(MUSIC_KEY_TO_SLOT[key]);
+      return custom ? custom.url : MUSIC_FILES[key];
+    }
     function play(key, opts){
       opts = opts || {};
       if(currentKey === key && isPlaying()) return; // déjà en cours, on ne relance pas
       stop();
-      const url = MUSIC_FILES[key];
+      const url = urlFor(key);
       if(!url) return;
       currentKey = key;
+      currentOpts = opts;
       if(GAPLESS_KEYS.has(key)) playGapless(key, url, opts);
       else playElement(key, url, opts);
     }
@@ -2983,17 +2975,20 @@
       if(!ctx){ playElement(key, url, { loop:true, fallback:opts.fallback }); return; } // repli si Web Audio indisponible
       ensureAudioCtxRunning();
       try {
-        let buffer = decodedBuffers[key];
+        // Cache par fichier (et non par piste) : une musique importée remplace
+        // bien l'ancienne au lieu de ressortir la version déjà décodée.
+        let buffer = decodedBuffers[url];
         if(!buffer){
           const res = await fetch(url);
           if(!res.ok) throw new Error('fichier introuvable');
           const arr = await res.arrayBuffer();
           buffer = await ctx.decodeAudioData(arr);
-          decodedBuffers[key] = buffer;
+          decodedBuffers[url] = buffer;
         }
         // Le décodage est asynchrone : la piste demandée a pu changer entretemps
         // (nouvel appel à play() pendant le fetch/decode) — on abandonne alors.
         if(currentKey !== key) return;
+        currentBufferUrl = url;
         mode = 'buffer';
         bufferDuration = buffer.duration;
         startBufferSource(buffer, 0);
@@ -3035,7 +3030,7 @@
     function resume(){
       ensureAudioCtxRunning();
       if(mode === 'buffer'){
-        const buffer = currentKey && decodedBuffers[currentKey];
+        const buffer = currentBufferUrl && decodedBuffers[currentBufferUrl];
         if(buffer) startBufferSource(buffer, bufferPauseOffset);
       } else if(audio){ applyVolume(); audio.play().catch(()=>{}); }
     }
@@ -3048,7 +3043,15 @@
       if(!audio || audio.ended){ cb(); return; }
       audio.addEventListener('ended', cb, { once:true });
     }
-    return { play, stop, pause, resume, isPlaying, applyVolume, onEnded, current(){ return currentKey; } };
+    // Musique importée ou retirée dans les réglages alors que sa piste joue
+    // (ex. la musique du menu) : on relance tout de suite avec le bon fichier.
+    function refreshSlot(slotKey){
+      if(!currentKey || MUSIC_KEY_TO_SLOT[currentKey] !== slotKey || !isPlaying()) return;
+      const key = currentKey, opts = currentOpts;
+      stop();
+      play(key, opts);
+    }
+    return { play, stop, pause, resume, isPlaying, applyVolume, onEnded, refreshSlot, current(){ return currentKey; } };
   })();
 
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
@@ -3492,12 +3495,14 @@
       row.querySelector('.preview-btn').addEventListener('click', () => { CUSTOM_SOUNDS.previewSlot(slot.key); });
       row.querySelector('.reset-btn').addEventListener('click', async () => {
         await CUSTOM_SOUNDS.resetSlot(slot.key);
+        MUSIC.refreshSlot(slot.key);
         renderCustomSoundList();
       });
       fileInput.addEventListener('change', async () => {
         const file = fileInput.files && fileInput.files[0];
         if(!file) return;
         await CUSTOM_SOUNDS.importFile(slot.key, file);
+        MUSIC.refreshSlot(slot.key);
         renderCustomSoundList();
       });
       const volumeSlider = row.querySelector('.volume-slider');
@@ -3526,12 +3531,17 @@
     });
   }
   CUSTOM_SOUNDS.setOnPreviewChange(updatePreviewIcons);
-  CUSTOM_SOUNDS.loadFromDB().then(renderCustomSoundList);
+  CUSTOM_SOUNDS.loadFromDB().then(() => {
+    renderCustomSoundList();
+    // La musique du menu a pu démarrer avant la lecture des fichiers importés.
+    const cur = MUSIC.current();
+    if(cur) MUSIC.refreshSlot(MUSIC_KEY_TO_SLOT[cur]);
+  });
 
   // ---------- PRÉFÉRENCES UI ----------
   // Petites préférences d'affichage persistées, séparées des réglages sons.
   const UIPREFS = (function(){
-    const prefs = { showRoundRecap: true, hideWordOnPause: true, showForbiddenInPlay: false, showFinaleHelp: true, arbitreMode: false };
+    const prefs = { hideWordOnPause: true, showForbiddenInPlay: false, showFinaleHelp: true, arbitreMode: false };
     try {
       const saved = JSON.parse(localStorage.getItem('mdp_ui_prefs') || 'null');
       if(saved) Object.assign(prefs, saved);
@@ -3540,8 +3550,6 @@
       try { localStorage.setItem('mdp_ui_prefs', JSON.stringify(prefs)); } catch(e){}
     }
     return {
-      getShowRoundRecap(){ return prefs.showRoundRecap; },
-      setShowRoundRecap(v){ prefs.showRoundRecap = v; save(); },
       getHideWordOnPause(){ return prefs.hideWordOnPause; },
       setHideWordOnPause(v){ prefs.hideWordOnPause = v; save(); },
       getShowForbiddenInPlay(){ return prefs.showForbiddenInPlay; },
@@ -3857,6 +3865,7 @@
     endedByStop: false,
     peekedPool: null, peekedLevel: null,
     gameOver: false,
+    gen: 0, // incrémenté à chaque retour au menu : les animations encore en vol d'une partie quittée ne font plus rien
   };
 
   const screens = {
@@ -3903,12 +3912,11 @@
   };
   function showScreen(name){
     // Écran maintenu allumé sur tous les écrans de jeu, relâché au menu.
-    if(name === 'setup') WAKE.release(); else WAKE.acquire();
+    if(name === 'setup'){ WAKE.release(); state.gen += 1; } else WAKE.acquire();
     Object.values(screens).forEach(s => s.classList.remove('active'));
     screens[name].classList.add('active');
     document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
     document.getElementById('btn-play-settings').classList.toggle('visible', name !== 'setup' && name !== 'final');
-    document.getElementById('btn-word-too-hard').classList.toggle('visible', name !== 'setup' && name !== 'final');
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && state.currentTurn.kind === 'qualif';
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
@@ -3956,14 +3964,19 @@
     document.getElementById('schedule-overlay').classList.remove('visible');
   });
   document.getElementById('btn-quit-game').addEventListener('click', () => {
+    freezeRound(); // le chrono ne tourne pas pendant qu'on se décide
     document.getElementById('quit-confirm-overlay').classList.add('visible');
   });
   document.getElementById('btn-quit-cancel').addEventListener('click', () => {
     document.getElementById('quit-confirm-overlay').classList.remove('visible');
+    unfreezeRound();
   });
   document.getElementById('btn-quit-confirm').addEventListener('click', () => {
     document.getElementById('quit-confirm-overlay').classList.remove('visible');
-    clearInterval(state.timerHandle);
+    stopTimer();
+    state.running = false;
+    roundFrozen = false;
+    if(peekHandle){ clearInterval(peekHandle); peekHandle = null; }
     document.getElementById('screen-play').classList.remove('finale-pending-start');
     showScreen('setup');
   });
@@ -3971,16 +3984,15 @@
     const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
   }
 
-  function renderWordRecap(containerId, success){
+  // Détail des mots de la manche : toujours présent, discret et replié par
+  // défaut. C'est aussi là qu'on met de côté un mot trop dur (il ne sera plus
+  // tiré) : un tap sur le mot le barre, un second tap annule. La liste
+  // complète reste gérable dans Paramètres > Mots mis de côté.
+  function renderWordRecap(containerId, success, label){
     const container = document.getElementById(containerId);
     if(!container) return;
-    if(!UIPREFS.getShowRoundRecap()){
-      container.innerHTML = '';
-      container.classList.remove('expanded');
-      container.style.display = 'none';
-      return;
-    }
     container.style.display = '';
+    container.classList.add('discreet');
     const found = state.wordsFound || [];
     const failed = state.wordsFailed || [];
     const leftover = state.pool || [];
@@ -3990,7 +4002,7 @@
     const unused = success ? leftover : [];
     function group(title, cls, words){
       const chips = words.length
-        ? `<div class="word-recap-chips">${words.map(w => `<span class="word-recap-chip ${cls}">${escapeHtml(w)}</span>`).join('')}</div>`
+        ? `<div class="word-recap-chips">${words.map(w => `<button type="button" class="word-recap-chip ${cls}${WORD_BLACKLIST.has(w) ? ' set-aside' : ''}" data-word="${escapeHtml(w)}">${escapeHtml(w)}</button>`).join('')}</div>`
         : `<div class="word-recap-empty">Aucun</div>`;
       return `<div class="word-recap-group">
         <div class="word-recap-title ${cls}">${title} (${words.length})</div>
@@ -4000,7 +4012,7 @@
     container.classList.remove('expanded');
     container.innerHTML = `
       <div class="word-recap-toggle">
-        <span class="word-recap-toggle-label">Détails de la manche</span>
+        <span class="word-recap-toggle-label">${label || 'Détails de la manche'}</span>
         <span class="word-recap-toggle-counts">
           <span class="c-found">✅ ${found.length}</span>
           <span class="c-missed">❌ ${missed.length}</span>
@@ -4008,6 +4020,7 @@
         <span class="word-recap-chevron">▼</span>
       </div>
       <div class="word-recap-body">
+        <p class="word-recap-hint">Un mot trop dur ? Touche-le pour le mettre de côté.</p>
         ${group('✅ Trouvés', 'found', found)}
         ${group('❌ Pas trouvés', 'missed', missed)}
         ${unused.length ? group('➖ Non utilisés', 'unused', unused) : ''}
@@ -4026,6 +4039,18 @@
         });
       }
     });
+    container.querySelectorAll('.word-recap-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const w = chip.dataset.word;
+        if(TEST_WORD_MODE.isOn() || w === TEST_WORD) return; // "TEST" ne finit jamais dans les mots écartés
+        const setAside = !WORD_BLACKLIST.has(w);
+        if(setAside) WORD_BLACKLIST.add(w); else WORD_BLACKLIST.remove(w);
+        chip.classList.toggle('set-aside', setAside);
+        // La mention "de côté" peut faire passer une ligne de plus : on réajuste la hauteur dépliée.
+        const body = container.querySelector('.word-recap-body');
+        if(container.classList.contains('expanded')) body.style.maxHeight = body.scrollHeight + 'px';
+      });
+    });
   }
 
   // ---- Réglages sons ----
@@ -4043,7 +4068,6 @@
   const initialSfxSettings = SFX.getSettings();
   document.getElementById('game-volume-slider').value = Math.round(initialSfxSettings.gameVol * 100);
   wireSoundToggle('game-sound-toggle', () => SFX.getSettings().gameOn, v => { SFX.setGameOn(v); MUSIC.applyVolume(); });
-  wireSoundToggle('recap-detail-toggle', () => UIPREFS.getShowRoundRecap(), v => UIPREFS.setShowRoundRecap(v));
   wireSoundToggle('pause-hide-toggle', () => UIPREFS.getHideWordOnPause(), v => UIPREFS.setHideWordOnPause(v));
   wireSoundToggle('forbidden-reminder-toggle', () => UIPREFS.getShowForbiddenInPlay(), v => {
     UIPREFS.setShowForbiddenInPlay(v);
@@ -4142,6 +4166,7 @@
     renderWordPoolStatus();
   });
   function openSettingsOverlay(){
+    freezeRound(); // ouvert en pleine manche : le chrono attend la fermeture
     document.getElementById('settings-overlay').classList.add('visible');
     pruneBlacklistAgainstWordBank();
     renderBlacklistPanel();
@@ -4178,6 +4203,7 @@
   function closeSettingsOverlay(){
     CUSTOM_SOUNDS.stopPreview();
     document.getElementById('settings-overlay').classList.remove('visible');
+    unfreezeRound();
   }
   document.getElementById('btn-open-settings').addEventListener('click', openSettingsOverlay);
   document.getElementById('btn-play-settings').addEventListener('click', openSettingsOverlay);
@@ -4767,6 +4793,7 @@
     state.wordsFailed = [];
     state.target = turn.target;
     state.timeLeft = turn.chrono ? 0 : turn.time;
+    state.timerMs = null; // chrono neuf : repart de timeLeft (voir startTimer)
     state.turnStartTime = turn.time;
     state.dotsTotal = turn.poolSize;
     state.dotsFound = 0;
@@ -4856,7 +4883,9 @@
     // restent immédiats) — pas plus lentement, juste plus tard. Les boutons de
     // jeu restent grisés (setPlayControlsEnabled(false) plus haut) jusqu'au
     // premier tap sur le mot, qui n'est lui-même possible qu'une fois révélé.
+    const gen = state.gen;
     setTimeout(() => {
+      if(gen !== state.gen) return; // partie quittée pendant l'apparition
       dotsRow.style.opacity = '';
       wordPillEl.style.opacity = '';
       wordPillEl.style.pointerEvents = '';
@@ -4909,15 +4938,31 @@
   function unlockInput(){
     inputLocked = false;
     const turn = state.currentTurn;
-    if(turn && !state.turnMusicStarted){
+    if(turn && (!state.turnMusicStarted || !state.running)){
       // Le chrono de la manche n'a pas encore démarré (aucun mode) : même
-      // après un remplacement de mot via "Mot trop difficile", les boutons de
+      // après la fin d'une animation de changement de mot, les boutons de
       // jeu restent grisés — y compris en finale, où c'est le mot lui-même
       // (pas un bouton) qui sert à lancer le chrono.
       setPlayControlsEnabled(false);
     } else {
       setPlayControlsEnabled(true);
     }
+  }
+
+  // Pause "officielle" des qualifs / de l'entraînement (le mot se voile, on
+  // tape dessus pour reprendre). Aussi déclenchée d'office quand l'appli part
+  // en arrière-plan en pleine manche.
+  function pauseRound(){
+    // Un gel en cours (fenêtre ouverte) a déjà arrêté chrono et musique : la
+    // pause en prend simplement le relais.
+    roundFrozen = false;
+    state.running = false;
+    stopTimer();
+    MUSIC.pause();
+    document.getElementById('word-pill').classList.add('waiting');
+    if(UIPREFS.getHideWordOnPause()) document.getElementById('word-pill').classList.add('paused-hidden');
+    document.getElementById('play-hint').textContent = "En pause — tape sur le mot pour reprendre";
+    setPlayControlsEnabled(false);
   }
 
   document.getElementById('word-pill').addEventListener('click', () => {
@@ -4939,14 +4984,7 @@
       return;
     }
     if(state.running){
-      // pause
-      state.running = false;
-      clearInterval(state.timerHandle);
-      MUSIC.pause();
-      document.getElementById('word-pill').classList.add('waiting');
-      if(UIPREFS.getHideWordOnPause()) document.getElementById('word-pill').classList.add('paused-hidden');
-      document.getElementById('play-hint').textContent = "En pause — tape sur le mot pour reprendre";
-      setPlayControlsEnabled(false);
+      pauseRound();
     } else {
       // démarrage ou reprise
       const turn = state.currentTurn;
@@ -5117,20 +5155,55 @@
   // (veille, notification, onglet caché), l'affichage reste exact.
   // On interroge l'horloge 4 fois par seconde pour que le changement de
   // seconde tombe pile, mais on ne redessine que si la valeur a bougé.
+  // Le chrono garde aussi sa valeur exacte en millisecondes (timerMs) : une
+  // pause ou un gel reprend pile là où il s'était arrêté, sans rendre ni
+  // voler la fraction de seconde en cours — sinon, pause après pause, la
+  // musique (qui, elle, reprend à l'instant exact) prenait de l'avance.
+  function currentTimerMs(){
+    const turn = state.currentTurn;
+    const el = Date.now() - state.timerRef;
+    return turn.chrono ? (state.timerBase + el) : Math.max(0, state.timerBase - el);
+  }
   function startTimer(){
     clearInterval(state.timerHandle);
     state.timerRef = Date.now();
-    state.timerBase = state.timeLeft;
+    state.timerBase = (state.timerMs != null) ? state.timerMs : state.timeLeft * 1000;
+    state.timerActive = true;
     state.timerHandle = setInterval(tick, 250);
+  }
+  // Arrête le chrono en mémorisant sa valeur exacte (pour une reprise éventuelle).
+  function stopTimer(){
+    if(state.timerActive) state.timerMs = currentTimerMs();
+    state.timerActive = false;
+    clearInterval(state.timerHandle);
   }
   function tick(){
     const turn = state.currentTurn;
-    const elapsed = Math.floor((Date.now() - state.timerRef) / 1000);
-    const next = turn.chrono ? (state.timerBase + elapsed) : Math.max(0, state.timerBase - elapsed);
+    const ms = currentTimerMs();
+    const next = turn.chrono ? Math.floor(ms / 1000) : Math.ceil(ms / 1000);
     if(next === state.timeLeft) return;
     state.timeLeft = next;
     updateTimerUI();
-    if(!turn.chrono && state.timeLeft <= 0){ clearInterval(state.timerHandle); endTurn(); }
+    if(!turn.chrono && state.timeLeft <= 0){ stopTimer(); endTurn(); }
+  }
+
+  // Gel temporaire de la manche (chrono + musique) pendant qu'une fenêtre est
+  // ouverte par-dessus (réglages, quitter) ou que l'appli
+  // passe en arrière-plan en finale. Rien ne change à l'écran : à la fermeture,
+  // tout repart exactement d'où c'était.
+  let roundFrozen = false;
+  function freezeRound(){
+    if(roundFrozen || !state.timerActive) return;
+    roundFrozen = true;
+    stopTimer();
+    MUSIC.pause();
+  }
+  function unfreezeRound(){
+    if(!roundFrozen) return;
+    roundFrozen = false;
+    if(!state.running || !screens.play.classList.contains('active')) return;
+    startTimer();
+    MUSIC.resume();
   }
   // Rejoue la traversée des chevrons comme un changement de mot normal, mais sans
   // révéler de nouveau mot : le cadre se referme (dématérialisation) pendant qu'il
@@ -5332,6 +5405,8 @@
   }
 
   function playClosingChevronTransition(onDone){
+    const gen = state.gen, done = onDone;
+    onDone = () => { if(gen === state.gen) done(); }; // partie quittée entretemps : on ne rouvre rien
     const isFinaleStyle = state.currentTurn && state.currentTurn.style === 'clues';
     const pillEl = document.getElementById('word-pill');
     if(isFinaleStyle){
@@ -5419,7 +5494,7 @@
 
   // Transition chevron du tie-break buzz : même effet de balayage que la
   // qualif classique, appliqué à la pastille dédiée du buzz.
-  function animateBuzzWordChange(nextWord){
+  function animateBuzzWordChange(nextWord, onDone){
     const wipeLeft = document.getElementById('buzz-wipe-left');
     const wipeRight = document.getElementById('buzz-wipe-right');
     const pillEl = document.getElementById('buzz-word-pill');
@@ -5431,12 +5506,12 @@
         setWordText(nextWord.toUpperCase(), 'buzz-word');
       },
       () => {
-        setTimeout(() => fadeInWord('buzz-word'), SWEEP_BLANK_MS);
+        setTimeout(() => { fadeInWord('buzz-word'); if(onDone) onDone(); }, SWEEP_BLANK_MS);
       });
   }
 
   function loadNextWord(animate){
-    if(state.pool.length === 0){ clearInterval(state.timerHandle); endTurn(); return; }
+    if(state.pool.length === 0){ stopTimer(); endTurn(); return; }
     state.clueCount = 1;
     const nextWord = state.pool[0].toUpperCase();
     const isFinaleStyle = state.currentTurn && state.currentTurn.style === 'clues';
@@ -5511,7 +5586,7 @@
       // Si le temps est déjà écoulé pile à ce moment, la musique du timer
       // couvre déjà la fin (pas besoin de son en plus).
       if(turn.kind === 'qualif' && state.timeLeft > 0) playQualifRoundWinJingle();
-      clearInterval(state.timerHandle);
+      stopTimer();
       renderDots();
       playClosingChevronTransition(() => endTurn());
       return;
@@ -5531,7 +5606,7 @@
     if(isObjectiveImpossible()){
       SFX.thenFinaleTimeout(passNode);
       lockInput();
-      clearInterval(state.timerHandle);
+      stopTimer();
       renderDots();
       playClosingChevronTransition(() => endTurn());
       return;
@@ -5568,44 +5643,11 @@
       lockInput();
       if(turn.kind === 'qualif' && state.timeLeft > 0) playQualifRoundWinJingle();
       else if(turn.kind === 'final') SFX.thenFinaleTimeout(forbiddenNode);
-      clearInterval(state.timerHandle);
+      stopTimer();
       renderDots();
       playClosingChevronTransition(() => endTurn());
       return;
     }
-    lockInput();
-    loadNextWord();
-  });
-
-  // "Mot trop difficile" : met le mot de côté (plus jamais tiré dans les
-  // futures parties) et le remplace tout de suite par un nouveau, tiré dans
-  // les mêmes niveaux de difficulté que la manche en cours. Neutre pour la
-  // manche : pas de pénalité, pas de mot perdu — le pool garde la même
-  // longueur, donc l'objectif de la manche reste inchangé.
-  function drawReplacementWord(turn){
-    const tiers = turn.kind === 'final' ? FINAL_LEVEL_TIERS[turn.level] : QUALIF_TIERS;
-    const candidates = drawTieredWords(state.pool.length + 5, tiers, state.pool).filter(w => !state.pool.includes(w));
-    return candidates.length ? candidates[0] : null;
-  }
-  document.getElementById('btn-word-too-hard').addEventListener('click', () => {
-    if(inputLocked) return;
-    document.getElementById('blacklist-confirm-overlay').classList.add('visible');
-  });
-  document.getElementById('btn-blacklist-cancel').addEventListener('click', () => {
-    document.getElementById('blacklist-confirm-overlay').classList.remove('visible');
-  });
-  document.getElementById('btn-blacklist-confirm').addEventListener('click', () => {
-    document.getElementById('blacklist-confirm-overlay').classList.remove('visible');
-    if(inputLocked) return;
-    const turn = state.currentTurn;
-    const word = state.pool[0];
-    // Mode test : "TEST" ne doit jamais finir dans les mots écartés pour de bon.
-    if(!TEST_WORD_MODE.isOn()) WORD_BLACKLIST.add(word);
-    SFX.pass();
-    const replacement = TEST_WORD_MODE.isOn() ? TEST_WORD : drawReplacementWord(turn);
-    state.pool.shift();
-    if(replacement) state.pool.unshift(replacement);
-    // Pas de dotsLost/wordsFailed ici : ce n'est pas compté comme une mauvaise réponse.
     lockInput();
     loadNextWord();
   });
@@ -5625,7 +5667,7 @@
     if(inputLocked) return;
     lockInput();
     playQualifRoundWinJingle();
-    clearInterval(state.timerHandle);
+    stopTimer();
     renderDots();
     playClosingChevronTransition(() => endTurn());
   });
@@ -5776,6 +5818,7 @@
     const b = state.buzz;
     b.turnPos = b.startPos;
     b.word = drawTieredWords(1, BUZZ_TIERS)[0];
+    buzzLocked = true; // relâché une fois le nouveau mot affiché
     renderBuzzPoints();
     renderBuzzTurn();
     showScreen('buzzPlay');
@@ -5794,9 +5837,10 @@
         // Le tie-break partage l'apparition de la qualif (même effet, même son).
         pillEl.classList.add('materialize-tv');
         setBuzzControlsEnabled(true);
+        buzzLocked = false;
       }, PLAY_REVEAL_DELAY);
     } else {
-      animateBuzzWordChange(b.word);
+      animateBuzzWordChange(b.word, () => { buzzLocked = false; });
     }
   }
   function renderBuzzPoints(){
@@ -5819,7 +5863,17 @@
     document.getElementById('buzz-turn-label').innerHTML =
       `C'est à <b style="color:${PLAYER_COLORS[t.colorIdx]};">${escapeHtml(t.giverName)}</b> de faire deviner à <b style="color:${PLAYER_COLORS[t.colorIdx]};">${escapeHtml(t.guesserName)}</b>`;
   }
+  // Verrou anti double-appui du tie-break (même rôle que inputLocked en manche) :
+  // sans lui, un 2e tap pendant le changement de mot donnait le point à
+  // l'équipe suivante et sautait un mot.
+  let buzzLocked = false;
+  function lockBuzz(ms){
+    buzzLocked = true;
+    if(ms) setTimeout(() => { buzzLocked = false; }, ms);
+  }
   document.getElementById('btn-buzz-correct').addEventListener('click', () => {
+    if(buzzLocked) return;
+    lockBuzz(); // relâché à la fin du changement de mot (startBuzzRound)
     SFX.correct();
     const b = state.buzz;
     const idx = b.teams[b.turnPos];
@@ -5842,6 +5896,8 @@
   // de manche classique (chevrons qui recouvrent le mot puis cadre qui s'éteint),
   // avant de basculer sur l'annonce du finaliste.
   function playBuzzClosingTransition(onDone){
+    const gen = state.gen, done = onDone;
+    onDone = () => { if(gen === state.gen) done(); };
     const wipeLeft = document.getElementById('buzz-wipe-left');
     const wipeRight = document.getElementById('buzz-wipe-right');
     const pillEl = document.getElementById('buzz-word-pill');
@@ -5860,6 +5916,8 @@
   }
 
   document.getElementById('btn-buzz-not-found').addEventListener('click', () => {
+    if(buzzLocked) return;
+    lockBuzz(400); // le temps de l'animation de passage de main : un double tap sautait une équipe
     SFX.forbidden();
     const b = state.buzz;
     b.turnPos = (b.turnPos + 1) % b.teams.length;
@@ -6250,7 +6308,9 @@
   document.getElementById('btn-start-final').addEventListener('click', () => {
     const btn = document.getElementById('btn-start-final');
     btn.disabled = true;
+    const gen = state.gen;
     playLadderReveal('finalist-ladder', 1, () => {
+      if(gen !== state.gen){ btn.disabled = false; return; }
       btn.disabled = false;
       startPalier(1);
     });
@@ -6309,7 +6369,7 @@
     document.getElementById('decision-sub').textContent = sub;
     document.getElementById('decision-bank').innerHTML =
       `Prochain palier : <b>${euro(PALIERS[turn.level].gain)}</b> — 5 mots parmi ${PALIERS[turn.level].pool}`;
-    renderWordRecap('decision-recap', true);
+    renderWordRecap('decision-recap', true, 'Détails du palier');
     // L'échelle reflète immédiatement le vrai état (palier gagné en vert, suivant
     // en doré) ; l'animation LED, elle, ne se joue plus toute seule ici — elle
     // attend le clic sur "Jouer pour X €" (voir le handler du bouton plus bas).
@@ -6339,7 +6399,9 @@
     const btnStop = document.getElementById('btn-stop-final');
     btnContinue.disabled = true;
     btnStop.disabled = true;
+    const gen = state.gen;
     playLadderReveal('decision-ladder', nextLevel, () => {
+      if(gen !== state.gen) return;
       startPalier(nextLevel);
     });
   });
@@ -6348,6 +6410,7 @@
     endFinal(false);
   });
 
+  let peekHandle = null;
   function usePeek(nextLevel){
     state.jokerUsed = true;
     state.jokerAvailable = false;
@@ -6363,10 +6426,14 @@
       document.getElementById('peek-word').textContent = shown[i].toUpperCase();
     };
     render();
-    const handle = setInterval(() => {
+    // Gardé à part pour que "Quitter" puisse l'arrêter : sinon, une fois au
+    // menu, il ramenait tout seul sur l'écran de décision.
+    if(peekHandle) clearInterval(peekHandle);
+    const handle = peekHandle = setInterval(() => {
       i += 1;
       if(i >= shown.length){
         clearInterval(handle);
+        peekHandle = null;
         document.getElementById('decision-joker-zone').innerHTML = "";
         showScreen('decision');
         return;
@@ -6410,6 +6477,8 @@
         <div class="pts" style="color:${color};">${h.found}</div>`;
       ranking.appendChild(row);
     });
+    // Mots du dernier palier joué (déjà vus sur l'écran de décision si on s'est arrêté).
+    renderWordRecap('final-recap', last ? last.success : true, 'Détails du dernier palier');
     showScreen('final');
   }
 
@@ -6441,6 +6510,14 @@
   let musicWasPlayingBeforeHidden = false;
   document.addEventListener('visibilitychange', () => {
     if(document.hidden){
+      // Manche en cours : le chrono ne doit pas tourner pendant que personne
+      // ne voit l'écran. Qualifs/entraînement : vraie pause (tap sur le mot
+      // pour reprendre). Finale (pas de pause) : simple gel, qui repart tout
+      // seul au retour, musique et chrono toujours calés ensemble.
+      if(state.timerActive && screens.play.classList.contains('active')){
+        if(state.currentTurn.kind === 'final') freezeRound();
+        else pauseRound();
+      }
       musicWasPlayingBeforeHidden = MUSIC.isPlaying();
       MUSIC.pause();
     } else {
@@ -6451,6 +6528,9 @@
       document.addEventListener('click', ensureAudioCtxRunning, { once:true });
       document.addEventListener('touchstart', ensureAudioCtxRunning, { once:true, passive:true });
       if(musicWasPlayingBeforeHidden) MUSIC.resume();
+      // Finale gelée pendant l'absence : on repart, sauf si une fenêtre
+      // (réglages, quitter...) est encore ouverte par-dessus.
+      if(roundFrozen && !document.querySelector('.quit-overlay.visible')) unfreezeRound();
       // Le verrou d'écran a été relâché par le système pendant l'absence :
       // on le redemande si on est toujours en partie.
       WAKE.refresh();
