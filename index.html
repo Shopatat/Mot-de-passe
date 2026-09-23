@@ -545,13 +545,14 @@
   .handoff-target{ font-size:14px; color: var(--gold); font-weight:800; margin-top:4px; }
   /* Rappel de la finale (palier 1) : encadré bleu nuit. */
   .handoff-final-reminder{
-    font-size:13.5px; color: #e4ecfa; line-height:1.55; align-self:center; max-width:360px;
+    font-size:13.5px; color: #e4ecfa; line-height:1.55; max-width:360px; margin:0 auto;
     padding:12px 16px; border-radius:14px; text-align:left;
     background: linear-gradient(180deg, rgba(28,52,110,0.55), rgba(12,26,64,0.65));
     border:1px solid rgba(96,140,230,0.55);
     box-shadow: 0 0 16px rgba(50,100,220,0.22), inset 0 1px 0 rgba(150,190,255,0.12);
   }
   .handoff-final-reminder b{ color: #fff; }
+  .handoff-final-reminder .rem-title{ text-align:center; font-weight:800; color:#fff; margin-bottom:4px; }
 
   /* ---- Avant-manche (écran "handoff") : face-à-face des deux prénoms ----
      L'écran occupe toute la hauteur : le haut (manche + scores), la scène au
@@ -1655,7 +1656,7 @@
     </div>
     <div>
       <div class="handoff-final-reminder" id="handoff-final-reminder" style="display:none;">
-        Première finale ? Petit rappel :<br>
+        <div class="rem-title">Première finale ? Petit rappel</div>
         • Tape le mot pour donner un indice (3 max) — les flèches à côté comptent ce qu'il reste.<br>
         • Toujours pas trouvé après le 3<sup>e</sup> ? Le mot passe en rouge : le tap suivant l'abandonne pour de bon, contrairement aux qualifs.
       </div>
@@ -4665,7 +4666,7 @@
       const next = sv.at === 'afterTurn' ? st.currentTurnIndex + 1 : st.currentTurnIndex;
       const t = st.turnQueue[next];
       if(st.subMode === 'team'){
-        title = t ? `Équipes · Manche ${t.manche} / 4` : 'Équipes · fin des qualifications';
+        title = t ? `Équipes · Manche ${t.manche} sur 4` : 'Équipes · fin des qualifications';
         detail = st.teams.map(tm => `${dot(tm.colorIdx)}${escapeHtml(tm.giverName)} et ${escapeHtml(tm.guesserName)} <b>${tm.score}</b>`).join(' &nbsp; ');
       } else {
         title = 'Chacun pour soi · ' + (t ? (t.progressLabel || 'Qualifications') : 'fin des qualifications');
@@ -6217,8 +6218,11 @@
     function col(title, scoreKey, timeKey, currentIdx){
       const rows = state.soloStats.map((p, i) => ({ i, name: p.name, score: p[scoreKey], time: p[timeKey] }))
         .sort((a, b) => b.score - a.score || a.time - b.time);
-      return `<div class="solo-board-col"><h4>${title}</h4>${rows.map((r, k) =>
-        `<div class="solo-board-row${k === 0 && r.score > 0 ? ' lead' : ''}${r.i === currentIdx ? ' current' : ''}"><span class="rank">${k+1}</span><span class="who">${escapeHtml(r.name)}</span><span class="pts">${r.score}</span></div>`
+      // Égalité parfaite (mêmes points, même temps) : même rang, et tous en
+      // doré s'ils sont en tête — c'est un duel qui les départagera.
+      const rankOf = r => rows.findIndex(x => x.score === r.score && x.time === r.time) + 1;
+      return `<div class="solo-board-col"><h4>${title}</h4>${rows.map(r =>
+        `<div class="solo-board-row${rankOf(r) === 1 && r.score > 0 ? ' lead' : ''}${r.i === currentIdx ? ' current' : ''}"><span class="rank">${rankOf(r)}</span><span class="who">${escapeHtml(r.name)}</span><span class="pts">${r.score}</span></div>`
       ).join('')}</div>`;
     }
     el.innerHTML = col('Donneurs', 'giverScore', 'giverTime', turn.giverIdx) + col('Devineurs', 'guesserScore', 'guesserTime', turn.guesserIdx);
@@ -6860,7 +6864,7 @@
     if(turn.level === SAFE_LEVEL) sub += ` Palier de sécurité atteint : ${euro(PALIERS[SAFE_LEVEL-1].gain)} sont acquis, et le joker est débloqué.`;
     document.getElementById('decision-sub').textContent = sub;
     document.getElementById('decision-bank').innerHTML =
-      `Prochain palier : <b>${euro(PALIERS[turn.level].gain)}</b> — 5 mots parmi ${PALIERS[turn.level].pool}`;
+      `Prochain palier : <b>${euro(PALIERS[turn.level].gain)}</b> — 5 mots sur ${PALIERS[turn.level].pool} à trouver`;
     renderWordRecap('decision-recap', true, 'Détails du palier');
     // L'échelle reflète immédiatement le vrai état (palier gagné en vert, suivant
     // en doré) ; l'animation LED, elle, ne se joue plus toute seule ici — elle
