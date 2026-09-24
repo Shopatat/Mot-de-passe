@@ -17,7 +17,7 @@
 <!-- Google Fonts : amélioration progressive, chargée seulement si internet est dispo. -->
 <!-- Hors-ligne (mode avion), le CSS retombe sur Impact/-apple-system : le jeu reste 100% jouable. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wdth,wght@125,800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     color-scheme: dark;
@@ -1117,69 +1117,99 @@
   .summary-title{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:24px; text-align:center; letter-spacing:0.5px; }
   .summary-sub{ text-align:center; color: var(--text-dim); font-size:14px; }
 
-  /* Gains ladder — pyramide façon "paliers" TV, la plus large en bas */
-  .ladder{ display:flex; flex-direction:column-reverse; gap:5px; align-items:center; }
+  /* Échelle des gains de la finale, d'après l'émission (banc d'essai réglé par
+     Fabien le 2026-09-24) : barres noires aux coins arrondis, reflets rouges aux
+     bouts, écriture blanche large. Le palier en cours est plus large, cerclé de
+     chrome, montant jaune, avec 3 chevrons de chaque côté qui s'allument à tour
+     de rôle vers le montant (chenillard). Un palier gagné devient terne et
+     rétrécit. La plus large en haut ; l'ordre du DOM va du palier 1 au 5. */
+  .ladder{ position:relative; display:flex; flex-direction:column-reverse; gap:7px; align-items:center; }
   .ladder-step{
-    position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:1px; width:100%; padding:7px 28px; border-radius:999px;
-    background: linear-gradient(180deg, #2a0f0c 0%, #150605 55%, #0c0302 100%);
-    border:1px solid #4a1a16; color: var(--text-dim); overflow:hidden;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -3px 6px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.3);
+    position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center;
+    width:var(--w); height:30px; border-radius:10px; border:2px solid transparent; color:#fff;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.03) 38%, rgba(255,255,255,0) 50%, rgba(0,0,0,.25) 100%) padding-box,
+      radial-gradient(ellipse 22% 90% at 93% 62%, rgba(150,28,18,.6), rgba(110,18,12,.22) 55%, transparent 80%) padding-box,
+      radial-gradient(ellipse 14% 80% at 5% 62%, rgba(120,20,14,.3), transparent 80%) padding-box,
+      linear-gradient(90deg, #0b0304 0%, #110506 50%, #1c0707 100%) padding-box,
+      linear-gradient(180deg, #2a1414, #060203) border-box;
+    box-shadow: 0 3px 6px rgba(0,0,0,.55);
   }
-  .ladder-step::after{
-    content:""; position:absolute; left:8%; right:8%; top:12%; height:34%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0));
-    border-radius:999px; pointer-events:none;
-  }
-  .ladder-step:nth-child(1){ width:64%; }
-  .ladder-step:nth-child(2){ width:73%; }
-  .ladder-step:nth-child(3){ width:82%; }
-  .ladder-step:nth-child(4){ width:91%; }
-  .ladder-step:nth-child(5){ width:100%; }
+  .ladder-step[data-level="1"]{ --w:68%; }
+  .ladder-step[data-level="2"]{ --w:75%; }
+  .ladder-step[data-level="3"]{ --w:82%; }
+  .ladder-step[data-level="4"]{ --w:88%; }
+  .ladder-step[data-level="5"]{ --w:92%; }
+  .ladder-face{ position:relative; z-index:1; display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
   .ladder-step .amount{
-    position:relative; z-index:1; font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
-    font-size:15px; letter-spacing:0.4px; color:inherit;
+    font-family:'Archivo', 'Arial Black', Impact, sans-serif; font-weight:800; font-stretch:125%;
+    font-size:13.5px; letter-spacing:.6px; white-space:nowrap; text-shadow:0 1px 2px rgba(0,0,0,.8);
   }
-  .ladder-step .meta{ position:relative; z-index:1; font-size:8.5px; letter-spacing:0.3px; color:inherit; opacity:0.65; font-weight:700; }
-  .ladder-step.done{
-    color:#bfe8cf; border-color: rgba(79,191,122,0.55);
-    background: linear-gradient(180deg, #123322 0%, #0c1f16 55%, #071510 100%);
+  .ladder-step.current, .ladder-step.bond-clone{
+    height:40px; border-width:4px; border-radius:12px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.03) 38%, rgba(255,255,255,0) 50%, rgba(0,0,0,.25) 100%) padding-box,
+      radial-gradient(ellipse 22% 90% at 93% 62%, rgba(150,28,18,.6), rgba(110,18,12,.22) 55%, transparent 80%) padding-box,
+      radial-gradient(ellipse 14% 80% at 5% 62%, rgba(120,20,14,.3), transparent 80%) padding-box,
+      linear-gradient(90deg, #0b0304 0%, #110506 50%, #1c0707 100%) padding-box,
+      linear-gradient(180deg, #f6f6f8 0%, #c2c3c9 22%, #6d6e75 48%, #b9bac1 70%, #e4e5ea 86%, #7a7b82 100%) border-box;
+    box-shadow: 0 4px 10px rgba(0,0,0,.6), 0 0 0 1px rgba(0,0,0,.6);
   }
-  .ladder-step.done .amount{ color: var(--correct); }
-  .ladder-step.current{
-    color: var(--gold); border-color: var(--gold);
-    animation: ladder-pulse 1.8s ease-in-out infinite;
+  .ladder-step.current{ width:min(calc(var(--w) + 10%), 100%); }
+  .ladder-step.current .amount, .ladder-step.bond-clone .amount{
+    color:#ffd02a; font-size:16.5px; text-shadow:0 0 8px rgba(255,190,40,.45), 0 1px 2px rgba(0,0,0,.8);
   }
-  .ladder-step.current .amount{ color: var(--gold); text-shadow: 0 0 10px rgba(242,201,76,0.5); }
-  @keyframes ladder-pulse{
-    0%, 100%{ box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -4px 8px rgba(0,0,0,0.5), 0 0 12px rgba(242,201,76,0.32); }
-    50%{ box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -4px 8px rgba(0,0,0,0.5), 0 0 22px rgba(242,201,76,0.68); }
-  }
-  .ladder-step.safe-marker .meta{ color: var(--gold-dim); opacity:0.9; }
+  .ladder-step.done{ width:calc(var(--w) - 4%); filter:brightness(.8); }
+  .ladder-step.done .amount{ color:#7b7072; text-shadow:none; }
+  /* Cadre chromé qui "bondit" vers le palier suivant (voir playLadderBond) : les
+     deux montants défilent verticalement pendant le saut. */
+  .ladder-step.bond-clone{ position:absolute; margin:0; z-index:5; }
+  .ladder-step.bond-clone .ladder-face{ overflow:hidden; }
+  .ladder-step.bond-clone .amount{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
 
-  /* Révélation LED d'un palier juste avant de le jouer : deux volets "diode" façon
-     plateau TV traversent la boîte de bord à bord (comme un rideau), un premier
-     passage pour cacher le montant et révéler l'objectif du palier (pastilles :
-     5 mots à trouver parmi le pool), un second pour cacher cet objectif et
-     redévoiler le montant, prêt à jouer. Éléments injectés dynamiquement en JS
-     (voir playLadderReveal). */
-  .ladder-step{ overflow:hidden; }
-  .ladder-face{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:1px; transition: opacity .16s ease; }
-  .ladder-led{ position:absolute; inset:0; z-index:3; pointer-events:none; }
-  .ladder-led-strip{
-    position:absolute; top:0; bottom:0; width:54%;
-    background-image: radial-gradient(circle at center, #fff 0%, #ffe9d2 26%, var(--red) 58%, transparent 68%);
-    background-size:6px 6px;
-    filter: drop-shadow(0 0 6px rgba(255,120,90,0.7)) brightness(1.15);
-    transition: transform .38s cubic-bezier(.4,0,.2,1);
+  /* Chevrons LED du palier en cours (voir buildLadderChevrons). Au repos, 3
+     chevrons éteints de chaque côté font un chenillard (un tour en 2 s, chacun
+     s'allume un sixième de tour après le précédent, --i = rang depuis le bord).
+     Pour changer ce qu'affiche le bandeau, un "train" de 3 chevrons allumés
+     entre par chaque bout, efface ce qu'il laisse derrière lui, croise l'autre
+     au centre et ressort par le bord opposé (voir ladderPass). Chaque côté
+     couvre tout le bandeau pour que les trains puissent se croiser. */
+  .ladder-side{ position:absolute; inset:0; z-index:3; pointer-events:none; }
+  .ladder-chev{ position:absolute; top:0; bottom:0; }
+  .ladder-side.left .ladder-chev{ clip-path: polygon(0 0, 46% 0, 100% 50%, 46% 100%, 0 100%, 54% 50%); }
+  .ladder-side.right .ladder-chev{ clip-path: polygon(100% 0, 54% 0, 0 50%, 54% 100%, 100% 100%, 46% 50%); }
+  .ladder-chev.dim{
+    background: radial-gradient(circle, rgba(255,110,90,.30) 0 34%, transparent 46%) 0 0 / 4px 4px, #4d0b08;
+    animation: ladderChase 2s linear infinite; animation-delay: calc(var(--i, 0) * 2s / 6);
   }
-  .ladder-led-strip.left{ left:0; transform: translateX(-100%); clip-path: polygon(0 0, 80% 0, 100% 50%, 80% 100%, 0 100%); }
-  .ladder-led-strip.right{ right:0; transform: translateX(100%); clip-path: polygon(100% 0, 20% 0, 0 50%, 20% 100%, 100% 100%); }
+  @keyframes ladderChase{
+    0%{ filter: brightness(1); }
+    5%{ filter: brightness(3) saturate(1.2); }
+    28%{ filter: brightness(1); }
+    100%{ filter: brightness(1); }
+  }
+  @media (prefers-reduced-motion: reduce){ .ladder-chev.dim{ animation:none; } }
+  .ladder-chev.lit{ background: radial-gradient(circle, #fff 0 22%, #ffe0d4 32%, #ff7a60 44%, transparent 54%) 0 0 / 4px 4px, #b2261a; }
+  .ladder-train{
+    position:absolute; top:0; bottom:0; opacity:0; will-change:transform;
+    background: radial-gradient(circle, rgba(255,205,190,.5) 0 22%, rgba(255,90,70,.3) 38%, transparent 50%) 0 0 / 4px 4px, #5c0f0a;
+  }
+  .ladder-side.left .ladder-train{ left:0; clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%, 18px 50%); }
+  .ladder-side.right .ladder-train{ right:0; clip-path: polygon(100% 0, 18px 0, 0 50%, 18px 100%, 100% 100%, calc(100% - 18px) 50%); }
+  /* Objectif du palier : grosses billes vertes (mots à trouver) et argent (en trop). */
   .ladder-dots{
     position:absolute; inset:0; z-index:2; display:flex; align-items:center; justify-content:center;
-    gap:7px; opacity:0; transition: opacity .2s ease; pointer-events:none;
+    gap:4px; opacity:0; pointer-events:none;
   }
-  .ladder-dots .dot-mark{ width:9px; height:9px; }
+  .ladder-ball{
+    width:17px; height:17px; border-radius:50%; flex-shrink:0;
+    background: radial-gradient(circle at 38% 30%, #ffffff 0%, #dcdde1 26%, #a2a4aa 60%, #5a5c61 100%);
+    box-shadow: 0 1px 2px rgba(0,0,0,.7), inset 0 -1px 2px rgba(0,0,0,.35);
+  }
+  .ladder-ball.on{
+    background: radial-gradient(circle at 38% 30%, #f2ffe8 0%, #8ef56a 24%, #34c421 58%, #0f6d0b 100%);
+    box-shadow: 0 0 6px rgba(80,255,60,.55), 0 1px 2px rgba(0,0,0,.7), inset 0 -1px 2px rgba(0,0,0,.3);
+  }
 
   .bank-line{ text-align:center; font-size:13px; color:var(--text-dim); font-weight:700; }
   .bank-line b{ color: var(--gold); font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:18px; letter-spacing:0.5px; }
@@ -5846,26 +5876,6 @@
     requestAnimationFrame(poll);
   }
 
-  // Variante pour deux volets qui se croisent l'un l'autre (au lieu de croiser un
-  // centre fixe) : déclenche quand le bord meneur de elA a rejoint/dépassé le bord
-  // meneur de elB. Utilisée quand les deux éléments convergent l'un vers l'autre.
-  function waitForStripsCross(elA, elB, callback, leadPx){
-    const lead = leadPx || 0;
-    let done = false;
-    function poll(){
-      if(done) return;
-      const a = elA.getBoundingClientRect();
-      const b = elB.getBoundingClientRect();
-      if(a.right + lead >= b.left){
-        done = true;
-        callback();
-        return;
-      }
-      requestAnimationFrame(poll);
-    }
-    requestAnimationFrame(poll);
-  }
-
   function playClosingChevronTransition(onDone){
     const gen = state.gen, done = onDone;
     onDone = () => { if(gen === state.gen) done(); }; // partie quittée entretemps : on ne rouvre rien
@@ -6671,8 +6681,8 @@
       const div = document.createElement('div');
       let cls = 'ladder-step';
       const past = state.finalHistory.find(h => h.level === p.level);
-      // forceCurrent : sert à figer un palier déjà gagné en "doré" pour la frame
-      // de départ de l'animation LED, avant qu'il ne bascule en "acquis".
+      // forceCurrent : garde un palier qu'on vient de gagner dans son cadre chromé,
+      // le temps que le cadre "bondisse" vers le palier suivant (playLadderBond).
       const forcedCurrent = opts.forceCurrent === p.level;
       const isDone = past && past.success && !forcedCurrent;
       const isCurrent = forcedCurrent || (!isDone && p.level === currentLevel);
@@ -6681,26 +6691,115 @@
       if(p.level === SAFE_LEVEL) cls += ' safe-marker';
       div.className = cls;
       div.dataset.level = p.level;
-      div.innerHTML = `<div class="ladder-face">
-        <span class="amount">${euro(p.gain)}</span>
-      </div>`;
+      div.innerHTML = `<div class="ladder-face"><span class="amount">${euro(p.gain)}</span></div>`;
       el.appendChild(div);
+      if(isCurrent) buildLadderChevrons(div);
     });
   }
 
-  // Révèle le palier qu'on s'apprête à jouer (déjà doré) juste avant de démarrer la
-  // manche : deux passages de volets LED qui traversent la boîte de bord à bord —
-  // le 1er cache le montant et dévoile l'objectif du palier (X mots à trouver
-  // parmi le pool, sous forme de pastilles), le 2nd cache cet objectif et
-  // redévoile le montant, prêt à jouer. Anticipation, pas bilan.
+  // Réglages de l'échelle choisis par Fabien sur le banc d'essai
+  // (https://claude.ai/artifact/1fVE38MKqMx4NPPZfFg9Yp, 2026-09-24).
+  const LADDER_FX = {
+    travel: 362,   // traversée d'un train de chevrons, d'un bord à l'autre (ms)
+    fade: 138,     // extinction des trains en fin de passage (ms)
+    balls: 0.65,   // facteur des temps "billes" (pause, arrivée des grises, maintien)
+    bond: 2        // facteur du bond vers le palier suivant (saut 300 ms, retournement 1,04 s)
+  };
+  // Géométrie des chevrons, calculée sur la hauteur intérieure du palier en
+  // cours (40 px - 2 x 4 px de chrome) : fixe, donc sans mesure — l'échelle
+  // est souvent construite avant que son écran soit affiché.
+  const LADDER_CHEV_W = Math.round(32 * 1.1);
+  const LADDER_CHEV_STEP = Math.round(LADDER_CHEV_W * 0.54); // ~3 px entre deux chevrons
+  const LADDER_TRAIN_W = 2 * LADDER_CHEV_STEP + LADDER_CHEV_W + 4;
+
+  function buildLadderChevrons(stepEl){
+    stepEl.querySelectorAll('.ladder-side').forEach(e => e.remove());
+    const sides = {};
+    for(const s of ['left', 'right']){
+      const side = document.createElement('div');
+      side.className = 'ladder-side ' + s;
+      const dims = [];
+      for(let i = 0; i < 3; i++){
+        const c = document.createElement('div');
+        c.className = 'ladder-chev dim';
+        c.style.setProperty('--i', i);
+        c.style.width = LADDER_CHEV_W + 'px';
+        c.style[s] = (i * LADDER_CHEV_STEP + 3) + 'px';
+        side.appendChild(c); dims.push(c);
+      }
+      const train = document.createElement('div');
+      train.className = 'ladder-train';
+      train.style.width = LADDER_TRAIN_W + 'px';
+      for(let i = 0; i < 3; i++){
+        const c = document.createElement('div');
+        c.className = 'ladder-chev lit';
+        c.style.width = LADDER_CHEV_W + 'px';
+        c.style[s] = (i * LADDER_CHEV_STEP + 2) + 'px';
+        train.appendChild(c);
+      }
+      side.appendChild(train);
+      stepEl.appendChild(side);
+      sides[s] = { dims, train };
+    }
+    stepEl._chev = sides;
+  }
+
+  const ladderSleep = ms => new Promise(res => setTimeout(res, ms));
+  // Avance (en px de trajet) à laquelle le son se déclenche avant que les
+  // pointes des deux trains se rejoignent au centre : sans elle, le son
+  // semblait arriver après le croisement. Ajustable si le ressenti change.
+  const LADDER_SOUND_LEAD_PX = 20;
+
+  // Un passage de chevrons : un train entre par chaque bout à vitesse constante,
+  // efface ce qu'il laisse derrière lui, croise l'autre au centre (le son part
+  // à ce moment-là et le nouveau contenu apparaît) puis ressort par le bord
+  // opposé. dimAtEnd : rallume le chenillard au repos une fois fini.
+  async function ladderPass(stepEl, oldEl, newEl, dimAtEnd){
+    const k = stepEl._chev;
+    const W = stepEl.clientWidth, half = W / 2, tw = LADDER_TRAIN_W;
+    const stop = W + tw; // la pointe va jusqu'à ce que tout le train soit sorti
+    const T = LADDER_FX.travel;
+    const dims = [...k.left.dims, ...k.right.dims];
+    dims.forEach(c => { if(c.style.opacity !== '0') c.animate([{ opacity:1 }, { opacity:0 }], { duration:T * 0.3, fill:'forwards' }); });
+    k.left.train.style.opacity = k.right.train.style.opacity = '1';
+    k.left.train.animate([{ transform:`translateX(${-tw}px)` }, { transform:`translateX(${stop - tw}px)` }], { duration:T, easing:'linear', fill:'forwards' });
+    k.right.train.animate([{ transform:`translateX(${tw}px)` }, { transform:`translateX(${-(stop - tw)}px)` }], { duration:T, easing:'linear', fill:'forwards' });
+    // L'ancien contenu est rogné au rythme de la queue des trains (qui n'entre
+    // dans le bandeau qu'à la fraction f0 du trajet).
+    const f0 = Math.min(tw / stop, 0.99), X = Math.max(stop - tw, 0);
+    const wipe = oldEl.animate([
+      { clipPath:'inset(0 0 0 0)', offset:0 },
+      { clipPath:'inset(0 0 0 0)', offset:f0 },
+      { clipPath:`inset(0 ${X}px 0 ${X}px)`, offset:1 }
+    ], { duration:T, easing:'linear', fill:'forwards' });
+    const swapAt = T * half / stop;
+    const leadMs = LADDER_SOUND_LEAD_PX * T / stop;
+    setTimeout(() => { try{ SFX.wordReveal(); }catch(e){} }, Math.max(0, swapAt - leadMs));
+    await ladderSleep(swapAt);
+    oldEl.style.opacity = '0'; wipe.cancel();
+    newEl.style.opacity = '1';
+    await ladderSleep(T - swapAt);
+    [k.left.train, k.right.train].forEach(tr => tr.animate(
+      [{ opacity:1, filter:'brightness(1.35)' }, { opacity:0, filter:'brightness(1)' }], { duration:LADDER_FX.fade, fill:'forwards' }));
+    await ladderSleep(LADDER_FX.fade);
+    [k.left.train, k.right.train].forEach(tr => { tr.getAnimations().forEach(a => a.cancel()); tr.style.opacity = '0'; });
+    dims.forEach(c => { c.getAnimations().forEach(a => a.cancel()); c.style.opacity = '0'; });
+    if(dimAtEnd) dims.forEach(c => { c.style.opacity = ''; c.animate([{ opacity:0 }, { opacity:1 }], { duration:250 }); });
+  }
+
+  // Révèle l'objectif du palier qu'on s'apprête à jouer : un passage de
+  // chevrons cache le montant et laisse 5 billes vertes (les mots à trouver),
+  // les billes argent "en trop" arrivent, puis un second passage ramène le
+  // montant, prêt à jouer. Anticipation, pas bilan.
   function playLadderReveal(containerId, level, onDone){
     const container = document.getElementById(containerId);
     const stepEl = container && container.querySelector(`[data-level="${level}"]`);
     if(!stepEl){ if(onDone) onDone(); return; }
+    if(!stepEl._chev) buildLadderChevrons(stepEl);
 
     const face = stepEl.querySelector('.ladder-face');
-    // Le nombre de pastilles reflète le pool du palier (9, 8, 7...) : 5 s'allument
-    // en vert (l'objectif à atteindre), le reste reste gris (mots "en trop").
+    // Autant de billes que de mots dans le pool du palier (9, 8, 7...) : 5
+    // vertes (l'objectif), le reste en argent (mots "en trop").
     const totalDots = PALIERS[level-1].pool;
     const litCount = Math.min(FINAL_TARGET, totalDots);
     const dots = document.createElement('div');
@@ -6708,96 +6807,102 @@
     const dotEls = [];
     for(let i=0;i<totalDots;i++){
       const d = document.createElement('div');
-      // Les 5 diodes des mots à trouver sont déjà allumées dès leur création : elles
-      // doivent apparaître directement vertes, jamais grises puis vertes.
-      d.className = 'dot-mark' + (i < litCount ? ' found' : '');
-      // Les diodes "en trop" (au-delà des 5 mots à trouver) restent hors flux tant
-      // que le groupe des 5 vertes n'est pas apparu seul et centré (cf. plus bas).
+      d.className = 'ladder-ball' + (i < litCount ? ' on' : '');
+      // Les billes argent restent hors flux tant que les 5 vertes ne sont pas
+      // apparues seules et centrées.
       if(i >= litCount) d.style.display = 'none';
       dots.appendChild(d);
       dotEls.push(d);
     }
     stepEl.appendChild(dots);
+    const litEls = dotEls.slice(0, litCount);
+    const extraEls = dotEls.slice(litCount);
+    const m = LADDER_FX.balls;
 
-    const SWEEP_DURATION = 900;
-    // Avance (en px) à laquelle le son se déclenche par rapport au croisement visuel
-    // des volets : sans elle, le son semblait démarrer après que les volets soient
-    // déjà arrivés au milieu. Ajustable si le ressenti n'est pas encore le bon.
-    const LADDER_SOUND_LEAD_PX = 20;
-    // Fait traverser un jeu de volets LED de bord à bord (le gauche part de la
-    // gauche et sort à droite, le droit fait l'inverse) : onMidpoint s'exécute
-    // quand ils se croisent au centre (tout est recouvert), onComplete une fois
-    // qu'ils sont entièrement sortis de la boîte.
-    function sweepChevrons(onMidpoint, onComplete){
-      const led = document.createElement('div');
-      led.className = 'ladder-led';
-      led.innerHTML = `<div class="ladder-led-strip left"></div><div class="ladder-led-strip right"></div>`;
-      stepEl.appendChild(led);
-      const stripLeft = led.querySelector('.left');
-      const stripRight = led.querySelector('.right');
-      requestAnimationFrame(() => {
-        stripLeft.style.transition = `transform ${SWEEP_DURATION}ms cubic-bezier(.4,0,.2,1)`;
-        stripRight.style.transition = `transform ${SWEEP_DURATION}ms cubic-bezier(.4,0,.2,1)`;
-        stripLeft.style.transform = 'translateX(240%)';
-        stripRight.style.transform = 'translateX(-240%)';
-      });
-      // Le son part un peu avant le croisement réel (LADDER_SOUND_LEAD_PX), tandis
-      // qu'onMidpoint continue de se déclencher pile au croisement (leurs bords se
-      // rejoignent), pas à un délai fixe qui suppose le milieu de l'animation.
-      waitForStripsCross(stripLeft, stripRight, () => SFX.wordReveal(), LADDER_SOUND_LEAD_PX);
-      waitForStripsCross(stripLeft, stripRight, onMidpoint);
-      setTimeout(() => { led.remove(); if(onComplete) onComplete(); }, SWEEP_DURATION + 20);
-    }
-
-    // 1er passage : le montant se cache, l'objectif du palier apparaît (pastilles).
-    sweepChevrons(() => {
-      face.style.opacity = '0';
-      dots.style.opacity = '1';
-    }, () => {
-      const litEls = dotEls.slice(0, litCount);
-      const extraEls = dotEls.slice(litCount);
-      // Les 5 diodes sont déjà vertes depuis leur création (voir plus haut) : elles
-      // apparaissent d'un coup, sans s'allumer une à une et sans son.
-
-      setTimeout(() => {
-        // Étape 2 — FLIP : les diodes grises "en trop" rejoignent le flux, ce qui
-        // élargit le groupe centré. On capture la position des vertes juste avant
-        // (First), puis juste après (Last), et on rejoue l'écart en transform pour
-        // transformer ce saut de mise en page en un glissement animé.
-        const firstRects = litEls.map(d => d.getBoundingClientRect());
+    (async () => {
+      await ladderPass(stepEl, face, dots, false);
+      await ladderSleep(380 * m);
+      if(extraEls.length){
+        // FLIP : les billes argent rejoignent le flux, ce qui élargit le groupe
+        // centré ; on rejoue l'écart des vertes en transform pour qu'elles
+        // glissent au lieu de sauter.
+        const firstLefts = litEls.map(d => d.getBoundingClientRect().left);
         extraEls.forEach(d => { d.style.display = ''; d.style.opacity = '0'; });
-        void dots.offsetWidth; // reflow forcé
         litEls.forEach((d, i) => {
-          const dx = firstRects[i].left - d.getBoundingClientRect().left;
-          if(dx){ d.style.transition = 'none'; d.style.transform = `translateX(${dx}px)`; }
+          const dx = firstLefts[i] - d.getBoundingClientRect().left;
+          if(dx) d.animate([{ transform:`translateX(${dx}px)` }, { transform:'none' }], { duration:380 * m, easing:'cubic-bezier(.4,0,.2,1)' });
         });
-        void dots.offsetWidth; // reflow forcé avant de relâcher vers la position finale
-        litEls.forEach(d => {
-          d.style.transition = 'transform .38s cubic-bezier(.4,0,.2,1)';
-          d.style.transform = '';
-        });
-        extraEls.forEach(d => {
-          d.style.transition = 'opacity .3s ease .14s';
-          d.style.opacity = '1';
-        });
+        extraEls.forEach(d => d.animate([{ opacity:0 }, { opacity:1 }], { duration:300 * m, delay:140 * m, fill:'forwards' }));
+      }
+      await ladderSleep(480 * m);
+      extraEls.forEach(d => { d.getAnimations().forEach(a => a.cancel()); d.style.opacity = ''; });
+      await ladderSleep(1100 * m);
+      await ladderPass(stepEl, dots, face, true);
+      dots.remove();
+      if(onDone) onDone();
+    })();
+  }
 
-        setTimeout(() => {
-          litEls.forEach(d => { d.style.transition = ''; d.style.transform = ''; });
-          extraEls.forEach(d => { d.style.transition = ''; d.style.display = ''; });
+  // Palier gagné : le cadre chromé "bondit" du palier gagné vers le suivant en
+  // faisant défiler le montant, pendant que l'ancien palier se retourne deux
+  // fois en rebondissant avant de rester terne (relevé image par image sur
+  // l'émission, ralenti x2 au choix de Fabien).
+  function playLadderBond(containerId, fromLevel, toLevel, onDone){
+    const container = document.getElementById(containerId);
+    const fromEl = container && container.querySelector(`[data-level="${fromLevel}"]`);
+    if(!fromEl){ renderLadder(containerId, toLevel); if(onDone) onDone(); return; }
+    const rel = el => {
+      const a = el.getBoundingClientRect(), b = container.getBoundingClientRect();
+      return { x:a.left - b.left, y:a.top - b.top, w:a.width, h:a.height };
+    };
+    const A = rel(fromEl);
+    renderLadder(containerId, toLevel);
+    const oldEl = container.querySelector(`[data-level="${fromLevel}"]`);
+    const newEl = container.querySelector(`[data-level="${toLevel}"]`);
+    const f = LADDER_FX.bond;
+    const at = ms => ms / 520;
+    const pr = 'perspective(420px) rotateX(';
+    oldEl.animate([
+      { transform: pr + '88deg)', offset: 0 },
+      { transform: pr + '0deg)', offset: at(85), easing:'ease-in' },
+      { transform: pr + '-89deg)', offset: at(170) },
+      { transform: pr + '89deg)', offset: at(171), easing:'ease-out' },
+      { transform: pr + '0deg)', offset: at(260) },
+      { transform: pr + '0deg)', offset: at(290), easing:'ease-out' },
+      { transform: pr + '-70deg)', offset: at(375), easing:'ease-in-out' },
+      { transform: pr + '0deg)', offset: 1 }
+    ], { duration: 520 * f });
+    if(!newEl){ setTimeout(() => { if(onDone) onDone(); }, 560 * f); return; }
 
-          setTimeout(() => {
-            // 2e passage : l'objectif se cache, le montant réapparaît, prêt à jouer.
-            sweepChevrons(() => {
-              dots.style.opacity = '0';
-              face.style.opacity = '1';
-            }, () => {
-              dots.remove();
-              if(onDone) onDone();
-            });
-          }, 350);
-        }, 480);
-      }, 380);
-    });
+    const B = rel(newEl);
+    newEl.style.visibility = 'hidden';
+    const clone = document.createElement('div');
+    clone.className = 'ladder-step bond-clone';
+    Object.assign(clone.style, { left:A.x+'px', top:A.y+'px', width:A.w+'px', height:A.h+'px' });
+    clone.innerHTML = `<div class="ladder-face"><span class="amount">${euro(PALIERS[fromLevel-1].gain)}</span><span class="amount">${euro(PALIERS[toLevel-1].gain)}</span></div>`;
+    container.appendChild(clone);
+    const [a1, a2] = clone.querySelectorAll('.amount');
+    const D = 150 * f;
+    clone.animate([
+      { left:A.x+'px', top:A.y+'px', width:A.w+'px', height:A.h+'px' },
+      { left:B.x+'px', top:B.y+'px', width:B.w+'px', height:B.h+'px' }
+    ], { duration:D, easing:'cubic-bezier(.3,.7,.4,1)', fill:'forwards' });
+    a1.animate([{ transform:'translateY(0)' }, { transform:'translateY(115%)' }], { duration:D, fill:'forwards' });
+    a2.animate([{ transform:'translateY(-115%)' }, { transform:'translateY(0)' }], { duration:D, fill:'forwards' });
+    (async () => {
+      await ladderSleep(D);
+      clone.animate([{ transform:'scaleX(1)' }, { transform:'scaleX(1.045)' }, { transform:'scaleX(1)' }], { duration:230 * f, easing:'ease-out' });
+      await ladderSleep(230 * f);
+      newEl.style.visibility = '';
+      clone.remove();
+      // Les chevrons du nouveau palier s'allument ensuite, chenillard compris.
+      const dims = newEl._chev ? [...newEl._chev.left.dims, ...newEl._chev.right.dims] : [];
+      dims.forEach(c => c.style.opacity = '0');
+      await ladderSleep(140 * f);
+      dims.forEach(c => { c.style.opacity = ''; c.animate([{ opacity:0 }, { opacity:1 }], { duration:320 * f }); });
+      await ladderSleep(320 * f);
+      if(onDone) onDone();
+    })();
   }
 
   document.getElementById('btn-start-final').addEventListener('click', () => {
@@ -6854,9 +6959,12 @@
 
     // Réactive les boutons : ils avaient été désactivés au clic "Continuer" du
     // palier précédent (anti double-tap) et ne se réactivaient jamais ensuite,
-    // ce qui bloquait la progression dès le 2e palier.
-    document.getElementById('btn-continue-final').disabled = false;
-    document.getElementById('btn-stop-final').disabled = false;
+    // ce qui bloquait la progression dès le 2e palier. Hors reprise, ils restent
+    // bloqués le temps du bond de l'échelle (voir plus bas).
+    const btnContinueFinal = document.getElementById('btn-continue-final');
+    const btnStopFinal = document.getElementById('btn-stop-final');
+    btnContinueFinal.disabled = !silent;
+    btnStopFinal.disabled = !silent;
 
     document.getElementById('decision-icon').textContent = "🎉";
     document.getElementById('decision-title').textContent = `${euro(p.gain)} en jeu`;
@@ -6866,10 +6974,12 @@
     document.getElementById('decision-bank').innerHTML =
       `Prochain palier : <b>${euro(PALIERS[turn.level].gain)}</b> — 5 mots sur ${PALIERS[turn.level].pool} à trouver`;
     renderWordRecap('decision-recap', true, 'Détails du palier');
-    // L'échelle reflète immédiatement le vrai état (palier gagné en vert, suivant
-    // en doré) ; l'animation LED, elle, ne se joue plus toute seule ici — elle
-    // attend le clic sur "Jouer pour X €" (voir le handler du bouton plus bas).
-    renderLadder('decision-ladder', turn.level + 1);
+    // L'échelle s'affiche d'abord avec le palier qu'on vient de gagner encore
+    // dans son cadre chromé, puis le cadre bondit vers le palier suivant une fois
+    // l'écran apparu (reprise d'une partie : directement l'état final). L'objectif
+    // du palier suivant, lui, attend le clic sur "Jouer pour X €".
+    if(silent) renderLadder('decision-ladder', turn.level + 1);
+    else renderLadder('decision-ladder', turn.level, { forceCurrent: turn.level });
 
     const jokerZone = document.getElementById('decision-joker-zone');
     jokerZone.innerHTML = "";
@@ -6888,6 +6998,17 @@
     controls.classList.add('revealed');
     saveGameProgress({ at:'decision' });
     showScreen('decision');
+    if(!silent){
+      const gen = state.gen;
+      setTimeout(() => {
+        if(gen !== state.gen) return;
+        playLadderBond('decision-ladder', turn.level, turn.level + 1, () => {
+          if(gen !== state.gen) return;
+          btnContinueFinal.disabled = false;
+          btnStopFinal.disabled = false;
+        });
+      }, 450); // laisse l'écran finir d'apparaître (fondu de 0,35 s)
+    }
   }
 
   document.getElementById('btn-continue-final').addEventListener('click', () => {
