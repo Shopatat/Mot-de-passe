@@ -717,18 +717,36 @@
     box-shadow: 0 1px 0 rgba(255,255,255,0.25);
   }
   @keyframes word-pill-shine{ to{ --shine-angle: 360deg; } }
-  /* Habillage propre à la finale, relevé sur l'extrait : le cadre du bandeau
-     n'est pas rouge mais gris argent, et son intérieur n'est pas noir mais un
-     dégradé brun/cuivre, plus clair vers le centre. La piste de diodes passe
-     elle aussi en boîtier gris argent. Les qualifs gardent leur habillage
-     sombre et rouge. */
+  /* Habillage propre à la finale, réglé par Fabien dans l'atelier des chevrons
+     de la finale (https://claude.ai/artifact/MCF6DChsfMJPfkhXNZKVQf, doc
+     led/finale, 2026-09-25) : même forme que le palier en cours de l'échelle
+     des gains — coins arrondis (17 px, pas une pilule), anneau fin (3 px) en
+     chrome vertical assombri (clarté 60 %) — sur un intérieur brun/cuivre. Le
+     cadre est bas (4 px au-dessus et au-dessous du mot) : les chevrons LED ont
+     la hauteur de son intérieur. La piste de diodes garde son boîtier gris
+     argent. Les qualifs gardent leur habillage sombre et rouge. */
   #screen-play.finale-style .word-pill{
-    background: linear-gradient(105deg, #1d0e05 0%, #3d2210 42%, #4a2b15 58%, #241107 100%);
+    border-width:3px; border-radius:17px; padding:4px 22px;
+    background: linear-gradient(100.5deg, #180b05 0%, #2f190d 42%, #392011 58%, #220e07 100%);
     box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.5);
   }
   #screen-play.finale-style .word-pill::before{
-    background: conic-gradient(from var(--shine-angle), #56565b 0deg, #a6a6a0 180deg, #56565b 360deg);
+    inset:-3px; padding:3px;
+    background: linear-gradient(180deg, #f6f6f8 0%, #c2c3c9 22%, #6d6e75 48%, #b9bac1 70%, #e4e5ea 86%, #7a7b82 100%);
+    filter: brightness(0.6);
+    animation: none;
   }
+  /* Le mot pulse en attendant le 1er appui (".waiting") : même pulsation que
+     dans les qualifs, mais partant de la clarté assombrie du chrome. */
+  #screen-play.finale-style .word-pill.waiting::before{ animation: finRingPulse 1.25s ease-in-out infinite; }
+  @keyframes finRingPulse{
+    0%,100%{ filter: brightness(0.6); }
+    50%{ filter: brightness(0.84); }
+  }
+  #screen-play.finale-style .word-pill .word-flare{ inset:-3px; }
+  /* Mot plus petit en finale (30 px au maximum) : sa hauteur de ligne suit
+     (voir .word-text et fitWordText). */
+  #screen-play.finale-style .word-text{ --word-max:30px; }
   #screen-play.finale-style .dot-row{
     background: linear-gradient(180deg, #331d0d 0%, #241408 55%, #190d04 100%);
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,190,130,0.12);
@@ -760,7 +778,7 @@
     text-shadow: 0 0 12px rgba(255,59,48,0.55);
   }
   #screen-play.finale-style .word-pill.clue-danger::before{
-    background: conic-gradient(from var(--shine-angle), var(--red-dim) 0deg, #ff6357 180deg, var(--red-dim) 360deg);
+    background: linear-gradient(180deg, #ffc9c4 0%, #e8675d 22%, #7a1510 48%, #d44a40 70%, #ff9a90 86%, #8a1a14 100%);
   }
   /* Masque le mot pendant une pause en cours de manche, pour éviter qu'il reste
      visible à l'écran quand on lâche le téléphone. L'animation wordTextReveal
@@ -866,7 +884,11 @@
   .word-text{
     font-family:'Anton', Impact, 'Arial Narrow', sans-serif;
     font-size: var(--word-size, 34px); letter-spacing:1px; text-transform:uppercase;
-    color: #fff; line-height:1.05; word-break: break-word;
+    /* Hauteur de ligne fixée sur la taille maxi du mot (--word-max : 34 px,
+       30 px en finale) : un mot long, réduit par fitWordText pour tenir, reste
+       centré dans la même hauteur, et le cadre ne change pas de taille d'un mot
+       à l'autre. */
+    color: #fff; line-height: calc(var(--word-max, 34px) * 1.05); word-break: break-word;
     white-space: nowrap;
     position:relative; z-index:1;
   }
@@ -911,92 +933,42 @@
   @keyframes wordFadeIn{ from{ opacity:0; } to{ opacity:1; } }
   .chevrons{ display:none; flex-shrink:0; flex-direction:row; gap:0; position:relative; z-index:50; align-self:center; transition: opacity 0.15s ease; }
   .chevrons.active{ display:flex; }
-  /* Chevrons d'indices de la finale. Sur le plateau ils ne sont pas rouges mais
-     orange cuivré, et un chevron consommé ne laisse aucune trace : il disparaît
-     complètement, comme à l'antenne. Le span garde sa place dans la rangée
-     (couleur transparente, pas display:none) pour que les chevrons restants ne
-     se décalent pas. */
-  .chevrons span{
-    width:32px; height:76px; margin-left:-15px;
-    background-image: radial-gradient(circle at center, currentColor 40%, transparent 45%);
-    background-size: 4.5px 4.5px;
-    color: transparent;
-    transition: color 0.3s ease, filter 0.3s ease;
+  /* Chevrons d'indices de la finale, en LED posées une à une (SVG, voir
+     buildChevrons), réglés par Fabien dans l'atelier des chevrons de la finale
+     (https://claude.ai/artifact/MCF6DChsfMJPfkhXNZKVQf, doc led/finale,
+     2026-09-25). Rouge vif, trait de 2 LED, angle droit, 2 LED entre deux
+     chevrons, hauteur de l'intérieur du cadre (11 rangées), sans halo.
+     Chaque chevron (.cv) a trois couches : ses LED (.base), une couche
+     claire qui tire vers le blanc (.hot) pour la pulsation, et une couche
+     blanche (.fl) pour le flash quand il part. Le prochain à partir (.next)
+     pulse jusqu'au blanc chaud ; un chevron consommé (.gone) disparaît sans
+     laisser de trace. Ceux de droite sont le même dessin en miroir. */
+  .chevrons.left{ order:1; margin-right:-4px; }   /* 2 px entre les chevrons et le cadre */
+  .chevrons.right{ order:3; margin-left:-4px; }
+  #screen-play.finale-style .word-row{ padding-inline:2px; } /* 2 px entre l'écran et les chevrons */
+  .chevrons svg{ display:block; overflow:visible; }
+  .chevrons.right svg{ transform:scaleX(-1); }
+  .chevrons .base{ fill:url(#fin-led-g); }
+  .chevrons .hot{ fill:url(#fin-led-hot); opacity:0; }
+  .chevrons .fl{ fill:url(#fin-led-w); opacity:0; }
+  .chevrons .cv.flash .fl{ opacity:1; }
+  .chevrons .cv.gone{ opacity:0; }
+  .chevrons .cv.next .hot{ animation: finChevPulse 2.6s ease-in-out infinite; }
+  @keyframes finChevPulse{
+    0%,100%{ opacity:0; }
+    50%{ opacity:1; }
   }
-  .chevrons span:first-child{ margin-left:0; }
-  .chevrons.left{ order:1; margin-right:-10px; }
-  .chevrons.left span{ clip-path: polygon(0% 8%, 46% 50%, 0% 92%, 20% 100%, 66% 50%, 20% 0%); }
-  .chevrons.right{ order:3; margin-left:-10px; }
-  .chevrons.right span{ clip-path: polygon(100% 8%, 54% 50%, 100% 92%, 80% 100%, 34% 50%, 80% 0%); }
-  /* Doublures de traversée de la finale. Les chevrons partent de la position
-     exacte des repères d'indices, traversent le bandeau, se croisent au milieu
-     et vont se fondre dans les repères du côté opposé — ils ne reviennent
-     jamais sur leurs pas. Même trame crème/ambre que le balayage des qualifs. */
-  .chevron-travel{
-    position:absolute; top:50%; height:100%; display:flex;
-    opacity:0; z-index:60; pointer-events:none;
-    transition: transform var(--travel-duration, 0.46s) linear, opacity 0.12s ease-in-out;
-  }
-  .chevron-travel span{
-    width:44px; height:100%; margin-left:-8px;
-    background-image: radial-gradient(circle at center, #ffffff 0%, #fff6e4 34%, var(--sweep-amber) 62%, rgba(26,9,2,0.95) 78%, rgba(26,9,2,0.95) 100%);
-    background-size: 5px 5px;
-    filter: drop-shadow(0 0 8px rgba(var(--sweep-glow),0.85)) drop-shadow(0 0 22px rgba(var(--sweep-glow),0.5)) brightness(1.22) contrast(1.15);
-  }
-  .chevron-travel span:first-child{ margin-left:0; }
-  .chevron-travel.left{ right:100%; transform: translateY(-50%) translateX(0); }
-  .chevron-travel.left span{ clip-path: polygon(0% 0%, 68% 0%, 100% 50%, 68% 100%, 0% 100%, 32% 50%); }
-  .chevron-travel.right{ left:100%; transform: translateY(-50%) translateX(0); }
-  .chevron-travel.right span{ clip-path: polygon(100% 0%, 32% 0%, 0% 50%, 32% 100%, 100% 100%, 68% 50%); }
-  .chevrons span.lit{
-    color: var(--sweep-amber);
-    filter: drop-shadow(0 0 8px rgba(var(--sweep-glow),0.75)) drop-shadow(0 0 16px rgba(var(--sweep-glow),0.4));
-  }
-  .chevrons span:not(.lit){
-    filter: drop-shadow(0 0 2px rgba(0,0,0,0.45));
-  }
-  .chevrons.left span.lit:last-child{ filter: brightness(1.25) drop-shadow(0 0 9px rgba(var(--sweep-glow),0.9)) drop-shadow(0 0 18px rgba(var(--sweep-glow),0.5)); }
-  .chevrons.right span.lit:first-child{ filter: brightness(1.25) drop-shadow(0 0 9px rgba(var(--sweep-glow),0.9)) drop-shadow(0 0 18px rgba(var(--sweep-glow),0.5)); }
-  .chevrons span.lit.pulse{
-    animation: chevronPulse 2.6s ease-in-out infinite;
-  }
-  @keyframes chevronPulse{
-    0%,100%{ color: var(--sweep-amber); filter: drop-shadow(0 0 6px rgba(var(--sweep-glow),0.6)); }
-    50%{ color: #f2b070; filter: drop-shadow(0 0 16px rgba(var(--sweep-glow),0.95)); }
-  }
-  /* Consommation d'un indice, en trois temps : le chevron flashe en blanc
-     éclatant sur place (85 ms), file vers le mot et s'y enfonce, puis sa place
-     est remise à zéro sans qu'il réapparaisse — il ne reste aucune trace, comme
-     sur le plateau. Trois animations distinctes pour que le trajet (--travel) et sa
-     durée (--glide) varient d'un chevron à l'autre sans toucher au flash ni à la
-     queue. Les trois chevrons s'arrêtent au même point, celui du dernier (collé
-     au mot, qui entre un peu dans le cadre) : le pas entre deux chevrons est de
-     17 px, donc 38 / 55 / 72 px, parcourus à la même vitesse (~0,47 px/ms).
-     Pas de fill-mode "backwards" sur la queue, sinon elle masquerait le chevron
-     dès le premier instant. */
-  .chevrons.left{ --dir: 1; }
-  .chevrons.right{ --dir: -1; }
-  .chevrons.left  span:nth-child(3), .chevrons.right span:nth-child(1){ --travel:38px; --glide:80ms; }
-  .chevrons.left  span:nth-child(2), .chevrons.right span:nth-child(2){ --travel:55px; --glide:116ms; }
-  .chevrons.left  span:nth-child(1), .chevrons.right span:nth-child(3){ --travel:72px; --glide:151ms; }
-  .chevrons span.spent{
-    animation-name: chevronFlash, chevronGlide, chevronGhost;
-    animation-duration: 85ms, var(--glide), 190ms;
-    animation-delay: 0s, 85ms, calc(85ms + var(--glide));
-    animation-timing-function: linear, ease-in, ease-out;
-    animation-fill-mode: forwards, forwards, forwards;
-  }
-  @keyframes chevronFlash{
-    from,to{ color:#ffffff; filter: drop-shadow(0 0 20px rgba(255,255,255,1)) drop-shadow(0 0 34px rgba(255,255,255,0.7)); }
-  }
-  @keyframes chevronGlide{
-    0%{   opacity:1;   transform: translateX(0) scaleX(1); animation-timing-function: ease-in; }
-    65%{  opacity:.85; transform: translateX(calc(var(--dir) * var(--travel) * .58)) scaleX(1.05); animation-timing-function: ease-in; }
-    100%{ opacity:0;   transform: translateX(calc(var(--dir) * var(--travel))) scaleX(1.1); }
-  }
-  @keyframes chevronGhost{
-    from,to{ opacity:1; transform: translateX(0) scaleX(1); color: transparent; filter: none; }
-  }
+  @media (prefers-reduced-motion: reduce){ .chevrons .cv.next .hot{ animation:none; opacity:.5; } }
+  /* Traversée du cadre quand le mot change (voir runFinaleTravel) : un train de
+     3 chevrons LED plus épais (trait de 4 LED) entre par chaque bord intérieur
+     du cadre, avance LED par LED, croise l'autre au centre et ressort par le
+     bord opposé. Placés dans le cache du cadre (.word-wipe), qui les coupe. */
+  .chevron-travel{ position:absolute; top:0; opacity:0; z-index:60; pointer-events:none; will-change:transform; }
+  .chevron-travel.left{ left:0; }
+  .chevron-travel.right{ right:0; }
+  .chevron-travel svg{ display:block; overflow:visible; fill:url(#fin-led-t);
+    filter: drop-shadow(0 0 4px rgba(238,101,83,.85)) drop-shadow(0 0 8px rgba(238,101,83,.45)); }
+  .chevron-travel.right svg{ transform:scaleX(-1); }
   .controls-row{ display:flex; gap:10px; }
   .controls-row button{ flex:1; }
   .controls-row.pending{ opacity:0; pointer-events:none; transition:none; }
@@ -1711,8 +1683,8 @@
         <div class="word-wipe" id="word-wipe">
           <div class="wipe-half left"><div class="wipe-band left" id="wipe-left"></div></div>
           <div class="wipe-half right"><div class="wipe-band right" id="wipe-right"></div></div>
-          <div class="chevron-travel left" id="chevron-travel-left"><span></span><span></span><span></span></div>
-          <div class="chevron-travel right" id="chevron-travel-right"><span></span><span></span><span></span></div>
+          <div class="chevron-travel left" id="chevron-travel-left"></div>
+          <div class="chevron-travel right" id="chevron-travel-right"></div>
         </div>
         <div class="word-text" id="play-word">MOT</div>
         <div class="word-flare" id="word-flare"></div>
@@ -5514,9 +5486,70 @@
     }
   });
 
+  // Chevron d'indice de la finale dessiné LED par LED dans l'atelier des
+  // chevrons de la finale (https://claude.ai/artifact/MCF6DChsfMJPfkhXNZKVQf,
+  // doc led/finale, 2026-09-25) : '#' = LED, '.' = rien, pointe vers le mot.
+  // Trait de 2 LED, angle droit, 11 rangées sur la hauteur de l'intérieur du
+  // cadre (4 + 31,5 + 4 px, voir #screen-play.finale-style .word-pill).
+  const FIN_CHEV_LED = [
+    '##.....',
+    '.##....',
+    '..##...',
+    '...##..',
+    '....##.',
+    '.....##',
+    '....##.',
+    '...##..',
+    '..##...',
+    '.##....',
+    '##.....',
+  ];
+  const FIN_LED_PITCH = 39.5 / FIN_CHEV_LED.length; // ~3,6 px d'une LED à l'autre
+  const FIN_LED_R = (FIN_LED_PITCH * 0.45).toFixed(2); // points à 45 % du pas
+  const FIN_CHEV_STEP = 4;   // d'un chevron au suivant, en LED (trait 2 + écart 2)
+  const FIN_RING = 3;        // épaisseur de l'anneau du cadre en finale (px)
+  const FIN_CHEV_GAP = 2;    // espace entre les chevrons et le cadre (px, voir .chevrons.left)
+  // Tous les points d'un chevron en un seul chemin (un cercle par LED).
+  const finDots = pts => pts.map(([x, y]) =>
+    `M${(x - FIN_LED_R).toFixed(2)} ${y.toFixed(2)}a${FIN_LED_R} ${FIN_LED_R} 0 1 0 ${(2 * FIN_LED_R).toFixed(2)} 0a${FIN_LED_R} ${FIN_LED_R} 0 1 0 ${(-2 * FIN_LED_R).toFixed(2)} 0`).join('');
+  // 3 chevrons en angle droit de `rows` rangées et d'un trait de `trait` LED,
+  // espacés de `step` LED : points par chevron, largeur et hauteur totales.
+  function finChevronDots(rows, trait, step){
+    const m = (rows - 1) / 2, w = Math.round(m) + trait, chevs = [];
+    for(let i = 0; i < 3; i++){
+      const pts = [];
+      for(let r = 0; r < rows; r++){
+        const x0 = Math.round(m - Math.abs(r - m));
+        for(let c = x0; c < x0 + trait; c++) pts.push([(c + i * step + 0.5) * FIN_LED_PITCH, (r + 0.5) * FIN_LED_PITCH]);
+      }
+      chevs.push(pts);
+    }
+    return { chevs, w:(w + 2 * step) * FIN_LED_PITCH, h:rows * FIN_LED_PITCH };
+  }
+  // Les 3 chevrons d'un côté (le 1er = le plus loin du mot), fixes : calculés une fois.
+  const FIN_CHEV_SVG = (() => {
+    const P = [];
+    FIN_CHEV_LED.forEach((line, r) => [...line].forEach((ch, c) => { if(ch === '#') P.push([c, r]); }));
+    const w = (FIN_CHEV_LED[0].length + 2 * FIN_CHEV_STEP) * FIN_LED_PITCH, h = FIN_CHEV_LED.length * FIN_LED_PITCH;
+    let g = '';
+    for(let i = 0; i < 3; i++){
+      const d = finDots(P.map(([c, r]) => [(c + i * FIN_CHEV_STEP + 0.5) * FIN_LED_PITCH, (r + 0.5) * FIN_LED_PITCH]));
+      g += `<g class="cv"><path class="base" d="${d}"/><path class="hot" d="${d}"/><path class="fl" d="${d}"/></g>`;
+    }
+    return `<svg width="${w.toFixed(2)}" height="${h.toFixed(2)}" viewBox="0 0 ${w.toFixed(2)} ${h.toFixed(2)}" aria-hidden="true">${g}</svg>`;
+  })();
+  // Dégradés des LED : rouge vif (chevrons), blanc chaud (pulsation), blanc
+  // (flash au départ d'un chevron), rouge clair (traversée).
+  document.body.insertAdjacentHTML('beforeend',
+    '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
+    '<radialGradient id="fin-led-g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fc9485"/><stop offset="38%" stop-color="#fa6650"/><stop offset="72%" stop-color="#f82104"/><stop offset="100%" stop-color="#a11503"/></radialGradient>' +
+    '<radialGradient id="fin-led-hot" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fdf4f2"/><stop offset="45%" stop-color="#fbe2da"/><stop offset="100%" stop-color="#f4c4bb"/></radialGradient>' +
+    '<radialGradient id="fin-led-w" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff"/><stop offset="55%" stop-color="#fff6ea"/><stop offset="100%" stop-color="#ffd9b0"/></radialGradient>' +
+    '<radialGradient id="fin-led-t" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#fbd9d2"/><stop offset="40%" stop-color="#f9c0b4"/><stop offset="75%" stop-color="#ee6553"/><stop offset="100%" stop-color="#a7473a"/></radialGradient>' +
+    '</defs></svg>');
+
   function buildChevrons(container){
-    container.innerHTML = "";
-    for(let i=0;i<MAX_CLUES;i++) container.appendChild(document.createElement('span'));
+    container.innerHTML = FIN_CHEV_SVG;
   }
   // Chaque tap sur le mot donne un indice (MAX_CLUES = 3, donc clueCount va de
   // 1 à 4) ; au-delà, le mot est en "danger" — un tap de plus l'abandonne.
@@ -5567,35 +5600,40 @@
     const inDanger = state.clueCount > MAX_CLUES;
     document.getElementById('word-pill').classList.toggle('clue-danger', inDanger);
     document.getElementById('btn-correct').classList.toggle('clue-danger', inDanger);
-    const lit = MAX_CLUES - (state.clueCount - 1);
-    // Gauche : la flèche adjacente au mot est la dernière (index le plus élevé),
-    // donc l'extinction part bien de l'extérieur vers le mot, comme à l'antenne.
-    const leftSpans = document.getElementById('chevrons-left').querySelectorAll('span');
-    leftSpans.forEach((s, i) => {
-      const isLit = i >= (MAX_CLUES - lit);
-      markChevron(s, isLit);
-      s.classList.toggle('pulse', isLit && i === (MAX_CLUES - lit));
-    });
-    // Droite : la flèche adjacente au mot est la première (index 0).
-    const rightSpans = document.getElementById('chevrons-right').querySelectorAll('span');
-    rightSpans.forEach((s, i) => {
-      const isLit = i < lit;
-      markChevron(s, isLit);
-      s.classList.toggle('pulse', isLit && i === lit - 1);
+    const lit = Math.max(0, Math.min(MAX_CLUES, MAX_CLUES - (state.clueCount - 1)));
+    // Des deux côtés (ceux de droite sont en miroir), l'index 0 est le chevron
+    // le plus loin du mot : l'extinction part de l'extérieur vers le mot, comme
+    // à l'antenne. Le prochain à partir pulse.
+    ['chevrons-left', 'chevrons-right'].forEach(id => {
+      document.getElementById(id).querySelectorAll('.cv').forEach((cv, i) => {
+        const isLit = i >= MAX_CLUES - lit;
+        markChevron(cv, i, isLit);
+        cv.classList.toggle('next', isLit && i === MAX_CLUES - lit);
+      });
     });
   }
-  // Bascule un chevron, en jouant le flash blanc uniquement sur la transition
+  // Bascule un chevron, en jouant son départ uniquement sur la transition
   // allumé -> consommé (et pas au premier rendu ni sur les chevrons déjà éteints).
-  function markChevron(span, isLit){
-    const wasLit = span.classList.contains('lit');
-    span.classList.toggle('lit', isLit);
-    if(wasLit && !isLit){
-      span.classList.remove('pulse', 'spent');
-      void span.offsetWidth;
-      span.classList.add('spent');
-    } else if(isLit){
-      span.classList.remove('spent');
-    }
+  function markChevron(cv, i, isLit){
+    const wasLit = cv.dataset.lit === '1';
+    cv.dataset.lit = isLit ? '1' : '0';
+    cv.classList.toggle('gone', !isLit);
+    if(wasLit && !isLit) spendChevron(cv, i);
+  }
+  // Départ d'un chevron (un indice donné) : flash blanc sur place (85 ms), puis
+  // il file vers le mot et s'enfonce dans le cadre (38 px au-delà du chevron
+  // collé au mot) en s'effaçant. Même vitesse pour les trois (~0,47 px/ms) :
+  // plus il part de loin, plus son trajet est long.
+  function spendChevron(cv, i){
+    (cv._anims || []).forEach(a => a.cancel());
+    const flash = 85, d = (MAX_CLUES - 1 - i) * FIN_CHEV_STEP * FIN_LED_PITCH + 38;
+    const glide = Math.max(40, d / 0.47), total = flash + glide;
+    cv.classList.add('flash');
+    cv._anims = [
+      cv.animate([{ transform:'translateX(0)' }, { transform:`translateX(${d.toFixed(1)}px)` }], { duration:glide, delay:flash, easing:'ease-in', fill:'both' }),
+      cv.animate([{ opacity:1 }, { opacity:1, offset:(flash + 0.65 * glide) / total }, { opacity:0 }], { duration:total }),
+    ];
+    setTimeout(() => { cv.classList.remove('flash'); (cv._anims || []).forEach(a => a.cancel()); cv._anims = []; }, total + 20);
   }
 
   function renderDots(){
@@ -5784,56 +5822,108 @@
   }
 
   // ---- Traversée des chevrons (finale) ----
-  // Le mouvement de la finale n'est pas un aller-retour : les chevrons partent
-  // de la position exacte des repères d'indices, traversent tout le bandeau,
-  // se croisent au milieu — c'est là que le mot bascule — et finissent leur
-  // course fondus dans les repères du côté opposé. Une même traversée sert à
-  // l'ouverture de manche et à chaque bascule de mot (trouvé, passé, interdit :
-  // seul le son change).
+  // Réglée par Fabien dans l'atelier des chevrons de la finale. Quand le mot
+  // change (trouvé, passé, interdit : seul le son change) ou que la manche se
+  // ferme :
+  // 1. les chevrons d'indices encore allumés glissent vers le cadre à la
+  //    vitesse de la traversée et s'effacent en passant l'anneau ;
+  // 2. au même moment, un train de 3 chevrons LED sort de chaque bord intérieur
+  //    du cadre (toujours 3, même s'il n'en restait qu'un dehors) : on dirait
+  //    que ceux du dehors deviennent ceux du dedans. Les trains avancent LED
+  //    par LED, se croisent au centre et ressortent par le bord opposé ;
+  // 3. le mot n'est visible qu'entre les bords arrière des deux trains :
+  //    l'ancien s'efface derrière eux à l'aller, le nouveau apparaît derrière
+  //    eux au retour (onCross est appelé quand les bords arrière se croisent) ;
+  // 4. les chevrons d'indices se rallument un par un en s'éloignant du mot.
   const FIN_TRAVEL_MS = 460;
 
   function runFinaleTravel(pillEl, onCross, onDone){
+    const wipe = pillEl.querySelector('.word-wipe'), wordEl = pillEl.querySelector('.word-text');
     const travelLeft = document.getElementById('chevron-travel-left');
     const travelRight = document.getElementById('chevron-travel-right');
-    // Distance : la largeur du bandeau, rien de plus. À l'antenne les chevrons
-    // mobiles ne sortent jamais du cadre — ils entrent par un bord, traversent
-    // et s'éteignent sur place à l'autre bord. Ils sont d'ailleurs placés dans
-    // le cache du bandeau, qui les clippe : ils ne peuvent plus déborder.
-    const dist = pillEl.offsetWidth + travelLeft.offsetWidth;
-
-    // Les repères d'indices restent visibles des deux côtés pendant toute la
-    // traversée : ils ne cèdent pas la place aux doublures.
-    [travelLeft, travelRight].forEach(el => {
-      el.style.transition = 'none';
-      el.style.setProperty('--travel-duration', (FIN_TRAVEL_MS / 1000) + 's');
-      el.style.opacity = '1';
-    });
-    travelLeft.style.transform = 'translateY(-50%) translateX(0)';
-    travelRight.style.transform = 'translateY(-50%) translateX(0)';
-    void travelLeft.offsetWidth;
-    [travelLeft, travelRight].forEach(el => { el.style.transition = ''; });
-
-    travelLeft.style.transform = `translateY(-50%) translateX(${dist}px)`;
-    travelRight.style.transform = `translateY(-50%) translateX(${-dist}px)`;
-
-    // Le mot bascule pile au croisement, pas à un délai fixe : ça reste juste
-    // quelle que soit la largeur du bandeau.
-    waitForChevronCrossing(pillEl, travelLeft, () => { if(onCross) onCross(); });
+    // Trains dessinés à la hauteur réelle de l'intérieur du cadre : trait de
+    // 4 LED, 2 LED entre deux chevrons, même pas que les chevrons d'indices.
+    const W = wipe.clientWidth, innerH = wipe.clientHeight;
+    const rows = Math.max(5, Math.round(innerH / FIN_LED_PITCH)), train = finChevronDots(rows, 4, 6);
+    const html = `<svg width="${train.w.toFixed(2)}" height="${train.h.toFixed(2)}" viewBox="0 0 ${train.w.toFixed(2)} ${train.h.toFixed(2)}" aria-hidden="true"><path d="${finDots(train.chevs.flat())}"/></svg>`;
+    [travelLeft, travelRight].forEach(el => { el.innerHTML = html; el.style.top = ((innerH - train.h) / 2).toFixed(2) + 'px'; });
+    const tw = train.w, T = FIN_TRAVEL_MS;
+    const delay = enterFinaleChevrons((W + tw) / T);
+    const easing = `steps(${Math.max(1, Math.round((W + tw) / FIN_LED_PITCH))}, end)`;
+    [travelLeft, travelRight].forEach(el => el.style.opacity = '1');
+    const moves = [
+      travelLeft.animate([{ transform:`translateX(${-tw}px)` }, { transform:`translateX(${W}px)` }], { duration:T, delay, easing, fill:'both' }),
+      travelRight.animate([{ transform:`translateX(${tw}px)` }, { transform:`translateX(${-W}px)` }], { duration:T, delay, easing, fill:'both' }),
+    ];
+    const stopWipe = wipeFinaleWord(wordEl, travelLeft, travelRight, W, () => { if(onCross) onCross(); });
 
     setTimeout(() => {
-      // Arrivée : les doublures s'éteignent au bord opposé et les repères
-      // reprennent leur compte à jour.
+      // Arrivée : les trains sont sortis par le bord opposé, les chevrons
+      // d'indices reprennent leur compte à jour et se rallument.
+      stopWipe();
+      moves.forEach(m => m.cancel());
       travelLeft.style.opacity = '0';
       travelRight.style.opacity = '0';
       renderChevrons();
-      // Repositionnement silencieux pour la traversée suivante.
-      [travelLeft, travelRight].forEach(el => { el.style.transition = 'none'; });
-      travelLeft.style.transform = 'translateY(-50%) translateX(0)';
-      travelRight.style.transform = 'translateY(-50%) translateX(0)';
-      void travelLeft.offsetWidth;
-      [travelLeft, travelRight].forEach(el => { el.style.transition = ''; });
+      relightFinaleChevrons();
       if(onDone) onDone();
-    }, FIN_TRAVEL_MS);
+    }, delay + T);
+  }
+
+  // Étape 1 : les chevrons d'indices encore allumés filent vers le mot à la
+  // vitesse v (px/ms) et s'effacent en passant l'anneau. Renvoie le délai (ms)
+  // au bout duquel le plus proche atteint le bord intérieur du cadre : c'est là
+  // que les trains sortent (0 s'il n'en restait aucun, mot en rouge).
+  let finEnterAnims = [];
+  function enterFinaleChevrons(v){
+    const step = FIN_CHEV_STEP * FIN_LED_PITCH, wc = FIN_CHEV_LED[0].length * FIN_LED_PITCH;
+    let any = false;
+    ['chevrons-left', 'chevrons-right'].forEach(id => {
+      document.getElementById(id).querySelectorAll('.cv').forEach((cv, i) => {
+        if(cv.classList.contains('gone')) return;
+        any = true;
+        const g = Math.max(0, FIN_CHEV_GAP + (MAX_CLUES - 1 - i) * step); // pointe -> bord extérieur de l'anneau
+        const D = g + FIN_RING + wc * 0.6, dur = D / v;
+        finEnterAnims.push(
+          cv.animate([{ transform:'translateX(0)' }, { transform:`translateX(${D.toFixed(1)}px)` }], { duration:dur, fill:'forwards' }),
+          cv.animate([{ opacity:1 }, { opacity:1, offset:Math.min(0.95, g / D) }, { opacity:0 }], { duration:dur, fill:'forwards' }));
+      });
+    });
+    return any ? (FIN_CHEV_GAP + FIN_RING) / v : 0;
+  }
+
+  // Étape 3 : à chaque image, on lit la position réelle des trains et on ne
+  // laisse voir le mot qu'entre leurs bords arrière. Renvoie la fonction qui
+  // arrête le suivi (et fait l'échange s'il n'a pas eu lieu, par exemple si
+  // l'appli est passée en arrière-plan pendant la traversée).
+  function wipeFinaleWord(wordEl, travelLeft, travelRight, W, swap){
+    const x = el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
+    let swapped = false, stopped = false;
+    const tick = () => {
+      if(stopped) return;
+      const a = x(travelLeft), b = W + x(travelRight);
+      if(!swapped && a >= b){ swapped = true; swap(); }
+      const lo = Math.min(a, b), hi = Math.max(a, b), o = wordEl.offsetLeft, w = wordEl.offsetWidth;
+      const left = Math.min(w, Math.max(0, lo - o)), right = Math.min(w, Math.max(0, o + w - hi));
+      wordEl.style.clipPath = `inset(-30px ${right.toFixed(1)}px -30px ${left.toFixed(1)}px)`;
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    return () => { stopped = true; if(!swapped) swap(); wordEl.style.clipPath = ''; };
+  }
+
+  // Étape 4 : rallumage un par un, du chevron collé au mot vers l'extérieur
+  // (~33 ms d'écart). On retire d'abord les animations d'entrée, qui les
+  // gardaient cachés.
+  function relightFinaleChevrons(){
+    finEnterAnims.forEach(a => a.cancel());
+    finEnterAnims = [];
+    ['chevrons-left', 'chevrons-right'].forEach(id => {
+      document.getElementById(id).querySelectorAll('.cv').forEach((cv, i) => {
+        if(cv.classList.contains('gone')) return;
+        cv.animate([{ opacity:0 }, { opacity:1 }], { duration:33, delay:(MAX_CLUES - 1 - i) * 33, fill:'backwards', easing:'steps(1, end)' });
+      });
+    });
   }
 
   // Pose le mot visible d'un coup (il apparaît au sein de la masse de chevrons,
@@ -5857,26 +5947,6 @@
     void el.offsetWidth;
     el.style.opacity = '';
     el.style.animation = 'wordFadeIn 0.23s linear both';
-  }
-
-  // Suit la traversée réelle d'un chevron (via sa position à l'écran, frame par
-  // frame) et déclenche le callback pile au moment où son centre croise le centre
-  // de la pastille — plutôt qu'un délai fixe qui suppose le milieu de l'animation.
-  // Robuste quel que soit la largeur du mot ou un futur réglage de la durée/easing.
-  function waitForChevronCrossing(pillEl, clusterEl, callback){
-    const centerX = pillEl.getBoundingClientRect().left + pillEl.getBoundingClientRect().width / 2;
-    let done = false;
-    function poll(){
-      if(done) return;
-      const r = clusterEl.getBoundingClientRect();
-      if((r.left + r.width / 2) >= centerX){
-        done = true;
-        callback();
-        return;
-      }
-      requestAnimationFrame(poll);
-    }
-    requestAnimationFrame(poll);
   }
 
   function playClosingChevronTransition(onDone){
@@ -5933,7 +6003,10 @@
   // que paliers par nombre de lettres, pour rester juste quelle que soit la
   // largeur d'écran et la largeur propre des lettres (III vs MMM).
   const WORD_SIZE_MAX = 34;
-  const WORD_SIZE_MIN = 17;
+  // Pas de retour à la ligne en dessous (le cadre grandirait et l'écran
+  // bougerait, voir .word-text) : sur un écran très étroit, le mot descend
+  // jusqu'à 12 px (un mot de 14 lettres tient à ~26 px sur un iPhone de 390 px).
+  const WORD_SIZE_MIN = 12;
   function fitWordText(elId){
     elId = elId || 'play-word';
     const el = document.getElementById(elId);
@@ -5945,16 +6018,13 @@
       - parseFloat(cs.paddingLeft || 0)
       - parseFloat(cs.paddingRight || 0);
     if(!(avail > 0)) return;
-    let size = WORD_SIZE_MAX;
+    // Taille maxi propre au cadre (--word-max, plus petite en finale).
+    let size = parseFloat(getComputedStyle(el).getPropertyValue('--word-max')) || WORD_SIZE_MAX;
     el.style.setProperty('--word-size', size + 'px');
-    el.style.whiteSpace = 'nowrap';
     while(size > WORD_SIZE_MIN && el.scrollWidth > avail){
       size -= 1;
       el.style.setProperty('--word-size', size + 'px');
     }
-    // Filet de sécurité : si même au minimum ça déborde (écran très étroit),
-    // on autorise le retour à la ligne plutôt que de laisser le mot dépasser.
-    el.style.whiteSpace = (el.scrollWidth > avail) ? 'normal' : 'nowrap';
   }
   function setWordText(txt, elId){
     elId = elId || 'play-word';
