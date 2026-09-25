@@ -773,14 +773,18 @@
      du mot, mot à 30 px au plus), coins de 18 px, anneau rouge profond de
      4 px, intérieur creusé + ombre portée de la finale ; piste de diodes
      façon finale (coins 13 px, LED de 13 px serrées, même ombre) sur son
-     fond sombre et son anneau gris tournant. Le tie-break garde son cadre. */
-  #screen-play:not(.finale-style) .word-pill{
+     fond sombre et son anneau gris tournant. Le tie-break prend le même cadre. */
+  #screen-play:not(.finale-style) .word-pill,
+  #screen-buzz-play .word-pill{
     border-width:4px; border-radius:18px; padding:4px 22px;
     box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 4px 10px rgba(0,0,0,0.65);
   }
-  #screen-play:not(.finale-style) .word-pill::before{ inset:-4px; padding:4px; }
-  #screen-play:not(.finale-style) .word-pill .word-flare{ inset:-4px; }
-  #screen-play:not(.finale-style) .word-text{ --word-max:30px; }
+  #screen-play:not(.finale-style) .word-pill::before,
+  #screen-buzz-play .word-pill::before{ inset:-4px; padding:4px; }
+  #screen-play:not(.finale-style) .word-pill .word-flare,
+  #screen-buzz-play .word-pill .word-flare{ inset:-4px; }
+  #screen-play:not(.finale-style) .word-text,
+  #screen-buzz-play .word-text{ --word-max:30px; }
   #screen-play:not(.finale-style) .dot-row{
     border-radius:13px; padding:5px 12px; gap:7px;
     box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45),
@@ -816,19 +820,22 @@
     background: linear-gradient(180deg, #ff6a5e, #ff3b30 50%, #b81f18);
     animation:none;
   }
-  /* Zone d'appui du mot : le cadre étant devenu fin, tout le bandeau autour
+  /* Zone d'appui du mot : le cadre étant devenu fin, tout le haut de l'écran
      réagit comme le mot (indices en finale, lancer le chrono / pause en
-     qualifs) — bord à bord, du dessous de la piste de diodes jusqu'à la ligne
+     qualifs) — bord à bord, du haut de l'écran (rien d'autre à y toucher :
+     nom, chrono et piste de diodes ne sont pas des boutons) jusqu'à la ligne
      de consigne comprise. Elle s'arrête à ~22 px au-dessus de Passer / Trouvé,
      pour qu'un tap un peu haut sur ces boutons ne donne pas d'indice. Les
      chevrons laissent passer le doigt. Valeurs comptées depuis le bord de
      l'anneau (inset part de l'intérieur de la bordure). */
   #screen-play .word-pill::after{
     content:""; position:absolute; z-index:-1;
-    top:-18px; left:-20px; right:-20px; bottom:-52px;   /* qualifs : anneau 4, écran 16, consigne 31 */
+    /* qualifs : anneau 4 + marge 2 + piste 29 + chrono 43 + écarts 2 x 14 + haut de l'écran 20 ; côtés 16 ; consigne 31 */
+    top:calc(-126px - env(safe-area-inset-top, 0px)); left:-20px; right:-20px; bottom:-52px;
   }
   #screen-play.finale-style .word-pill::after{
-    top:-17px; left:-77px; right:-77px; bottom:-70px;    /* finale : anneau 3, chevrons ~58, consigne 46 */
+    /* finale : anneau 3 (même hauteur au-dessus) ; chevrons ~58 ; consigne 46 */
+    top:calc(-125px - env(safe-area-inset-top, 0px)); left:-77px; right:-77px; bottom:-70px;
   }
   #screen-play .chevrons{ pointer-events:none; }
   /* Mode test seulement : un pointillé discret montre où s'arrête la zone. */
@@ -976,41 +983,6 @@
     position:absolute; inset:0; overflow:hidden; border-radius:inherit;
     pointer-events:none; z-index:2;
   }
-  /* Balayage entre deux mots, relevé image par image sur le plateau : deux
-     bandes de chevrons pleins naissent aux DEUX extrémités intérieures du
-     bandeau, convergent vers le centre et s'y éteignent — elles ne traversent
-     pas pour ressortir de l'autre côté. Chaque moitié du bandeau est un cache
-     qui clippe sa bande ; la bande défile de -100% à +100% de sa propre
-     largeur, ce qui donne exactement le comportement observé : le front avant
-     avance du bord vers le centre, puis le front arrière le suit et laisse le
-     noir revenir par le bord. */
-  .wipe-half{
-    position:absolute; top:0; height:100%; width:50%; overflow:hidden;
-    pointer-events:none;
-  }
-  .wipe-half.left{ left:0; }
-  .wipe-half.right{ right:0; }
-  .wipe-band{
-    position:absolute; top:0; height:100%; display:flex; align-items:stretch;
-    opacity:0; transform: translateX(0);
-    will-change: transform;
-  }
-  .wipe-band.left{ left:0; justify-content:flex-end; }
-  .wipe-band.right{ right:0; justify-content:flex-start; }
-  /* Chevrons pleins (bloc à pointe avant et encoche arrière), texturés en
-     matrice de points crème sur cuivre incandescent. */
-  .wipe-band span{
-    height:100%; flex:0 0 auto;
-    background-image: radial-gradient(circle at center, #ffffff 0%, #fff6e4 34%, var(--sweep-amber) 62%, rgba(26,9,2,0.95) 78%, rgba(26,9,2,0.95) 100%);
-    background-size: 5px 5px;
-    filter: drop-shadow(0 0 8px rgba(var(--sweep-glow),0.85)) drop-shadow(0 0 22px rgba(var(--sweep-glow),0.5)) brightness(1.22) contrast(1.15);
-  }
-  .wipe-band.left span{ clip-path: polygon(0% 0%, 68% 0%, 100% 50%, 68% 100%, 0% 100%, 32% 50%); }
-  .wipe-band.right span{ clip-path: polygon(100% 0%, 32% 0%, 0% 50%, 32% 100%, 100% 100%, 68% 50%); }
-  /* Réapparition du mot suivant : fondu d'opacité seul (~230 ms), sans
-     déplacement — c'est ce que fait l'émission, là où notre ancienne version
-     ajoutait un petit translateY. */
-  @keyframes wordFadeIn{ from{ opacity:0; } to{ opacity:1; } }
   .chevrons{ display:none; flex-shrink:0; flex-direction:row; gap:0; position:relative; z-index:50; align-self:center; transition: opacity 0.15s ease; }
   .chevrons.active{ display:flex; }
   /* Chevrons d'indices de la finale, en LED posées une à une (SVG, voir
@@ -1039,14 +1011,23 @@
     50%{ opacity:1; }
   }
   @media (prefers-reduced-motion: reduce){ .chevrons .cv.next .hot{ animation:none; opacity:.5; } }
-  /* Traversée du cadre quand le mot change (voir runFinaleTravel) : un train de
-     3 chevrons LED plus épais (trait de 4 LED) entre par chaque bord intérieur
-     du cadre, avance LED par LED, croise l'autre au centre et ressort par le
-     bord opposé. Placés dans le cache du cadre (.word-wipe), qui les coupe. */
+  /* Trains de chevrons LED quand le mot change (voir buildLedTrain) : 3
+     chevrons LED épais (trait de 4 LED) devant une bande pleine de la couleur
+     de l'intérieur du cadre (le « rideau », qui cache le mot pendant qu'ils
+     passent), placés dans le cache du cadre (.word-wipe), qui les coupe. En
+     finale ils se croisent et ressortent par le bord opposé ; en qualifs, à
+     l'entraînement et au tie-break (.through-middle), chaque moitié du cadre
+     les coupe au centre : ils s'y enfoncent comme dans un bord. Le halo ne
+     s'applique qu'aux LED allumées (.lit), pas au rideau. */
+  .travel-half{ position:absolute; top:0; bottom:0; left:0; right:0; }
+  .word-wipe.through-middle .travel-half{ overflow:hidden; }
+  .word-wipe.through-middle .travel-half.left{ right:50%; }
+  .word-wipe.through-middle .travel-half.right{ left:50%; }
   .chevron-travel{ position:absolute; top:0; opacity:0; z-index:60; pointer-events:none; will-change:transform; }
   .chevron-travel.left{ left:0; }
   .chevron-travel.right{ right:0; }
-  .chevron-travel svg{ display:block; overflow:visible; fill:url(#fin-led-t);
+  .chevron-travel svg{ display:block; overflow:visible; }
+  .chevron-travel svg.lit{ position:absolute; left:0; top:0; fill:url(#fin-led-t);
     filter: drop-shadow(0 0 4px rgba(238,101,83,.85)) drop-shadow(0 0 8px rgba(238,101,83,.45)); }
   .chevron-travel.right svg{ transform:scaleX(-1); }
   .controls-row{ display:flex; gap:10px; }
@@ -1303,6 +1284,7 @@
   #play-hint.hint-finale.danger{ color:#ff7a6e; text-shadow:0 0 14px rgba(255,59,48,.6); }
   #play-hint .hint-in{ animation:hintIn .25s ease; }
   #play-hint .hint-arrow{ display:inline-block; margin-right:7px; color:var(--gold); font-weight:800; }
+  #play-hint .hint-arrow.end{ margin-right:0; margin-left:7px; }
   @keyframes hintIn{ from{ opacity:0; transform:translateY(2px); } to{ opacity:1; transform:none; } }
   @media (prefers-reduced-motion:reduce){ #play-hint .hint-in{ animation:none; } }
 
@@ -1763,10 +1745,8 @@
       <div class="chevrons left" id="chevrons-left"></div>
       <div class="word-pill" id="word-pill">
         <div class="word-wipe" id="word-wipe">
-          <div class="wipe-half left"><div class="wipe-band left" id="wipe-left"></div></div>
-          <div class="wipe-half right"><div class="wipe-band right" id="wipe-right"></div></div>
-          <div class="chevron-travel left" id="chevron-travel-left"></div>
-          <div class="chevron-travel right" id="chevron-travel-right"></div>
+          <div class="travel-half left"><div class="chevron-travel left" id="chevron-travel-left"></div></div>
+          <div class="travel-half right"><div class="chevron-travel right" id="chevron-travel-right"></div></div>
         </div>
         <div class="word-text" id="play-word">MOT</div>
         <div class="word-flare" id="word-flare"></div>
@@ -1855,8 +1835,8 @@
       <div class="word-pill" id="buzz-word-pill">
         <div class="word-flare" id="buzz-word-flare"></div>
         <div class="word-wipe" id="buzz-word-wipe">
-          <div class="wipe-half left"><div class="wipe-band left" id="buzz-wipe-left"></div></div>
-          <div class="wipe-half right"><div class="wipe-band right" id="buzz-wipe-right"></div></div>
+          <div class="travel-half left"><div class="chevron-travel left" id="buzz-travel-left"></div></div>
+          <div class="travel-half right"><div class="chevron-travel right" id="buzz-travel-right"></div></div>
         </div>
         <div class="word-text" id="buzz-word"></div>
       </div>
@@ -5647,17 +5627,17 @@
     const inDanger = state.clueCount > MAX_CLUES;
     let text = '';
     if(inDanger){
-      text = 'Pas trouvé ? Tape sur le mot pour passer';
+      text = 'Pas trouvé ? Tape par ici pour passer';
     } else if(UIPREFS.getShowFinaleHelp()){
       // Taper le mot = DONNER l'indice n°X (pas signaler que l'autre s'est trompé) :
       // les trois états disent donc la même chose, avec le numéro de l'indice.
       // Seul l'appui suivant, une fois les 3 donnés, veut dire "raté" (voir ci-dessus).
-      if(!state.turnMusicStarted)      text = 'Tape sur le mot pour lancer le chrono et donner le 1er indice';
+      if(!state.turnMusicStarted)      text = 'Tape par ici pour donner le 1er indice et lancer le chrono';
       // (sans "donner" : avec, la ligne dépasse la largeur d'un téléphone et
       // passe sur deux lignes ; ainsi elle tient sur une seule, jusqu'à 375 px)
-      else if(state.clueCount === 1)   text = 'Tape sur le mot pour le 1er indice';
-      else if(state.clueCount === 2)   text = 'Tape sur le mot pour le 2e indice';
-      else                             text = 'Tape sur le mot pour le dernier indice';
+      else if(state.clueCount === 1)   text = 'Tape par ici pour le 1er indice';
+      else if(state.clueCount === 2)   text = 'Tape par ici pour le 2e indice';
+      else                             text = 'Tape par ici pour le dernier indice';
     }
     const key = (inDanger ? '!' : '') + text;
     if(el.dataset.hintKey === key) return; // rien de neuf : pas de nouvelle animation
@@ -5668,14 +5648,18 @@
     if(!text) return;
     const line = document.createElement('span');
     line.className = 'hint-in';
-    if(!inDanger){
-      const arrow = document.createElement('span');
-      arrow.className = 'hint-arrow';
-      arrow.setAttribute('aria-hidden', 'true');
-      arrow.textContent = '↑';
-      line.appendChild(arrow);
-    }
+    // Flèches de part et d'autre : tout le haut de l'écran est la zone d'appui
+    // (voir .word-pill::after), elles montrent « par ici » plutôt que le mot.
+    const arrow = end => {
+      const a = document.createElement('span');
+      a.className = 'hint-arrow' + (end ? ' end' : '');
+      a.setAttribute('aria-hidden', 'true');
+      a.textContent = '↑';
+      return a;
+    };
+    if(!inDanger) line.appendChild(arrow(false));
     line.appendChild(document.createTextNode(text));
+    if(!inDanger) line.appendChild(arrow(true));
     el.appendChild(line);
   }
   function renderChevrons(){
@@ -5826,83 +5810,108 @@
   // révéler de nouveau mot : le cadre se referme (dématérialisation) pendant qu'il
   // est encore caché par les chevrons, puis la callback est appelée une fois que
   // tout est retombé — pour conclure une manche sans cut instantané.
-  // ---- Balayage convergent (qualif, entraînement, tie-break) ----
-  // Durées relevées sur l'extrait du plateau : le balayage dure ~400 ms, les
-  // deux fronts se rejoignent au centre à mi-course (le mot est alors
-  // entièrement recouvert), puis le bandeau reste noir et vide ~40 ms avant que
-  // le mot suivant n'apparaisse en fondu sur ~230 ms.
-  const SWEEP_MS = 400;
-  const SWEEP_COVER_MS = 208;   // instant où les fronts se rejoignent
-  const SWEEP_BLANK_MS = 40;    // noir entre la fin du balayage et le mot suivant
-
-  // Remplit une bande avec juste ce qu'il faut de chevrons pour couvrir
-  // exactement la moitié du bandeau. Le pas visuel vise ~1,15 fois la hauteur
-  // intérieure (proportion relevée sur le plateau) ; la largeur est ensuite
-  // ajustée pour tomber pile, afin que translateX(±100%) place le front
-  // exactement sur le bord et sur le centre.
-  function buildSweepBand(bandEl, halfW, innerH){
-    // ~55 px de pas visé : sur un bandeau de téléphone ça donne 3 chevrons par
-    // moitié (6 sur la largeur), la densité relevée sur le plateau. Borné pour
-    // rester correct sur un très petit écran comme sur une tablette.
-    const n = Math.max(2, Math.min(5, Math.round(halfW / 55)));
-    // largeur totale = n*0.70*w + 0.30*w  ->  w = halfW / (0.70n + 0.30)
-    const w = halfW / (0.70 * n + 0.30);
-    // Les chevrons s'emboîtent par leur encoche arrière ; on relâche un peu
-    // l'emboîtement pour laisser la fine diagonale sombre qui les sépare à
-    // l'antenne — sans elle ils fusionnent en un seul bloc beige.
-    const overlap = 0.30 * w - 5;
-    bandEl.style.width = halfW + 'px';
-    bandEl.innerHTML = "";
-    for(let i = 0; i < n; i++){
-      const s = document.createElement('span');
-      s.style.width = w + 'px';
-      if(i > 0) s.style.marginLeft = (-overlap) + 'px';
-      bandEl.appendChild(s);
+  // ---- Trains de chevrons LED (tous les modes) ----
+  // Mêmes trains partout, réglés par Fabien dans les ateliers des chevrons
+  // (finale : https://claude.ai/artifact/MCF6DChsfMJPfkhXNZKVQf ; qualifs :
+  // https://claude.ai/artifact/NJZ3kBVea5Bq6kDUC1Qejq, doc chevrons/qualifs,
+  // 2026-09-26) : 3 chevrons LED en angle droit, trait de 4 LED, 2 LED entre
+  // deux chevrons, au pas des chevrons d'indices et à la hauteur de l'intérieur
+  // du cadre. Derrière les LED, un « rideau » : une bande pleine de la couleur
+  // de l'intérieur du cadre, du 1er au 3e chevron, écarts compris, qui passe
+  // devant le mot comme à l'antenne ; ses cases sans LED allumée portent une
+  // LED éteinte, comme sur un panneau.
+  const TRAIN_TRAIT = 4, TRAIN_STEP = 6;
+  function buildLedTrain(wipe, travelLeft, travelRight, curtainColor){
+    const innerH = wipe.clientHeight, P = FIN_LED_PITCH;
+    const rows = Math.max(5, Math.round(innerH / P)), train = finChevronDots(rows, TRAIN_TRAIT, TRAIN_STEP);
+    const W = train.w.toFixed(2), H = train.h.toFixed(2), m = (rows - 1) / 2;
+    const lit = new Set(), cells = [], off = [];
+    for(let r = 0; r < rows; r++){
+      const x0 = Math.round(m - Math.abs(r - m));
+      for(let i = 0; i < 3; i++) for(let c = x0; c < x0 + TRAIN_TRAIT; c++) lit.add((c + i * TRAIN_STEP) + ',' + r);
+      for(let c = x0; c < x0 + TRAIN_TRAIT + 2 * TRAIN_STEP; c++){
+        cells.push([c, r]);
+        if(!lit.has(c + ',' + r)) off.push([(c + 0.5) * P, (r + 0.5) * P]);
+      }
     }
+    const e = 0.35; // léger débord : les cases se touchent sans liseré
+    const band = cells.map(([c, r]) => `M${(c * P - e).toFixed(2)} ${(r * P - e).toFixed(2)}h${(P + 2 * e).toFixed(2)}v${(P + 2 * e).toFixed(2)}h${(-P - 2 * e).toFixed(2)}z`).join('');
+    const html = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${band}" fill="${curtainColor}"/><path d="${finDots(off)}" fill="#4a1a12"/></svg>` +
+      `<svg class="lit" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${finDots(train.chevs.flat())}"/></svg>`;
+    const top = (innerH - train.h) / 2;
+    [travelLeft, travelRight].forEach(el => { el.innerHTML = html; el.style.top = top.toFixed(2) + 'px'; });
+    // back(r) : dos (en V) du chevron de queue à la rangée r, depuis le bord
+    // arrière du train — plus en avant au milieu de la hauteur qu'aux pointes.
+    return { w:train.w, rows, top, mid:Math.floor(m), back: r => Math.round(m - Math.abs(r - m)) * P };
   }
 
-  // Lance le balayage sur une pastille donnée. onCovered() est appelé quand le
-  // mot est entièrement recouvert, onDone() quand les chevrons ont disparu.
-  function runConvergingSweep(pillEl, leftEl, rightEl, onCovered, onDone){
-    // On mesure le cache lui-même (et en offsetWidth, pas en
-    // getBoundingClientRect) : #app porte un zoom global, et getBoundingClientRect
-    // renvoie des pixels zoomés alors qu'une largeur posée en style est en
-    // pixels de mise en page — l'écart ferait dépasser la bande de son cache.
-    const halfW = leftEl.parentElement.offsetWidth;
-    const innerH = leftEl.parentElement.offsetHeight;
-    if(!halfW){ if(onCovered) onCovered(); if(onDone) onDone(); return; }
-    buildSweepBand(leftEl, halfW, innerH);
-    buildSweepBand(rightEl, halfW, innerH);
+  // Ne laisse voir d'el que la bande comprise entre deux bords en escalier
+  // Lf(r) et Rf(r) (en px dans le repère du cadre), rangée de LED par rangée.
+  function stairClip(el, Lf, Rf, train){
+    const o = el.offsetLeft, ot = el.offsetTop, w = el.offsetWidth, h = el.offsetHeight, P = FIN_LED_PITCH;
+    const cx = x => Math.min(w + 1, Math.max(-1, x - o)).toFixed(1);
+    const down = [], up = [];
+    for(let r = 0; r < train.rows; r++){
+      const y0 = (r === 0 ? -40 : train.top + r * P - ot).toFixed(1);
+      const y1 = (r === train.rows - 1 ? h + 40 : train.top + (r + 1) * P - ot).toFixed(1);
+      const L = Lf(r), R = Math.max(L, Rf(r));
+      down.push(`${cx(L)}px ${y0}px`, `${cx(L)}px ${y1}px`);
+      up.unshift(`${cx(R)}px ${y1}px`, `${cx(R)}px ${y0}px`);
+    }
+    el.style.clipPath = `polygon(${down.concat(up).join(', ')})`;
+  }
 
-    // Position de départ : chaque bande est entièrement hors de sa moitié, du
-    // côté du bord extérieur. On coupe la transition le temps du placement.
-    [leftEl, rightEl].forEach(el => { el.style.transition = 'none'; });
-    leftEl.style.transform = 'translateX(-100%)';
-    rightEl.style.transform = 'translateX(100%)';
-    leftEl.style.opacity = '0';
-    rightEl.style.opacity = '0';
-    void leftEl.offsetWidth; // applique le placement avant d'armer l'animation
+  // À chaque image, on lit la position réelle des trains et on ne laisse voir
+  // le mot qu'entre les dos des deux chevrons de queue : il s'efface vraiment
+  // derrière eux (une coupe droite au bord du train le laissait voir dans le
+  // creux du V). Avant le croisement c'est l'ancien mot ; swap() (s'il y en a
+  // un) est appelé quand les dos se rejoignent au milieu, et le nouveau mot
+  // apparaît alors derrière eux. Renvoie la fonction qui arrête le suivi (et
+  // fait l'échange s'il n'a pas eu lieu, par exemple si l'appli est passée en
+  // arrière-plan pendant le passage).
+  function trackWord(wordEl, travelLeft, travelRight, W, train, swap){
+    const x = el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
+    const k = train.back, mid = k(train.mid);
+    let swapped = false, stopped = false;
+    const tick = () => {
+      if(stopped) return;
+      const a = x(travelLeft), b = W + x(travelRight);
+      if(swap && !swapped && a + mid >= b - mid){ swapped = true; swap(); }
+      if(swapped) stairClip(wordEl, r => b - k(r), r => a + k(r), train);
+      else stairClip(wordEl, r => a + k(r), r => b - k(r), train);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    return () => { stopped = true; if(swap && !swapped) swap(); wordEl.style.clipPath = ''; };
+  }
 
-    [leftEl, rightEl].forEach(el => {
-      el.style.transition = `transform ${SWEEP_MS}ms linear, opacity 70ms ease-out`;
-      el.style.opacity = '1';
-    });
-    leftEl.style.transform = 'translateX(100%)';
-    rightEl.style.transform = 'translateX(-100%)';
-
-    if(onCovered) setTimeout(onCovered, SWEEP_COVER_MS);
+  // ---- Chevrons des qualifs, de l'entraînement et du tie-break ----
+  // Les mêmes trains que la finale, à la même vitesse, entrent par les deux
+  // bords intérieurs du cadre et filent vers le milieu, qui fait comme un bord :
+  // chacun s'y enfonce et disparaît en emportant l'ancien mot. onEnd est appelé
+  // quand ils ont disparu (le mot suivant apparaît alors d'un coup).
+  const LED_SWEEP_SPEED = 0.67; // px/ms : celle de la traversée de la finale sur un iPhone de 390 px
+  function runMiddleSweep(pillEl, travelLeft, travelRight, onEnd){
+    const wipe = pillEl.querySelector('.word-wipe'), wordEl = pillEl.querySelector('.word-text');
+    const W = wipe.clientWidth;
+    if(!W){ if(onEnd) onEnd(); return; }
+    wipe.classList.add('through-middle');
+    const train = buildLedTrain(wipe, travelLeft, travelRight, '#0e0504'), tw = train.w;
+    const endX = W / 2, D = endX + tw, T = D / LED_SWEEP_SPEED;
+    const easing = `steps(${Math.max(1, Math.round(D / FIN_LED_PITCH))}, end)`;
+    [travelLeft, travelRight].forEach(el => el.style.opacity = '1');
+    const moves = [
+      travelLeft.animate([{ transform:`translateX(${-tw}px)` }, { transform:`translateX(${endX}px)` }], { duration:T, easing, fill:'both' }),
+      travelRight.animate([{ transform:`translateX(${tw}px)` }, { transform:`translateX(${-endX}px)` }], { duration:T, easing, fill:'both' }),
+    ];
+    const stopWipe = trackWord(wordEl, travelLeft, travelRight, W, train, null);
     setTimeout(() => {
-      // Remise à zéro silencieuse pour le mot suivant.
-      [leftEl, rightEl].forEach(el => {
-        el.style.transition = 'none';
-        el.style.opacity = '0';
-      });
-      leftEl.style.transform = 'translateX(-100%)';
-      rightEl.style.transform = 'translateX(100%)';
-      void leftEl.offsetWidth;
-      [leftEl, rightEl].forEach(el => { el.style.transition = ''; });
-      if(onDone) onDone();
-    }, SWEEP_MS);
+      stopWipe();
+      moves.forEach(m => m.cancel());
+      travelLeft.style.opacity = '0';
+      travelRight.style.opacity = '0';
+      if(onEnd) onEnd();
+    }, T);
   }
 
   // ---- Traversée des chevrons (finale) ----
@@ -5925,12 +5934,11 @@
     const wipe = pillEl.querySelector('.word-wipe'), wordEl = pillEl.querySelector('.word-text');
     const travelLeft = document.getElementById('chevron-travel-left');
     const travelRight = document.getElementById('chevron-travel-right');
-    // Trains dessinés à la hauteur réelle de l'intérieur du cadre : trait de
-    // 4 LED, 2 LED entre deux chevrons, même pas que les chevrons d'indices.
-    const W = wipe.clientWidth, innerH = wipe.clientHeight;
-    const rows = Math.max(5, Math.round(innerH / FIN_LED_PITCH)), train = finChevronDots(rows, 4, 6);
-    const html = `<svg width="${train.w.toFixed(2)}" height="${train.h.toFixed(2)}" viewBox="0 0 ${train.w.toFixed(2)} ${train.h.toFixed(2)}" aria-hidden="true"><path d="${finDots(train.chevs.flat())}"/></svg>`;
-    [travelLeft, travelRight].forEach(el => { el.innerHTML = html; el.style.top = ((innerH - train.h) / 2).toFixed(2) + 'px'; });
+    // Trains communs (voir buildLedTrain), rideau couleur cuivre de l'intérieur
+    // du cadre de finale ; ils se croisent au centre et ressortent.
+    const W = wipe.clientWidth;
+    wipe.classList.remove('through-middle');
+    const train = buildLedTrain(wipe, travelLeft, travelRight, '#2b170c');
     const tw = train.w, T = FIN_TRAVEL_MS;
     const delay = enterFinaleChevrons((W + tw) / T);
     const easing = `steps(${Math.max(1, Math.round((W + tw) / FIN_LED_PITCH))}, end)`;
@@ -5939,7 +5947,7 @@
       travelLeft.animate([{ transform:`translateX(${-tw}px)` }, { transform:`translateX(${W}px)` }], { duration:T, delay, easing, fill:'both' }),
       travelRight.animate([{ transform:`translateX(${tw}px)` }, { transform:`translateX(${-W}px)` }], { duration:T, delay, easing, fill:'both' }),
     ];
-    const stopWipe = wipeFinaleWord(wordEl, travelLeft, travelRight, W, () => { if(onCross) onCross(); });
+    const stopWipe = trackWord(wordEl, travelLeft, travelRight, W, train, () => { if(onCross) onCross(); });
 
     setTimeout(() => {
       // Arrivée : les trains sont sortis par le bord opposé, les chevrons
@@ -5976,25 +5984,7 @@
     return any ? (FIN_CHEV_GAP + FIN_RING) / v : 0;
   }
 
-  // Étape 3 : à chaque image, on lit la position réelle des trains et on ne
-  // laisse voir le mot qu'entre leurs bords arrière. Renvoie la fonction qui
-  // arrête le suivi (et fait l'échange s'il n'a pas eu lieu, par exemple si
-  // l'appli est passée en arrière-plan pendant la traversée).
-  function wipeFinaleWord(wordEl, travelLeft, travelRight, W, swap){
-    const x = el => new DOMMatrixReadOnly(getComputedStyle(el).transform).m41;
-    let swapped = false, stopped = false;
-    const tick = () => {
-      if(stopped) return;
-      const a = x(travelLeft), b = W + x(travelRight);
-      if(!swapped && a >= b){ swapped = true; swap(); }
-      const lo = Math.min(a, b), hi = Math.max(a, b), o = wordEl.offsetLeft, w = wordEl.offsetWidth;
-      const left = Math.min(w, Math.max(0, lo - o)), right = Math.min(w, Math.max(0, o + w - hi));
-      wordEl.style.clipPath = `inset(-30px ${right.toFixed(1)}px -30px ${left.toFixed(1)}px)`;
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    return () => { stopped = true; if(!swapped) swap(); wordEl.style.clipPath = ''; };
-  }
+  // Étape 3 : le mot suit les trains (voir trackWord).
 
   // Étape 4 : rallumage un par un, du chevron collé au mot vers l'extérieur
   // (~33 ms d'écart). On retire d'abord les animations d'entrée, qui les
@@ -6018,19 +6008,6 @@
     if(!el) return;
     el.style.animation = 'none';
     el.style.opacity = '1';
-  }
-
-  // Réapparition du mot : fondu d'opacité pur, sans déplacement.
-  function fadeInWord(elId){
-    const el = document.getElementById(elId);
-    if(!el) return;
-    // Animation posée en inline (et pas via une classe) : la règle
-    // .word-pill.materialize-tv .word-text est plus spécifique qu'une classe
-    // simple et écraserait sinon ce fondu par l'apparition sèche.
-    el.style.animation = 'none';
-    void el.offsetWidth;
-    el.style.opacity = '';
-    el.style.animation = 'wordFadeIn 0.23s linear both';
   }
 
   function playClosingChevronTransition(onDone){
@@ -6061,23 +6038,18 @@
           setTimeout(onDone, 340);
         });
     } else {
-      const wipeLeft = document.getElementById('wipe-left');
-      const wipeRight = document.getElementById('wipe-right');
-      runConvergingSweep(pillEl, wipeLeft, wipeRight,
-        () => {
-          // Fronts rejoints : le mot s'efface à couvert. On coupe l'animation de
-          // matérialisation, qui tiendrait encore opacity:1 par-dessus.
-          const wordEl = document.getElementById('play-word');
-          wordEl.style.animation = 'none';
-          wordEl.style.opacity = '0';
-          },
-        () => {
-          // Chevrons partis : le cadre (vide) se referme comme une TV qui s'éteint.
-          pillEl.style.setProperty('--dematerialize-duration', '0.32s');
-          pillEl.classList.remove('materialize', 'materialize-tv');
-          pillEl.classList.add('dematerialize');
-          setTimeout(onDone, 340);
-        });
+      runMiddleSweep(pillEl, document.getElementById('chevron-travel-left'), document.getElementById('chevron-travel-right'), () => {
+        // Chevrons disparus au milieu avec le mot : le cadre (vide) se referme
+        // comme une TV qui s'éteint. On coupe l'animation de matérialisation,
+        // qui tiendrait encore le mot à opacity:1.
+        const wordEl = document.getElementById('play-word');
+        wordEl.style.animation = 'none';
+        wordEl.style.opacity = '0';
+        pillEl.style.setProperty('--dematerialize-duration', '0.32s');
+        pillEl.classList.remove('materialize', 'materialize-tv');
+        pillEl.classList.add('dematerialize');
+        setTimeout(onDone, 340);
+      });
     }
   }
 
@@ -6121,22 +6093,14 @@
   window.addEventListener('resize', () => { fitWordText('play-word'); fitWordText('buzz-word'); });
   window.addEventListener('orientationchange', () => setTimeout(() => { fitWordText('play-word'); fitWordText('buzz-word'); }, 120));
 
-  // Transition chevron du tie-break buzz : même effet de balayage que la
-  // qualif classique, appliqué à la pastille dédiée du buzz.
+  // Changement de mot du tie-break buzz : mêmes chevrons que les qualifs,
+  // appliqués au cadre dédié du buzz.
   function animateBuzzWordChange(nextWord, onDone){
-    const wipeLeft = document.getElementById('buzz-wipe-left');
-    const wipeRight = document.getElementById('buzz-wipe-right');
     const pillEl = document.getElementById('buzz-word-pill');
-    const wordEl = document.getElementById('buzz-word');
-    runConvergingSweep(pillEl, wipeLeft, wipeRight,
-      () => {
-        wordEl.style.animation = 'none';
-        wordEl.style.opacity = '0';
-        setWordText(nextWord.toUpperCase(), 'buzz-word');
-      },
-      () => {
-        setTimeout(() => { fadeInWord('buzz-word'); if(onDone) onDone(); }, SWEEP_BLANK_MS);
-      });
+    runMiddleSweep(pillEl, document.getElementById('buzz-travel-left'), document.getElementById('buzz-travel-right'), () => {
+      showWordNow('buzz-word', nextWord.toUpperCase());
+      if(onDone) onDone();
+    });
   }
 
   function loadNextWord(animate){
@@ -6158,25 +6122,13 @@
         },
         () => { unlockInput(); });
     } else {
-      const wipeLeft = document.getElementById('wipe-left');
-      const wipeRight = document.getElementById('wipe-right');
+      // Les chevrons emportent l'ancien mot au milieu ; le suivant apparaît
+      // d'un coup quand ils ont disparu.
       const pillEl = document.getElementById('word-pill');
-      const wordEl = document.getElementById('play-word');
-      runConvergingSweep(pillEl, wipeLeft, wipeRight,
-        () => {
-          // Fronts rejoints : le mot est recouvert, on peut le remplacer à
-          // couvert. Il reste masqué jusqu'à la disparition des chevrons.
-          wordEl.style.animation = 'none';
-          wordEl.style.opacity = '0';
-            setWordText(nextWord);
-        },
-        () => {
-          // Chevrons partis : court noir, puis le mot suivant monte en fondu.
-          setTimeout(() => {
-            fadeInWord('play-word');
-            unlockInput();
-          }, SWEEP_BLANK_MS);
-        });
+      runMiddleSweep(pillEl, document.getElementById('chevron-travel-left'), document.getElementById('chevron-travel-right'), () => {
+        showWordNow('play-word', nextWord);
+        unlockInput();
+      });
     }
     renderDots();
   }
@@ -6556,21 +6508,16 @@
   function playBuzzClosingTransition(onDone){
     const gen = state.gen, done = onDone;
     onDone = () => { if(gen === state.gen) done(); };
-    const wipeLeft = document.getElementById('buzz-wipe-left');
-    const wipeRight = document.getElementById('buzz-wipe-right');
     const pillEl = document.getElementById('buzz-word-pill');
-    runConvergingSweep(pillEl, wipeLeft, wipeRight,
-      () => {
-        const wordEl = document.getElementById('buzz-word');
-        wordEl.style.animation = 'none';
-        wordEl.style.opacity = '0';
-      },
-      () => {
-        pillEl.style.setProperty('--dematerialize-duration', '0.32s');
-        pillEl.classList.remove('materialize', 'materialize-tv');
-        pillEl.classList.add('dematerialize');
-        setTimeout(onDone, 340);
-      });
+    runMiddleSweep(pillEl, document.getElementById('buzz-travel-left'), document.getElementById('buzz-travel-right'), () => {
+      const wordEl = document.getElementById('buzz-word');
+      wordEl.style.animation = 'none';
+      wordEl.style.opacity = '0';
+      pillEl.style.setProperty('--dematerialize-duration', '0.32s');
+      pillEl.classList.remove('materialize', 'materialize-tv');
+      pillEl.classList.add('dematerialize');
+      setTimeout(onDone, 340);
+    });
   }
 
   document.getElementById('btn-buzz-not-found').addEventListener('click', () => {
