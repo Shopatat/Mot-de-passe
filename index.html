@@ -766,7 +766,71 @@
     animation: none;
   }
   #screen-play.finale-style .dot-row .dot-mark{ width:13px; height:13px; }
-  .word-pill.waiting::before{ animation: word-pill-shine 14s linear infinite, pulseGlow 1.25s ease-in-out infinite; }
+  /* Qualifs et entraînement, réglés par Fabien dans l'atelier des bandeaux des
+     qualifs (https://claude.ai/artifact/NxKKAgAQWnmaUpayhEPAWv, doc
+     atelier/qualifs, 2026-09-25) : la taille et la forme de la finale, avec
+     les couleurs des qualifs. Cadre du mot bas (4 px au-dessus et au-dessous
+     du mot, mot à 30 px au plus), coins de 18 px, anneau rouge profond de
+     4 px, intérieur creusé + ombre portée de la finale ; piste de diodes
+     façon finale (coins 13 px, LED de 13 px serrées, même ombre) sur son
+     fond sombre et son anneau gris tournant. Le tie-break garde son cadre. */
+  #screen-play:not(.finale-style) .word-pill{
+    border-width:4px; border-radius:18px; padding:4px 22px;
+    box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 4px 10px rgba(0,0,0,0.65);
+  }
+  #screen-play:not(.finale-style) .word-pill::before{ inset:-4px; padding:4px; }
+  #screen-play:not(.finale-style) .word-pill .word-flare{ inset:-4px; }
+  #screen-play:not(.finale-style) .word-text{ --word-max:30px; }
+  #screen-play:not(.finale-style) .dot-row{
+    border-radius:13px; padding:5px 12px; gap:7px;
+    box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45),
+      inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5);
+  }
+  #screen-play:not(.finale-style) .dot-row .dot-mark{ width:13px; height:13px; }
+  /* Chrono des qualifs (même atelier) : habillé comme la piste de diodes —
+     anneau gris tournant de 3 px sur le même fond sombre, coins de 16 px
+     (l'arrondi du cadre du mot ramené à sa hauteur), chiffres de 22 px. Aux
+     dernières secondes, l'anneau passe au rouge et ne tourne plus. */
+  #screen-play:not(.finale-style) .timer-badge{
+    position:relative; font-size:22px; line-height:1.6; padding:1px 12px;
+    border:3px solid transparent; border-radius:16px;
+    background: linear-gradient(180deg, #1c0d0c 0%, #0c0302 60%, #0c0302 100%);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.33), 0 1px 3px rgba(0,0,0,0.27),
+      inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5);
+  }
+  #screen-play:not(.finale-style) .timer-badge::before{
+    content:""; position:absolute; inset:-3px; border-radius:inherit; padding:3px;
+    background: conic-gradient(from var(--shine-angle), #4c4c50 0deg, #8c8c92 180deg, #4c4c50 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: word-pill-shine 14s linear infinite;
+    pointer-events:none;
+  }
+  #screen-play:not(.finale-style) .timer-badge.urgent{
+    border-color:transparent;
+    box-shadow: 0 0 8px rgba(255,59,48,0.6), 0 4px 10px rgba(0,0,0,0.33),
+      inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5);
+  }
+  #screen-play:not(.finale-style) .timer-badge.urgent::before{
+    background: linear-gradient(180deg, #ff6a5e, #ff3b30 50%, #b81f18);
+    animation:none;
+  }
+  /* Zone d'appui du mot : le cadre étant devenu fin, tout le bandeau autour
+     réagit comme le mot (indices en finale, lancer le chrono / pause en
+     qualifs) — bord à bord, du dessous de la piste de diodes jusqu'à la ligne
+     de consigne comprise. Elle s'arrête à ~22 px au-dessus de Passer / Trouvé,
+     pour qu'un tap un peu haut sur ces boutons ne donne pas d'indice. Les
+     chevrons laissent passer le doigt. Valeurs comptées depuis le bord de
+     l'anneau (inset part de l'intérieur de la bordure). */
+  #screen-play .word-pill::after{
+    content:""; position:absolute; z-index:-1;
+    top:-18px; left:-20px; right:-20px; bottom:-52px;   /* qualifs : anneau 4, écran 16, consigne 31 */
+  }
+  #screen-play.finale-style .word-pill::after{
+    top:-17px; left:-77px; right:-77px; bottom:-70px;    /* finale : anneau 3, chevrons ~58, consigne 46 */
+  }
+  #screen-play .chevrons{ pointer-events:none; }  .word-pill.waiting::before{ animation: word-pill-shine 14s linear infinite, pulseGlow 1.25s ease-in-out infinite; }
   @keyframes pulseGlow{
     0%,100%{ filter: brightness(1); }
     50%{ filter: brightness(1.4); }
@@ -1029,7 +1093,9 @@
      nette) dont le fond, le contour et la lueur respirent comme un feu d'alarme.
      Le texte seul suffit : c'est le bandeau entier qui pulse, sans icône (le
      voyant a été retiré ; le tie-break garde son propre bouton, voir plus bas). */
-  #final-extra-row{ margin-top:10px; gap:0; }
+  /* 30 px sous Passer / Trouvé (atelier des bandeaux des qualifs, 2026-09-25) :
+     assez loin pour qu'un tap un peu bas sur ces boutons ne tombe pas dessus. */
+  #final-extra-row{ margin-top:30px; gap:0; }
   #btn-interdit{
     width:100%; height:50px; padding:0; justify-content:center;
     border-radius:14px; border:2px solid #7a1410; background-color:#180a08;
