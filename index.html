@@ -830,7 +830,11 @@
   #screen-play.finale-style .word-pill::after{
     top:-17px; left:-77px; right:-77px; bottom:-70px;    /* finale : anneau 3, chevrons ~58, consigne 46 */
   }
-  #screen-play .chevrons{ pointer-events:none; }  .word-pill.waiting::before{ animation: word-pill-shine 14s linear infinite, pulseGlow 1.25s ease-in-out infinite; }
+  #screen-play .chevrons{ pointer-events:none; }
+  /* Mode test seulement : un pointillé discret montre où s'arrête la zone. */
+  body.test-word-mode #screen-play .word-pill::after{
+    border:1px dashed rgba(150,190,230,0.28); border-radius:12px;
+  }  .word-pill.waiting::before{ animation: word-pill-shine 14s linear infinite, pulseGlow 1.25s ease-in-out infinite; }
   @keyframes pulseGlow{
     0%,100%{ filter: brightness(1); }
     50%{ filter: brightness(1.4); }
@@ -3991,6 +3995,8 @@
         ? '🧪 Mots figés sur « TEST » : ACTIVÉ (toucher pour couper)'
         : '🧪 Mots figés sur « TEST » : désactivé';
       banner.hidden = !on;
+      // En mode test, la zone d'appui du mot est tracée (voir .word-pill::after).
+      document.body.classList.toggle('test-word-mode', on);
     }
     btn.addEventListener('click', () => { TEST_WORD_MODE.set(!TEST_WORD_MODE.isOn()); render(); });
     render();
