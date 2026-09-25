@@ -720,28 +720,28 @@
   /* Habillage propre à la finale, réglé par Fabien dans l'atelier des chevrons
      de la finale (https://claude.ai/artifact/MCF6DChsfMJPfkhXNZKVQf, doc
      led/finale, 2026-09-25) : même forme que le palier en cours de l'échelle
-     des gains — coins arrondis (17 px, pas une pilule), anneau fin (3 px) en
-     chrome vertical assombri (clarté 60 %) — sur un intérieur brun/cuivre. Le
+     des gains — coins arrondis (18 px, pas une pilule), anneau fin (3 px) en
+     chrome vertical assombri (clarté 70 %) — sur un intérieur brun/cuivre. Le
      cadre est bas (4 px au-dessus et au-dessous du mot) : les chevrons LED ont
      la hauteur de son intérieur. La piste de diodes garde son boîtier gris
      argent. Les qualifs gardent leur habillage sombre et rouge. */
   #screen-play.finale-style .word-pill{
-    border-width:3px; border-radius:17px; padding:4px 22px;
+    border-width:3px; border-radius:18px; padding:4px 22px;
     background: linear-gradient(100.5deg, #180b05 0%, #2f190d 42%, #392011 58%, #220e07 100%);
     box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.5);
   }
   #screen-play.finale-style .word-pill::before{
     inset:-3px; padding:3px;
     background: linear-gradient(180deg, #f6f6f8 0%, #c2c3c9 22%, #6d6e75 48%, #b9bac1 70%, #e4e5ea 86%, #7a7b82 100%);
-    filter: brightness(0.6);
+    filter: brightness(0.7);
     animation: none;
   }
   /* Le mot pulse en attendant le 1er appui (".waiting") : même pulsation que
      dans les qualifs, mais partant de la clarté assombrie du chrome. */
   #screen-play.finale-style .word-pill.waiting::before{ animation: finRingPulse 1.25s ease-in-out infinite; }
   @keyframes finRingPulse{
-    0%,100%{ filter: brightness(0.6); }
-    50%{ filter: brightness(0.84); }
+    0%,100%{ filter: brightness(0.7); }
+    50%{ filter: brightness(0.98); }
   }
   #screen-play.finale-style .word-pill .word-flare{ inset:-3px; }
   /* Mot plus petit en finale (30 px au maximum) : sa hauteur de ligne suit
