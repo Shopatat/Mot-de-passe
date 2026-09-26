@@ -3515,6 +3515,27 @@
     const buffers = {};     // key -> AudioBuffer une fois décodé
     const fallbackEls = {}; // key -> <audio> de secours utilisé pendant le décodage
     const ctx = getAudioCtx();
+    // Sons dont on saute le blanc du début, pour qu'ils partent pile au tap.
+    // Le fichier de l'indice (finale) commence par ~100 ms de quasi-silence
+    // (-44 dB) : Fabien sentait un délai entre l'appui et le son (2026-09-26).
+    // On repère au décodage le 1er échantillon à 10 % du pic et on démarre
+    // 3 ms avant ; le fichier n'est pas modifié.
+    const SKIP_LEAD = { indice:true };
+    const offsets = {};     // key -> secondes à sauter au début
+    function leadSilence(buf){
+      let peak = 0;
+      const chans = [];
+      for(let c = 0; c < buf.numberOfChannels; c++){
+        const d = buf.getChannelData(c); chans.push(d);
+        for(let i = 0; i < d.length; i++){ const v = Math.abs(d[i]); if(v > peak) peak = v; }
+      }
+      if(!peak) return 0;
+      const thr = peak * 0.1;
+      for(let i = 0; i < buf.length; i++){
+        for(const d of chans){ if(Math.abs(d[i]) >= thr) return Math.max(0, i / buf.sampleRate - 0.003); }
+      }
+      return 0;
+    }
     Object.keys(FILE_SFX_SOURCES).forEach(key => {
       const el = new Audio(FILE_SFX_SOURCES[key]);
       el.preload = 'auto';
@@ -3523,7 +3544,7 @@
         BOOT_SFX_READY.push(fetch(FILE_SFX_SOURCES[key])
           .then(r => r.arrayBuffer())
           .then(data => ctx.decodeAudioData(data))
-          .then(buf => { buffers[key] = buf; })
+          .then(buf => { buffers[key] = buf; if(SKIP_LEAD[key]) offsets[key] = leadSilence(buf); })
           .catch(() => { /* pas grave : le repli <audio> prend le relais */ }));
       }
     });
@@ -3543,7 +3564,7 @@
         const gainNode = ctx.createGain();
         gainNode.gain.value = vol;
         source.connect(gainNode).connect(ctx.destination);
-        source.start(0);
+        source.start(0, offsets[key] || 0);
         return source; // expose addEventListener('ended', ...) comme un <audio>
       }
       // Repli : buffer pas encore décodé (tout début de partie) ou Web Audio
