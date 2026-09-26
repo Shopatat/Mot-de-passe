@@ -610,21 +610,16 @@
   .handoff-role{ font-size:14px; color:var(--text-dim); }
   .handoff-role b{ color: var(--text); }
   .handoff-target{ font-size:14px; color: var(--gold); font-weight:800; margin-top:4px; }
-  /* Rappel de la finale (palier 1) : encadré gris argent, lignes numérotées,
-     choisis par Fabien dans l'atelier du petit rappel
+  /* Rappel de la finale (palier 1) : texte seul, centré, sans encadré ni
+     numéros, choisi par Fabien dans l'atelier du petit rappel
      (https://claude.ai/artifact/A5SZs3DXoTqD3EdKE4oqev, doc rappel/atelier,
-     2026-09-26). */
+     2026-09-27). */
   .handoff-final-reminder{
-    font-size:13.5px; color: #e6e8ee; line-height:1.55; max-width:360px; margin:0 auto;
-    padding:12px 16px; border-radius:14px; text-align:left;
-    background: linear-gradient(180deg, rgba(200,205,215,0.13), rgba(200,205,215,0.05));
-    border:1px solid rgba(190,194,204,0.6);
-    box-shadow: 0 0 14px rgba(200,205,215,0.12);
+    font-size:13.5px; color: #cfc9bd; line-height:1.55; max-width:360px; margin:0 auto;
+    padding:12px 4px; text-align:center;
   }
   .handoff-final-reminder b{ color: #fff; }
-  .handoff-final-reminder ol{ list-style:none; margin:0; padding:0; counter-reset:rem; }
-  .handoff-final-reminder li{ counter-increment:rem; }
-  .handoff-final-reminder li::before{ content:counter(rem) '. '; font-weight:800; color:#fff; }
+  .handoff-final-reminder p{ margin:0; }
   .handoff-final-reminder .rem-title{ text-align:center; font-weight:800; color:#fff; margin-bottom:4px; }
 
   /* ---- Avant-manche (écran "handoff") : face-à-face des deux prénoms ----
@@ -1874,10 +1869,8 @@
     <div>
       <div class="handoff-final-reminder" id="handoff-final-reminder" style="display:none;">
         <div class="rem-title">Petit rappel</div>
-        <ol>
-          <li>Tape la zone du mot pour donner un indice (3 max) — les flèches à côté comptent ce qu'il reste.</li>
-          <li>Toujours pas trouvé après le 3<sup>e</sup> ? Le mot passe en rouge : le tap suivant l'abandonne pour de bon, contrairement aux qualifs.</li>
-        </ol>
+        <p>Tape la zone du mot pour donner jusqu'à 3 indices — les chevrons montrent ceux qui restent.</p>
+        <p>Après le 3<sup>e</sup> indice, le mot passe en rouge : si ton partenaire se trompe encore, tape la zone du mot, il est perdu.</p>
       </div>
     </div>
     <button class="btn btn-gold" id="btn-ready">C'est parti</button>
