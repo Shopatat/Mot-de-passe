@@ -610,15 +610,21 @@
   .handoff-role{ font-size:14px; color:var(--text-dim); }
   .handoff-role b{ color: var(--text); }
   .handoff-target{ font-size:14px; color: var(--gold); font-weight:800; margin-top:4px; }
-  /* Rappel de la finale (palier 1) : encadré bleu nuit. */
+  /* Rappel de la finale (palier 1) : encadré gris argent, lignes numérotées,
+     choisis par Fabien dans l'atelier du petit rappel
+     (https://claude.ai/artifact/A5SZs3DXoTqD3EdKE4oqev, doc rappel/atelier,
+     2026-09-26). */
   .handoff-final-reminder{
-    font-size:13.5px; color: #e4ecfa; line-height:1.55; max-width:360px; margin:0 auto;
+    font-size:13.5px; color: #e6e8ee; line-height:1.55; max-width:360px; margin:0 auto;
     padding:12px 16px; border-radius:14px; text-align:left;
-    background: linear-gradient(180deg, rgba(28,52,110,0.55), rgba(12,26,64,0.65));
-    border:1px solid rgba(96,140,230,0.55);
-    box-shadow: 0 0 16px rgba(50,100,220,0.22), inset 0 1px 0 rgba(150,190,255,0.12);
+    background: linear-gradient(180deg, rgba(200,205,215,0.13), rgba(200,205,215,0.05));
+    border:1px solid rgba(190,194,204,0.6);
+    box-shadow: 0 0 14px rgba(200,205,215,0.12);
   }
   .handoff-final-reminder b{ color: #fff; }
+  .handoff-final-reminder ol{ list-style:none; margin:0; padding:0; counter-reset:rem; }
+  .handoff-final-reminder li{ counter-increment:rem; }
+  .handoff-final-reminder li::before{ content:counter(rem) '. '; font-weight:800; color:#fff; }
   .handoff-final-reminder .rem-title{ text-align:center; font-weight:800; color:#fff; margin-bottom:4px; }
 
   /* ---- Avant-manche (écran "handoff") : face-à-face des deux prénoms ----
@@ -1868,8 +1874,10 @@
     <div>
       <div class="handoff-final-reminder" id="handoff-final-reminder" style="display:none;">
         <div class="rem-title">Petit rappel</div>
-        • Tape le mot pour donner un indice (3 max) — les flèches à côté comptent ce qu'il reste.<br>
-        • Toujours pas trouvé après le 3<sup>e</sup> ? Le mot passe en rouge : le tap suivant l'abandonne pour de bon, contrairement aux qualifs.
+        <ol>
+          <li>Tape la zone du mot pour donner un indice (3 max) — les flèches à côté comptent ce qu'il reste.</li>
+          <li>Toujours pas trouvé après le 3<sup>e</sup> ? Le mot passe en rouge : le tap suivant l'abandonne pour de bon, contrairement aux qualifs.</li>
+        </ol>
       </div>
     </div>
     <button class="btn btn-gold" id="btn-ready">C'est parti</button>
