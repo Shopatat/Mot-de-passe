@@ -780,10 +780,11 @@
     box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 4px 10px rgba(0,0,0,0.65);
   }
   /* Même largeur de cadre qu'en finale (2026-09-26, demande de Fabien : en
-     pleine largeur il ressemblait au bandeau Interdit) : on réserve la place
+     pleine largeur il ressemblait au bandeau Interdit), tie-break compris : on réserve la place
      des chevrons de la finale de chaque côté — 2 px de bord + chevrons
      (53,9 px moins 4 de marge négative) + 6 px d'écart ≈ 58 px. */
-  #screen-play:not(.finale-style) .word-row{ padding-inline:58px; }
+  #screen-play:not(.finale-style) .word-row,
+  #screen-buzz-play .word-row{ padding-inline:58px; }
   #screen-play:not(.finale-style) .word-pill::before,
   #screen-buzz-play .word-pill::before{ inset:-4px; padding:4px; }
   #screen-play:not(.finale-style) .word-pill .word-flare,
