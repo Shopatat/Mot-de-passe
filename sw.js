@@ -38,7 +38,10 @@ self.addEventListener('activate', (event) => {
 
 // Le code du jeu (page + manifest) est vérifié en ligne à chaque ouverture avec
 // internet, pour que les mises à jour du jeu apparaissent sans jamais avoir à
-// vider un cache manuellement.
+// vider un cache manuellement. La requête passe en "no-cache" : sans ça, le
+// cache HTTP du navigateur pouvait resservir l'ancienne page jusqu'à 10 min
+// après un déploiement (GitHub Pages autorise max-age=600) ; là, il redemande
+// toujours au serveur (réponse 304 légère si rien n'a changé).
 const NETWORK_FIRST = ['/index.html', '/manifest.json', '/sw.js'];
 
 self.addEventListener('fetch', (event) => {
@@ -49,7 +52,7 @@ self.addEventListener('fetch', (event) => {
 
   if (isNetworkFirst) {
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request.url, { cache: 'no-cache', credentials: 'same-origin' })
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
