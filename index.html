@@ -4030,7 +4030,9 @@
   // Délai avant que le cadre du mot (et le cadre à diodes en finale) ne
   // démarrent leur animation d'apparition après "C'est parti" — le reste de
   // l'écran (nom, chrono, boutons) apparaît immédiatement comme avant.
-  const PLAY_REVEAL_DELAY = 2000;
+  // 1 900 ms : calé par Fabien sur le son de lancement (atelier de
+  // l'apparition du mot).
+  const PLAY_REVEAL_DELAY = 1900;
   // Palier : nombre de mots disponibles + gain
   const PALIERS = [
     { level:1, pool:9, gain:1000 },
@@ -5874,13 +5876,18 @@
   // (130 ms) et monte à sa place ; le rond se creuse en anneau, s'étire et
   // devient le vrai cadre (deux lueurs dedans, ombre noire autour) ; une
   // étoile naît au centre (450 ms) et grossit en éclat orangé qui remplit
-  // tout le cadre (650 à 783 ms) ; noir d'un coup, puis le mot (850 ms). En
+  // tout le cadre (650 à 783 ms) ; puis le mot d'un coup à la place du blanc
+  // (l'émission passe par ~70 ms de noir, Fabien a préféré sans). En
   // finale, les chevrons s'allument ensuite un par un, du cadre vers
   // l'extérieur, avec un éclair blanc.
   // Tout passe par des calques posés dans le cadre le temps de l'animation
   // (.wb) et des animations Web : à la fin, les calques partent et le vrai
   // cadre, identique, reprend la main.
-  const WB = { white:133, black:67, dotsAt:133, dotsDrop:0.42, dotsRise:200, chevGap:70, chevFlash:85 };
+  // Réglages de Fabien (doc v73) : blanc plein 133 ms puis le mot sans noir,
+  // bandeau qui apparaît à 133 ms 42 % de la hauteur du cadre plus bas et
+  // monte en 300 ms, LED allumées du centre vers l'extérieur à partir de
+  // 150 ms (160 ms chacune, 55 ms d'écart).
+  const WB = { white:133, black:0, dotsAt:133, dotsDrop:0.42, dotsRise:300, ledsAt:150, ledsStep:55, ledsDur:160, chevGap:70, chevFlash:85 };
   // [temps ms, largeur (fraction de la largeur finale, jamais moins que la
   // hauteur), hauteur (fraction de la hauteur finale), épaisseur de l'anneau :
   // 'plein' = rond rempli, fraction de la hauteur, 'R' = anneau du cadre].
@@ -5937,6 +5944,8 @@
       const p = pad === 'plein' ? h / 2 : pad === 'R' ? RING : pad === 'R+' ? RING * 1.6 : h * pad;
       return [t, { width: w + 'px', height: h + 'px', padding: p.toFixed(2) + 'px', borderRadius: t < 333 ? '999px' : t < 450 ? '24px' : RAD + 'px' }];
     }));
+    // Rien avant la première lumière, ni à la toute fin d'une fermeture.
+    add(fx, [[0, { opacity:0 }], [15, { opacity:1 }]]);
     add(q('.wb-crisp'), [[0, { opacity:1, backgroundColor:'#ffffff' }], [283, { opacity:1, backgroundColor:'#ffffff' }], [317, { opacity:.8, backgroundColor:'#ffe2e0' }], [367, { opacity:0, backgroundColor:'#ffb3ad' }]]);
     add(q('.wb-glow'), [[0, { opacity:1 }], [283, { opacity:1 }], [333, { opacity:.6 }], [400, { opacity:0 }]]);
     add(q('.wb-ring-c'), [[0, { opacity:0 }], [290, { opacity:0 }], [340, { opacity:1 }]]);
@@ -5962,6 +5971,13 @@
       add(dots, [[0, { visibility:'hidden', transform:`translateY(${up}px)` }], [t0, { visibility:'hidden', transform:`translateY(${up}px)` }],
         [t0 + 1, { visibility:'visible', transform:`translateY(${up}px)` }], [t0 + r * .35, { visibility:'visible', transform:`translateY(${(up * .35).toFixed(2)}px)` }],
         [t0 + r * .7, { visibility:'visible', transform:`translateY(${(up * .08).toFixed(2)}px)` }], [t0 + r, { visibility:'visible', transform:'none' }]]);
+      // Puis ses LED s'allument du centre vers l'extérieur (les deux du
+      // milieu ensemble quand leur nombre est pair).
+      const marks = dots.querySelectorAll('.dot-mark'), mid = (marks.length - 1) / 2;
+      marks.forEach((m, i) => {
+        const a = WB.ledsAt + Math.round(Math.abs(i - mid)) * WB.ledsStep;
+        add(m, [[0, { opacity:0, transform:'scale(.4)' }], [a, { opacity:0, transform:'scale(.4)' }], [a + WB.ledsDur, { opacity:1, transform:'none' }]]);
+      });
     }
     // Chevrons (finale) : un éclair blanc puis leur rouge, un par un.
     if(chevrons) chevrons.forEach(side => chevTimes.forEach(([i, t]) => {
