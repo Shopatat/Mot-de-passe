@@ -4054,7 +4054,7 @@
   // Titre "MOT DE PASSE" reproduit comme le panneau lumineux du plateau :
   // cadre chrome -> anneau rouge -> fond noir -> LED posees une a une sur une
   // grille (TITLE_LED, dessinee a la main par Fabien : '#' = LED allumee, '.' =
-  // eteinte ; les LED eteintes forment un motif discret). Tout est en SVG
+  // eteinte ; les LED eteintes ne sont pas dessinees, comme sur l'icone). Tout est en SVG
   // inline : aucune image a charger, et le rendu reste net a n'importe quelle
   // taille d'ecran. Les lettres sont a 1 LED d'ecart, les mots a 6, et le bloc
   // est centre (4 LED de marge de chaque cote) : pour retoucher, garder ces
@@ -4091,7 +4091,7 @@
   function renderTiles(containerId){
     const el = document.getElementById(containerId);
     const uid = containerId;
-    const g = TITLE_LED_GEOM, p = TITLE_LED_PITCH;
+    const g = TITLE_LED_GEOM;
     el.classList.add('led-panel');
     el.innerHTML = `
       <svg class="led-sign" viewBox="0 0 380 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mot de Passe">
@@ -4107,9 +4107,6 @@
             <stop offset="50%" stop-color="#d42a18"/>
             <stop offset="100%" stop-color="#8f1610"/>
           </linearGradient>
-          <pattern id="off-${uid}" x="${g.x0}" y="${g.y0}" width="${p}" height="${p}" patternUnits="userSpaceOnUse">
-            <circle cx="${p / 2}" cy="${p / 2}" r="${(p * 0.3).toFixed(2)}" fill="#7a3a30" opacity="0.32"/>
-          </pattern>
           <filter id="glow-${uid}" x="-5%" y="-15%" width="110%" height="130%">
             <feGaussianBlur stdDeviation="1.1" result="b"/>
             <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
@@ -4118,7 +4115,6 @@
         <rect x="18" y="18" width="344" height="114" rx="34" fill="url(#chrome-${uid})"/>
         <rect x="27" y="27" width="326" height="96" rx="27" fill="url(#ring-${uid})"/>
         <rect x="38" y="38" width="304" height="74" rx="18" fill="#080505"/>
-        <rect x="${g.x0}" y="${g.y0}" width="${g.w}" height="${g.h}" fill="url(#off-${uid})"/>
         <g filter="url(#glow-${uid})" fill="${TITLE_LED_COLOR}">${g.lit}</g>
       </svg>`;
   }
