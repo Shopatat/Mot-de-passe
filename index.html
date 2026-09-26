@@ -779,6 +779,11 @@
     border-width:4px; border-radius:18px; padding:4px 22px;
     box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 4px 10px rgba(0,0,0,0.65);
   }
+  /* Même largeur de cadre qu'en finale (2026-09-26, demande de Fabien : en
+     pleine largeur il ressemblait au bandeau Interdit) : on réserve la place
+     des chevrons de la finale de chaque côté — 2 px de bord + chevrons
+     (53,9 px moins 4 de marge négative) + 6 px d'écart ≈ 58 px. */
+  #screen-play:not(.finale-style) .word-row{ padding-inline:58px; }
   #screen-play:not(.finale-style) .word-pill::before,
   #screen-buzz-play .word-pill::before{ inset:-4px; padding:4px; }
   #screen-play:not(.finale-style) .word-pill .word-flare,
@@ -830,8 +835,8 @@
      l'anneau (inset part de l'intérieur de la bordure). */
   #screen-play .word-pill::after{
     content:""; position:absolute; z-index:-1;
-    /* qualifs : anneau 4 + marge 2 + piste 29 + chrono 43 + écarts 2 x 14 + haut de l'écran 20 ; côtés 16 ; consigne 31 */
-    top:calc(-126px - env(safe-area-inset-top, 0px)); left:-20px; right:-20px; bottom:-52px;
+    /* qualifs : anneau 4 + marge 2 + piste 29 + chrono 43 + écarts 2 x 14 + haut de l'écran 20 ; côtés 16 + 58 (place des chevrons) ; consigne 31 */
+    top:calc(-126px - env(safe-area-inset-top, 0px)); left:-78px; right:-78px; bottom:-52px;
   }
   #screen-play.finale-style .word-pill::after{
     /* finale : anneau 3 (même hauteur au-dessus) ; chevrons ~58 ; consigne 46 */
