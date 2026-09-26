@@ -6663,6 +6663,9 @@
     showScreen('trainingSummary');
   }
   document.getElementById('btn-training-next').addEventListener('click', () => {
+    // Même son de lancement que "C'est parti" : "Manche suivante" relance la
+    // manche directement, sans repasser par l'écran d'avant-manche.
+    SFX.roundStart();
     goToPlay();
   });
   document.getElementById('btn-training-stop').addEventListener('click', () => {
