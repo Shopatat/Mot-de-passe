@@ -7639,15 +7639,20 @@
       playWordBirth({ pill:btn, word:lbl });
     }
 
+    let leaving = false;
     btn.addEventListener('click', async () => {
-      if(!btn.classList.contains('shown')) return;
-      btn.classList.remove('shown');
+      if(!btn.classList.contains('shown') || leaving) return;
+      leaving = true;
       ensureAudioCtxRunning();
       updateBackgroundMusic('setup');
-      const load = document.getElementById('boot-load');
-      // Minuterie plutôt que la fin de l'animation : si le navigateur la gèle
-      // (onglet en arrière-plan), l'écran de chargement ne doit pas rester.
-      if(!reduced){ load.animate([{ opacity:1 }, { opacity:0 }], { duration:180, fill:'forwards' }); await wait(180); }
+      // JOUER se replie comme le cadre du mot en fin de manche (son
+      // apparition jouée à l'envers : blanc, éclat, anneau, rond, trait, plus
+      // rien), puis le titre glisse vers sa place dans le menu. Le libellé
+      // part d'abord, comme le mot emporté par les chevrons. playWordBirth
+      // rend la main même si le navigateur gèle l'animation (filet de sécurité).
+      lbl.style.opacity = '0';
+      await playWordBirth({ pill:btn, reverse:true });
+      btn.classList.remove('shown');
       // Le titre du chargement et celui du menu sont le même panneau à la
       // même largeur : on montre le menu et on fait partir son titre de la
       // place qu'occupait celui du chargement.
