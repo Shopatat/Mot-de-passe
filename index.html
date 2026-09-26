@@ -1045,6 +1045,42 @@
     100%{ opacity:1; }
   }
 
+  /* Apparition du cadre façon émission (voir playWordBirth) : pendant
+     l'animation, le vrai cadre est masqué (.wb-on) et des calques de lumière
+     (.wb) le dessinent ; à la fin ils ont exactement sa forme et partent. */
+  .word-pill.wb-on{ background:transparent !important; box-shadow:none !important; }
+  .word-pill.wb-on::before{ opacity:0; }
+  .wb{ position:absolute; left:50%; top:50%; translate:-50% -50%; box-sizing:border-box; border-radius:999px;
+    pointer-events:none; z-index:3; --e1:#ffb070; --e2:#ff5a1e; }
+  .wb > *, .wb-glow > *{ position:absolute; inset:0; border-radius:inherit; box-sizing:border-box; padding:inherit; }
+  .wb-glow{ padding:inherit; filter:blur(4px); }
+  .wb-ring{ -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  .wb-ring-w{ background-color:#fff; }
+  .wb-ring-c{ background: linear-gradient(180deg, #5e0d0d 0%, #b52a22 45%, #c93a30 55%, #6a1210 100%); }
+  .wb-fin .wb-ring-c{ background: linear-gradient(180deg, #f6f6f8 0%, #c2c3c9 22%, #6d6e75 48%, #b9bac1 70%, #e4e5ea 86%, #7a7b82 100%); filter:brightness(0.7); }
+  .wb-inner{ background: linear-gradient(180deg, #140807, #050303); background-clip:content-box; }
+  .wb-fin .wb-inner{ background: linear-gradient(100.5deg, #180b05 0%, #2f190d 42%, #392011 58%, #220e07 100%); background-clip:content-box; }
+  .wb-dark{ padding:0 !important; box-shadow: 0 0 10px 4px rgba(0,0,0,0.9); }
+  .wb-bands{ background-clip:content-box; background-origin:content-box; filter:blur(1.5px);
+    background-image: radial-gradient(ellipse 42% 34% at 50% 0%, rgba(255,232,232,0.95), rgba(255,200,200,0.35) 55%, transparent 100%),
+      radial-gradient(ellipse 42% 34% at 50% 100%, rgba(255,232,232,0.95), rgba(255,200,200,0.35) 55%, transparent 100%); }
+  .wb-spill{ padding:0 !important; inset:-45% 22% !important; border-radius:50% !important; filter:blur(8px);
+    background: radial-gradient(ellipse at center, var(--e1) 0%, transparent 70%); }
+  .wb-box{ padding:0 !important; overflow:hidden; }
+  .wb-box > *{ position:absolute; }
+  .wb-orange{ inset:0; background: radial-gradient(ellipse 55% 75% at 50% 50%, var(--e1) 0%, var(--e2) 45%, transparent 85%); }
+  .wb-streak{ left:3%; right:3%; top:50%; height:2px; margin-top:-1px;
+    background: linear-gradient(90deg, transparent, var(--e2) 18%, #fff 50%, var(--e2) 82%, transparent); box-shadow: 0 0 6px 1px var(--e2); }
+  .wb-star{ left:50%; top:50%; width:120px; height:120px; margin:-60px 0 0 -60px;
+    background:
+      radial-gradient(circle at center, #fff 0%, rgba(255,240,225,0.9) 7%, transparent 22%),
+      linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.95) 50%, transparent 100%) center/100% 3px no-repeat,
+      linear-gradient(0deg, transparent 0%, rgba(255,255,255,0.95) 50%, transparent 100%) center/3px 100% no-repeat; }
+  .wb-dwrap{ inset:0; filter:blur(2px); }
+  .wb-diamond{ position:absolute; left:0; right:0; top:-20%; bottom:-20%; clip-path: polygon(0 50%, 50% 0, 100% 50%, 50% 100%);
+    background: radial-gradient(ellipse 50% 50% at center, #fff 0%, #fff6ee 30%, var(--e1) 62%, var(--e2) 85%, transparent 100%); }
+  .wb-fill{ inset:0; background:#f3f4f6; box-shadow: inset 0 0 12px 4px var(--e2), inset 0 0 3px 1px var(--e1); }
+
   /* Fermeture du cadre en fin de manche : l'inverse de la matérialisation
      (la TV s'éteint) — déclenché pendant que les chevrons recouvrent encore
      le mot, pour une fermeture propre avant de basculer sur l'écran de fin. */
@@ -5500,6 +5536,7 @@
     wordEl.style.opacity = '';
     wordEl.style.animation = '';
     inputLocked = false;
+    cancelWordBirth(wordPillEl);
     wordPillEl.classList.remove('materialize', 'materialize-tv', 'dematerialize', 'paused-hidden');
     wordPillEl.style.opacity = '0'; // caché : le cadre + le mot n'apparaissent qu'après PLAY_REVEAL_DELAY
     wordPillEl.style.pointerEvents = 'none'; // pas tapable tant que rien n'est visible (sinon le chrono pourrait démarrer avant l'apparition)
@@ -5535,12 +5572,13 @@
       wordPillEl.style.pointerEvents = '';
       playHint.style.opacity = '';
       void wordPillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque manche
-      // Même apparition partout, finale comprise : point blanc, étirement,
-      // flash blanc puis mot sec, avec les diodes qui s'allument du centre vers
-      // l'extérieur. En finale, la traversée des chevrons ne sert plus qu'aux
-      // bascules de mot, pas à l'ouverture du palier.
-      wordPillEl.classList.add('materialize-tv');
-      lightUpDots();
+      // Même apparition partout, finale comprise (voir playWordBirth) ; en
+      // finale, les chevrons s'allument un par un juste après le mot. La
+      // traversée des chevrons ne sert qu'aux bascules de mot.
+      playWordBirth({
+        pill: wordPillEl, dots: dotsRow, finale: turn.kind === 'final',
+        chevrons: turn.style === 'clues' ? [chevronsLeft, chevronsRight] : null,
+      });
       wordPillEl.classList.add('waiting');
       if(turn.style === 'clues'){
         chevronsLeft.style.opacity = '1';
@@ -5827,25 +5865,120 @@
       el.appendChild(d);
     }
   }
-  // Allumage des pastilles en début de manche : sur le plateau, la piste
-  // apparaît vide puis les pastilles s'allument du centre vers l'extérieur,
-  // pendant que le bandeau est encore en train de s'étirer (~330 ms après le
-  // début de l'apparition, sur ~190 ms).
-  function lightUpDots(){
-    const el = document.getElementById('play-dots');
-    const marks = el.querySelectorAll('.dot-mark');
-    if(!marks.length) return;
-    const mid = (marks.length - 1) / 2;
-    marks.forEach((m, i) => {
-      // Distance au centre -> rang d'allumage (les deux pastilles centrales
-      // partent ensemble quand le nombre est pair).
-      const rank = Math.round(Math.abs(i - mid));
-      m.style.setProperty('--puck-delay', (0.33 + rank * 0.055) + 's');
-    });
-    el.classList.remove('lighting');
-    void el.offsetWidth;
-    el.classList.add('lighting');
-    setTimeout(() => el.classList.remove('lighting'), 1000);
+  // ---------- APPARITION DU CADRE DU MOT ----------
+  // Relevée image par image sur un extrait de l'émission envoyé par Fabien,
+  // réglée dans l'atelier de l'apparition du mot
+  // (https://claude.ai/artifact/53TAi8tH6G9mGBrw7mLKRz, doc apparition/atelier,
+  // 2026-09-26). Depuis la première lumière : un petit trait blanc gonfle en
+  // rond blanc plein, le bandeau des LED apparaît d'un coup un peu plus bas
+  // (130 ms) et monte à sa place ; le rond se creuse en anneau, s'étire et
+  // devient le vrai cadre (deux lueurs dedans, ombre noire autour) ; une
+  // étoile naît au centre (450 ms) et grossit en éclat orangé qui remplit
+  // tout le cadre (650 à 783 ms) ; noir d'un coup, puis le mot (850 ms). En
+  // finale, les chevrons s'allument ensuite un par un, du cadre vers
+  // l'extérieur, avec un éclair blanc.
+  // Tout passe par des calques posés dans le cadre le temps de l'animation
+  // (.wb) et des animations Web : à la fin, les calques partent et le vrai
+  // cadre, identique, reprend la main.
+  const WB = { white:133, black:67, dotsAt:133, dotsDrop:0.42, dotsRise:200, chevGap:70, chevFlash:85 };
+  // [temps ms, largeur (fraction de la largeur finale, jamais moins que la
+  // hauteur), hauteur (fraction de la hauteur finale), épaisseur de l'anneau :
+  // 'plein' = rond rempli, fraction de la hauteur, 'R' = anneau du cadre].
+  const WB_GEO = [
+    [0, .104, .24, 'plein'], [25, .115, .55, 'plein'], [55, .128, .85, 'plein'], [90, .14, .98, 'plein'], [130, .15, 1.05, 'plein'],
+    [167, .16, 1.12, .45], [217, .17, 1.2, .375], [250, .24, 1.2, .33], [283, .29, 1.15, .22], [317, .35, 1.1, .15],
+    [333, .44, 1.05, 'R+'], [367, .62, 1, 'R'], [417, .72, 1, 'R'], [450, .75, 1, 'R'], [483, .81, 1, 'R'],
+    [533, .86, 1, 'R'], [567, .95, 1, 'R'], [650, 1, 1, 'R'] ];
+  // Images clés [temps, valeurs] -> offsets croissants, avec une image finale
+  // (sans elle, le navigateur revient à la valeur de départ en fin d'animation).
+  function wbFrames(pts, T){
+    let m = 0;
+    const out = pts.map(([t, v]) => { m = Math.max(m, Math.min(1, Math.max(0, t / T))); return { ...v, offset: m }; });
+    if(m < 1) out.push({ ...pts[pts.length - 1][1], offset: 1 });
+    return out;
+  }
+  function cancelWordBirth(pill){
+    if(pill && pill._birthCancel){ pill._birthCancel(); }
+  }
+  function playWordBirth({ pill, dots, chevrons, finale }){
+    cancelWordBirth(pill);
+    if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cs = getComputedStyle(pill);
+    const RING = parseFloat(cs.borderTopWidth) || 4, RAD = parseFloat(cs.borderTopLeftRadius) || 18;
+    const W = pill.offsetWidth, H = pill.offsetHeight;
+    if(!W || !H) return;
+    const tWhiteEnd = 650 + WB.white, tWord = tWhiteEnd + WB.black, cut = tWhiteEnd, cut1 = cut + 1;
+    // Chevrons : du plus proche du cadre (index 2) au plus éloigné (index 0).
+    const chevTimes = chevrons ? [2, 1, 0].map((i, n) => [i, tWord + n * WB.chevGap]) : [];
+    const T = Math.max(tWord + 40, chevTimes.length ? chevTimes[2][1] + WB.chevFlash + 60 : 0);
+
+    const fx = document.createElement('div');
+    fx.className = 'wb' + (finale ? ' wb-fin' : '');
+    fx.innerHTML = '<div class="wb-dark"></div><div class="wb-spill"></div><div class="wb-inner"></div><div class="wb-bands"></div>' +
+      '<div class="wb-box"><div class="wb-orange"></div><div class="wb-streak"></div><div class="wb-dwrap"><div class="wb-diamond"></div></div><div class="wb-star"></div><div class="wb-fill"></div></div>' +
+      '<div class="wb-ring wb-ring-c"></div><div class="wb-glow"><div class="wb-ring wb-ring-w"></div></div><div class="wb-ring wb-ring-w wb-crisp"></div>';
+    const box = fx.querySelector('.wb-box');
+    box.style.inset = RING + 'px'; box.style.borderRadius = Math.max(0, RAD - RING) + 'px';
+    pill.appendChild(fx);
+    pill.classList.add('wb-on');
+    const q = s => fx.querySelector(s);
+    const anims = [];
+    const add = (el, pts) => { const a = el.animate(wbFrames(pts, T), { duration:T, fill:'backwards', easing:'linear' }); anims.push(a); return a; };
+
+    add(fx, WB_GEO.map(([t, wf, hf, pad]) => {
+      const h = H * hf, w = Math.max(W * wf, h);
+      const p = pad === 'plein' ? h / 2 : pad === 'R' ? RING : pad === 'R+' ? RING * 1.6 : h * pad;
+      return [t, { width: w + 'px', height: h + 'px', padding: p.toFixed(2) + 'px', borderRadius: t < 333 ? '999px' : t < 450 ? '24px' : RAD + 'px' }];
+    }));
+    add(q('.wb-crisp'), [[0, { opacity:1, backgroundColor:'#ffffff' }], [283, { opacity:1, backgroundColor:'#ffffff' }], [317, { opacity:.8, backgroundColor:'#ffe2e0' }], [367, { opacity:0, backgroundColor:'#ffb3ad' }]]);
+    add(q('.wb-glow'), [[0, { opacity:1 }], [283, { opacity:1 }], [333, { opacity:.6 }], [400, { opacity:0 }]]);
+    add(q('.wb-ring-c'), [[0, { opacity:0 }], [290, { opacity:0 }], [340, { opacity:1 }]]);
+    add(q('.wb-bands'), [[0, { opacity:0 }], [317, { opacity:0 }], [333, { opacity:.95 }], [400, { opacity:.8 }], [450, { opacity:.3 }], [483, { opacity:0 }]]);
+    add(q('.wb-dark'), [[0, { opacity:0 }], [317, { opacity:0 }], [367, { opacity:1 }], [567, { opacity:.6 }], [650, { opacity:0 }]]);
+    add(q('.wb-streak'), [[0, { opacity:0, transform:'scaleX(.3)' }], [440, { opacity:0, transform:'scaleX(.3)' }], [450, { opacity:.9, transform:'scaleX(.45)' }],
+      [533, { opacity:.9, transform:'scaleX(1)' }], [620, { opacity:.4, transform:'scaleX(1)' }], [650, { opacity:0, transform:'scaleX(1)' }]]);
+    add(q('.wb-star'), [[0, { opacity:0, transform:'scale(.1)' }], [440, { opacity:0, transform:'scale(.12)' }], [450, { opacity:1, transform:'scale(.15)' }],
+      [483, { opacity:1, transform:'scale(.32)' }], [533, { opacity:1, transform:'scale(.5)' }], [567, { opacity:.9, transform:'scale(.7)' }], [650, { opacity:0, transform:'scale(.9)' }]]);
+    add(q('.wb-diamond'), [[0, { opacity:0, transform:'scale(.2,.5)' }], [520, { opacity:0, transform:'scale(.2,.5)' }], [533, { opacity:1, transform:'scale(.25,.6)' }],
+      [567, { opacity:1, transform:'scale(.55,.9)' }], [600, { opacity:1, transform:'scale(.85,1.2)' }], [633, { opacity:1, transform:'scale(1.15,1.5)' }],
+      [650, { opacity:1, transform:'scale(1.4,1.8)' }], [cut, { opacity:1, transform:'scale(1.4,1.8)' }], [cut1, { opacity:0, transform:'scale(1.4,1.8)' }]]);
+    add(q('.wb-orange'), [[0, { opacity:0, transform:'scaleX(.4)' }], [483, { opacity:0, transform:'scaleX(.4)' }], [533, { opacity:.35, transform:'scaleX(.6)' }],
+      [600, { opacity:.8, transform:'scaleX(1)' }], [650, { opacity:1, transform:'scaleX(1.2)' }], [cut, { opacity:1, transform:'scaleX(1.2)' }], [cut1, { opacity:0, transform:'scaleX(1.2)' }]]);
+    add(q('.wb-fill'), [[0, { opacity:0 }], [633, { opacity:0 }], [650, { opacity:.7 }], [683, { opacity:1 }], [cut, { opacity:1 }], [cut1, { opacity:0 }]]);
+    add(q('.wb-spill'), [[0, { opacity:0 }], [567, { opacity:0 }], [650, { opacity:.75 }], [cut, { opacity:.75 }], [cut1, { opacity:0 }]]);
+    const word = pill.querySelector('.word-text');
+    if(word) add(word, [[0, { opacity:0 }], [tWord, { opacity:0 }], [tWord + 1, { opacity:1 }]]);
+    // Bandeau des LED : visibility plutôt qu'opacity (la finale l'assombrit
+    // avec un opacity !important tant que le chrono n'est pas lancé).
+    if(dots){
+      const up = H * WB.dotsDrop, t0 = WB.dotsAt, r = WB.dotsRise;
+      add(dots, [[0, { visibility:'hidden', transform:`translateY(${up}px)` }], [t0, { visibility:'hidden', transform:`translateY(${up}px)` }],
+        [t0 + 1, { visibility:'visible', transform:`translateY(${up}px)` }], [t0 + r * .35, { visibility:'visible', transform:`translateY(${(up * .35).toFixed(2)}px)` }],
+        [t0 + r * .7, { visibility:'visible', transform:`translateY(${(up * .08).toFixed(2)}px)` }], [t0 + r, { visibility:'visible', transform:'none' }]]);
+    }
+    // Chevrons (finale) : un éclair blanc puis leur rouge, un par un.
+    if(chevrons) chevrons.forEach(side => chevTimes.forEach(([i, t]) => {
+      const cv = side.querySelectorAll('.cv')[i];
+      if(!cv) return;
+      add(cv, [[0, { visibility:'hidden' }], [t, { visibility:'hidden' }], [t + 1, { visibility:'visible' }]]);
+      const fl = cv.querySelector('.fl');
+      if(fl) add(fl, [[0, { opacity:0 }], [t, { opacity:0 }], [t + 1, { opacity:1 }], [t + WB.chevFlash, { opacity:1 }], [t + WB.chevFlash + 1, { opacity:0 }]]);
+    }));
+
+    let done = false;
+    const cleanup = () => {
+      if(done) return;
+      done = true;
+      fx.remove();
+      pill.classList.remove('wb-on');
+      if(pill._birthCancel === cancel) pill._birthCancel = null;
+    };
+    const cancel = () => { anims.forEach(a => a.cancel()); cleanup(); };
+    pill._birthCancel = cancel;
+    Promise.all(anims.map(a => a.finished)).then(cleanup, () => {});
+    // Filet de sécurité : si les animations restent gelées, on rend la main
+    // au vrai cadre (mot visible) plutôt que de laisser les calques.
+    setTimeout(() => { if(!done) cancel(); }, T + 600);
   }
   function formatTime(t){
     const m = Math.floor(t/60);
@@ -6144,6 +6277,7 @@
         },
         () => {
           pillEl.style.setProperty('--dematerialize-duration', '0.32s');
+          cancelWordBirth(pillEl);
           pillEl.classList.remove('materialize', 'materialize-tv');
           pillEl.classList.add('dematerialize');
           chevronsLeft.style.opacity = '0';
@@ -6159,6 +6293,7 @@
         wordEl.style.animation = 'none';
         wordEl.style.opacity = '0';
         pillEl.style.setProperty('--dematerialize-duration', '0.32s');
+        cancelWordBirth(pillEl);
         pillEl.classList.remove('materialize', 'materialize-tv');
         pillEl.classList.add('dematerialize');
         setTimeout(onDone, 340);
@@ -6546,6 +6681,7 @@
     showScreen('buzzPlay');
     const pillEl = document.getElementById('buzz-word-pill');
     const wordEl = document.getElementById('buzz-word');
+    cancelWordBirth(pillEl);
     pillEl.classList.remove('dematerialize', 'materialize', 'materialize-tv');
     wordEl.style.opacity = '';
     wordEl.style.animation = '';
@@ -6557,7 +6693,7 @@
         pillEl.style.opacity = '';
         void pillEl.offsetWidth; // force le reflow pour pouvoir rejouer l'animation à chaque tie-break
         // Le tie-break partage l'apparition de la qualif (même effet, même son).
-        pillEl.classList.add('materialize-tv');
+        playWordBirth({ pill: pillEl, dots: null, finale: false, chevrons: null });
         setBuzzControlsEnabled(true);
         buzzLocked = false;
       }, PLAY_REVEAL_DELAY);
@@ -6627,6 +6763,7 @@
       wordEl.style.animation = 'none';
       wordEl.style.opacity = '0';
       pillEl.style.setProperty('--dematerialize-duration', '0.32s');
+      cancelWordBirth(pillEl);
       pillEl.classList.remove('materialize', 'materialize-tv');
       pillEl.classList.add('dematerialize');
       setTimeout(onDone, 340);
@@ -7448,7 +7585,9 @@
       ensureAudioCtxRunning();
       updateBackgroundMusic('setup');
       const load = document.getElementById('boot-load');
-      if(!reduced) await load.animate([{ opacity:1 }, { opacity:0 }], { duration:180, fill:'forwards' }).finished.catch(() => {});
+      // Minuterie plutôt que la fin de l'animation : si le navigateur la gèle
+      // (onglet en arrière-plan), l'écran de chargement ne doit pas rester.
+      if(!reduced){ load.animate([{ opacity:1 }, { opacity:0 }], { duration:180, fill:'forwards' }); await wait(180); }
       // Le titre du chargement et celui du menu sont le même panneau à la
       // même largeur : on montre le menu et on fait partir son titre de la
       // place qu'occupait celui du chargement.
