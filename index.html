@@ -1050,6 +1050,10 @@
      (.wb) le dessinent ; à la fin ils ont exactement sa forme et partent. */
   .word-pill.wb-on{ background:transparent !important; box-shadow:none !important; }
   .word-pill.wb-on::before{ opacity:0; }
+  /* Le mot passe au-dessus des calques : il se voit dès son apparition, sans
+     attendre la fin de l'animation (plus longue en finale, à cause des
+     chevrons qui s'allument ensuite). */
+  .word-pill.wb-on .word-text{ z-index:4; }
   .wb{ position:absolute; left:50%; top:50%; translate:-50% -50%; box-sizing:border-box; border-radius:999px;
     pointer-events:none; z-index:3; --e1:#ffb070; --e2:#ff5a1e; }
   .wb > *, .wb-glow > *{ position:absolute; inset:0; border-radius:inherit; box-sizing:border-box; padding:inherit; }
