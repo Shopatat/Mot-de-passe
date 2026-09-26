@@ -129,6 +129,74 @@
   .tile-row.led-panel{ padding:0; margin:6px 0 2px; }
   .tile-row.led-panel::before, .tile-row.led-panel::after{ content:none; }
   .led-sign{ width:100%; height:auto; display:block; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6)); }
+  /* Écran de chargement à l'ouverture de l'appli, réglé par Fabien dans
+     l'atelier du chargement (https://claude.ai/artifact/VzwKGJu1DcjaaVSoZpave8,
+     doc chargement/atelier, 2026-09-26) : titre LED au milieu de l'écran,
+     piste de 20 LED qui passent au vert de gauche à droite pendant que
+     musiques, bruitages et polices se préparent (1,5 s au moins), puis le
+     bouton JOUER s'allume comme le cadre du mot et pulse. Le tap sur JOUER
+     débloque le son sur iPhone et lance la musique du menu ; le titre remonte
+     alors à sa place dans le menu. Le menu est déjà en place derrière,
+     simplement invisible (body.booting). */
+  #boot{
+    position:fixed; inset:0; z-index:5000;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(142px + env(safe-area-inset-bottom));
+  }
+  #boot[hidden]{ display:none; }
+  body.booting #screen-setup{ visibility:hidden; }
+  .boot-inner{ width:100%; max-width:480px; display:flex; flex-direction:column; align-items:center; }
+  .boot-inner .tile-row{ width:100%; }
+  .boot-load{ display:flex; flex-direction:column; align-items:center; margin-top:30px; width:100%; }
+  .boot-slot{ display:grid; place-items:center; width:100%; height:66px; }
+  .boot-slot > *{ grid-area:1/1; }
+  /* Même boîtier que la piste de diodes des qualifs. */
+  #boot-bar{
+    position:relative; display:flex; justify-content:center; align-items:center; gap:var(--lg, 5px);
+    padding:5px 12px; border:3px solid transparent; border-radius:13px; box-sizing:border-box;
+    background: linear-gradient(180deg, #1c0d0c 0%, #0c0302 60%, #0c0302 100%);
+    box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45),
+      inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5);
+  }
+  #boot-bar::before{
+    content:""; position:absolute; inset:-3px; border-radius:inherit; padding:3px;
+    background: conic-gradient(from var(--shine-angle), #4c4c50 0deg, #8c8c92 180deg, #4c4c50 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: word-pill-shine 14s linear infinite;
+    pointer-events:none;
+  }
+  .boot-led{
+    width:var(--ls, 8px); height:var(--ls, 8px); border-radius:50%; flex-shrink:0;
+    background: radial-gradient(circle at 35% 28%, #6b6b6b 0%, #454545 45%, #2a2a2a 80%, #1a1a1a 100%);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.65), inset 0 -1px 1px rgba(255,255,255,0.04);
+  }
+  .boot-led.on{
+    background: radial-gradient(circle at 35% 28%, #eafff2 0%, #5fe89f 28%, #1ec574 58%, #0a7a44 100%);
+    box-shadow: 0 0 5px 1px rgba(30,255,140,0.75), 0 0 13px 4px rgba(30,255,140,0.45), inset 0 0 2px rgba(255,255,255,0.7);
+  }
+  .boot-led.flash{
+    background: radial-gradient(circle at 35% 28%, #fff 0%, #fff4ec 55%, #f0d8c8 100%);
+    box-shadow: 0 0 8px 3px rgba(255,244,236,0.9), 0 0 18px 6px rgba(255,236,220,0.45);
+  }
+  #boot-play{
+    position:relative; width:var(--bw, 260px); min-width:190px; padding:12px 0;
+    font-size:18px; line-height:1.25; letter-spacing:4px; text-indent:4px;
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.65), 0 6px 14px rgba(0,0,0,0.5);
+    opacity:0; pointer-events:none;
+  }
+  #boot-play.shown{ opacity:1; pointer-events:auto; animation: bootPulse 1.25s ease-in-out infinite; }
+  @keyframes bootPulse{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.4); } }
+  #boot-play .boot-flare{
+    position:absolute; inset:-5px; border-radius:inherit; pointer-events:none; opacity:0;
+    background: radial-gradient(ellipse 160% 260% at 50% 50%, #ffffff 0%, #ffe9d6 55%, #ffcfa0 100%);
+  }
+  #boot-play .boot-lbl{ position:relative; }
+  @media (prefers-reduced-motion: reduce){
+    #boot-bar::before{ animation:none; }
+    #boot-play.shown{ animation:none; }
+  }
   .tile{
     background:transparent; border:none; box-shadow:none;
     padding: 0 1px; height:auto; flex-shrink:0;
@@ -1437,7 +1505,19 @@
   .schedule-names{ font-weight:800; text-align:right; }
 </style>
 </head>
-<body>
+<body class="booting">
+<!-- Écran de chargement (voir #boot dans le CSS et initBoot) -->
+<div id="boot">
+  <div class="boot-inner">
+    <div class="tile-row" id="boot-title"></div>
+    <div class="boot-load" id="boot-load">
+      <div class="boot-slot">
+        <div id="boot-bar" role="progressbar" aria-label="Chargement du jeu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+        <button class="btn btn-gold" id="boot-play" type="button"><span class="boot-flare"></span><span class="boot-lbl">Jouer</span></button>
+      </div>
+    </div>
+  </div>
+</div>
 <div id="app">
 
   <button id="btn-quit-game" title="Retour au menu principal">✕</button>
@@ -3315,7 +3395,19 @@
       stop();
       play(key, opts);
     }
-    return { play, stop, pause, resume, isPlaying, applyVolume, onEnded, refreshSlot, current(){ return currentKey; } };
+    // Préparation par l'écran de chargement : le fichier est téléchargé (il
+    // part ensuite du cache), et les pistes à boucle sans accroc sont déjà
+    // décodées, pour démarrer sans délai la première fois.
+    async function preload(key){
+      const url = urlFor(key);
+      if(!url) return;
+      const res = await fetch(url);
+      if(!res.ok) return;
+      const arr = await res.arrayBuffer();
+      const ctx = getAudioCtx();
+      if(GAPLESS_KEYS.has(key) && ctx && !decodedBuffers[url]) decodedBuffers[url] = await ctx.decodeAudioData(arr);
+    }
+    return { play, stop, pause, resume, isPlaying, applyVolume, onEnded, refreshSlot, preload, current(){ return currentKey; } };
   })();
 
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
@@ -3366,6 +3458,8 @@
   // aucun bricolage. Tant qu'un fichier n'est pas encore décodé (juste après
   // l'ouverture de la page), on retombe sur une balise <audio> classique le
   // temps que ce soit prêt.
+  // Décodages en cours, suivis par l'écran de chargement (voir initBoot).
+  const BOOT_SFX_READY = [];
   const FILE_SFX = (function(){
     const buffers = {};     // key -> AudioBuffer une fois décodé
     const fallbackEls = {}; // key -> <audio> de secours utilisé pendant le décodage
@@ -3375,11 +3469,11 @@
       el.preload = 'auto';
       fallbackEls[key] = el;
       if(ctx){
-        fetch(FILE_SFX_SOURCES[key])
+        BOOT_SFX_READY.push(fetch(FILE_SFX_SOURCES[key])
           .then(r => r.arrayBuffer())
           .then(data => ctx.decodeAudioData(data))
           .then(buf => { buffers[key] = buf; })
-          .catch(() => { /* pas grave : le repli <audio> prend le relais */ });
+          .catch(() => { /* pas grave : le repli <audio> prend le relais */ }));
       }
     });
     // slotKey : clé du réglage de volume perso à appliquer (SOUND_SLOTS) —
@@ -7269,14 +7363,114 @@
     showScreen('setup');
   });
 
-  // L'écran d'accueil est actif par défaut dans le HTML (pas de showScreen()
-  // appelé au tout premier chargement), donc la musique de menu ne se
-  // déclenchait jamais toute seule. On la lance ici explicitement.
+  // ---------- ÉCRAN DE CHARGEMENT ----------
+  // Affiché à chaque ouverture de l'appli (un retour depuis l'arrière-plan ne
+  // recharge pas la page, donc ne le remontre pas). La piste de LED suit le
+  // vrai chargement (polices 1, chaque bruitage 1, chaque musique 3), jamais
+  // plus vite que BOOT_MIN_MS pour ne pas clignoter ; au-delà de BOOT_MAX_MS
+  // (réseau coupé, fichier bloqué), on considère que c'est prêt : chaque son
+  // garde de toute façon son propre repli.
+  // La musique du menu ne part qu'au tap sur JOUER : c'est ce geste qui
+  // autorise le son sur iPhone (avant, elle attendait le premier tap au menu).
+  (function initBoot(){
+    const BOOT_LEDS = 20, BOOT_WIDTH = 0.72, BOOT_MIN_MS = 1500, BOOT_MAX_MS = 8000;
+    const boot = document.getElementById('boot');
+    const bar = document.getElementById('boot-bar'), btn = document.getElementById('boot-play');
+    const flare = btn.querySelector('.boot-flare'), lbl = btn.querySelector('.boot-lbl');
+    const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    renderTiles('boot-title');
+
+    // Taille des LED : 20 LED dans une piste à 72 % de la largeur.
+    const bw = Math.round(boot.querySelector('.boot-inner').clientWidth * BOOT_WIDTH);
+    const inner = bw - 30;
+    const lg = Math.max(2, Math.min(7, inner / BOOT_LEDS * 0.42));
+    const ls = Math.min(13, (inner - lg * (BOOT_LEDS - 1)) / BOOT_LEDS);
+    boot.style.setProperty('--bw', bw + 'px');
+    bar.style.cssText = `width:${bw}px; --ls:${ls.toFixed(2)}px; --lg:${lg.toFixed(2)}px;`;
+    bar.innerHTML = '<span class="boot-led"></span>'.repeat(BOOT_LEDS);
+    const leds = [...bar.children];
+
+    // Ce qu'on attend, avec son poids dans la barre.
+    const tasks = [];
+    const fonts = document.fonts
+      ? Promise.all(['30px Anton', '800 15px Manrope', '600 15px Manrope', '400 15px Manrope'].map(f => document.fonts.load(f))).then(() => document.fonts.ready)
+      : null;
+    const track = (w, p) => { const t = { w, done:false }; tasks.push(t); Promise.resolve(p).catch(() => {}).then(() => { t.done = true; }); };
+    track(1, fonts);
+    BOOT_SFX_READY.forEach(p => track(1, p));
+    ['menu', 'qualifWait', 'qualif', 'finaleAmbient', 'finaleEarly', 'finaleLate'].forEach(k => track(3, MUSIC.preload(k)));
+    const total = tasks.reduce((s, t) => s + t.w, 0);
+
+    let t0 = null, last = 0, disp = 0, shown = -1;
+    function step(now){
+      if(t0 === null){ t0 = now; last = now; }
+      const t = now - t0, dt = now - last; last = now;
+      const real = t >= BOOT_MAX_MS ? 1 : tasks.reduce((s, x) => s + (x.done ? x.w : 0), 0) / total;
+      const target = Math.min(real, t / BOOT_MIN_MS);
+      disp += (target - disp) * Math.min(1, dt / 70);
+      if(target >= 1 && disp > 0.985) disp = 1;
+      const n = Math.floor(disp * BOOT_LEDS + 1e-6);
+      if(n !== shown){
+        shown = n;
+        leds.forEach((l, i) => l.classList.toggle('on', i < n));
+        bar.setAttribute('aria-valuenow', Math.round(disp * 100));
+      }
+      if(disp < 1) requestAnimationFrame(step);
+      else finish();
+    }
+    requestAnimationFrame(step);
+
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    async function finish(){
+      // Tout est prêt : éclair blanc sur les LED, puis JOUER s'allume à la
+      // place de la piste (même recette que l'apparition du cadre du mot).
+      leds.forEach(l => l.classList.add('flash'));
+      await wait(130);
+      leds.forEach(l => l.classList.remove('flash'));
+      await wait(220);
+      if(reduced){ bar.style.visibility = 'hidden'; btn.classList.add('shown'); return; }
+      bar.animate([{ opacity:1 }, { opacity:0 }], { duration:220, fill:'forwards' });
+      await wait(200);
+      btn.classList.add('shown');
+      const d = 700;
+      btn.animate([
+        { transform:'scale(.04,.3)', opacity:0 }, { transform:'scale(.05,.9)', opacity:1, offset:.1 },
+        { transform:'scale(.4,1)', offset:.3 }, { transform:'scale(1.03,1.03)', offset:.55 },
+        { transform:'scale(.99,.99)', offset:.68 }, { transform:'none', opacity:1 }], { duration:d, easing:'linear' });
+      flare.animate([{ opacity:1 }, { opacity:1, offset:.35 }, { opacity:.45, offset:.5 }, { opacity:1, offset:.72 },
+        { opacity:1, offset:.86 }, { opacity:0, offset:.88 }, { opacity:0 }], { duration:d });
+      lbl.animate([{ opacity:0 }, { opacity:0, offset:.9 }, { opacity:1, offset:.901 }, { opacity:1 }], { duration:d });
+    }
+
+    btn.addEventListener('click', async () => {
+      if(!btn.classList.contains('shown')) return;
+      btn.classList.remove('shown');
+      ensureAudioCtxRunning();
+      updateBackgroundMusic('setup');
+      const load = document.getElementById('boot-load');
+      if(!reduced) await load.animate([{ opacity:1 }, { opacity:0 }], { duration:180, fill:'forwards' }).finished.catch(() => {});
+      // Le titre du chargement et celui du menu sont le même panneau à la
+      // même largeur : on montre le menu et on fait partir son titre de la
+      // place qu'occupait celui du chargement.
+      const from = document.getElementById('boot-title').getBoundingClientRect().top;
+      document.body.classList.remove('booting');
+      boot.hidden = true;
+      if(reduced) return;
+      const menuTitle = document.getElementById('title-tiles');
+      const dy = from - menuTitle.getBoundingClientRect().top;
+      menuTitle.animate([{ transform:`translateY(${dy}px)` }, { transform:'none' }], { duration:650, easing:'cubic-bezier(.22,.8,.25,1)' });
+      [...screens.setup.children].filter(c => c !== menuTitle && c.offsetParent !== null).forEach((c, i) =>
+        c.animate([{ opacity:0, transform:'translateY(8px)' }, { opacity:1, transform:'none' }],
+          { duration:320, delay:380 + i * 60, easing:'ease-out', fill:'backwards' }));
+    });
+  })();
+
   // Par ailleurs, les navigateurs bloquent souvent l'audio tant qu'il n'y a
-  // pas eu d'interaction : si le premier essai est refusé, on retente au
-  // premier clic/tap n'importe où sur la page.
-  updateBackgroundMusic('setup');
+  // pas eu d'interaction : si un essai de musique est refusé, on retente au
+  // premier clic/tap n'importe où sur la page (pas pendant le chargement :
+  // la musique du menu attend JOUER).
   function retryMusicOnFirstInteraction(){
+    if(document.body.classList.contains('booting')) return;
     // On ne peut pas se fier à MUSIC.current() ici : il est déjà renseigné dès
     // l'appel à play(), avant même de savoir si audio.play() a réussi ou pas
     // (promesse async). On relance donc systématiquement au premier clic/tap ;
