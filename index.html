@@ -797,18 +797,20 @@
       inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5);
   }
   #screen-play:not(.finale-style) .dot-row .dot-mark{ width:13px; height:13px; }
-  /* Chrono des qualifs (même atelier) : habillé comme la piste de diodes —
+  /* Chrono (même atelier), qualifs, entraînement et finale : habillé comme la piste de diodes —
      anneau gris tournant de 3 px sur le même fond sombre, coins de 16 px
      (l'arrondi du cadre du mot ramené à sa hauteur), chiffres de 22 px. Aux
-     dernières secondes, l'anneau passe au rouge et ne tourne plus. */
-  #screen-play:not(.finale-style) .timer-badge{
+     dernières secondes, l'anneau passe au rouge et ne tourne plus. En finale,
+     il prend l'habillage de la piste de la finale : fond brun, anneau en
+     chrome vertical assombri (70 %) qui ne tourne pas, ombre du cadre. */
+  #screen-play .timer-badge{
     position:relative; font-size:22px; line-height:1.6; padding:1px 12px;
     border:3px solid transparent; border-radius:16px;
     background: linear-gradient(180deg, #1c0d0c 0%, #0c0302 60%, #0c0302 100%);
     box-shadow: 0 4px 10px rgba(0,0,0,0.33), 0 1px 3px rgba(0,0,0,0.27),
       inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5);
   }
-  #screen-play:not(.finale-style) .timer-badge::before{
+  #screen-play .timer-badge::before{
     content:""; position:absolute; inset:-3px; border-radius:inherit; padding:3px;
     background: conic-gradient(from var(--shine-angle), #4c4c50 0deg, #8c8c92 180deg, #4c4c50 360deg);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -817,12 +819,23 @@
     animation: word-pill-shine 14s linear infinite;
     pointer-events:none;
   }
-  #screen-play:not(.finale-style) .timer-badge.urgent{
+  #screen-play.finale-style .timer-badge{
+    background: linear-gradient(180deg, #331d0d 0%, #241408 55%, #190d04 100%);
+    box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45),
+      inset 0 2px 4px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,190,130,0.12);
+  }
+  #screen-play.finale-style .timer-badge::before{
+    background: linear-gradient(180deg, #f6f6f8 0%, #c2c3c9 22%, #6d6e75 48%, #b9bac1 70%, #e4e5ea 86%, #7a7b82 100%);
+    filter: brightness(0.7);
+    animation: none;
+  }
+  #screen-play .timer-badge.urgent{
     border-color:transparent;
     box-shadow: 0 0 8px rgba(255,59,48,0.6), 0 4px 10px rgba(0,0,0,0.33),
       inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5);
   }
-  #screen-play:not(.finale-style) .timer-badge.urgent::before{
+  #screen-play .timer-badge.urgent::before{
+    filter:none;
     background: linear-gradient(180deg, #ff6a5e, #ff3b30 50%, #b81f18);
     animation:none;
   }
