@@ -276,6 +276,19 @@
   .pname-vrow .swap-btn{ width:28px; height:28px; font-size:14px; opacity:0.85; }
   .pname-row input[type="text"], .pname-grid input[type="text"]{ padding:10px 11px; }
   .pname-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  /* Étiquettes des prénoms déjà joués : une ligne qui défile de côté si besoin. */
+  .pname-chips{ display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin:0 -14px 10px; padding:0 14px 2px; }
+  .pname-chips::-webkit-scrollbar{ display:none; }
+  .pname-chips[hidden], .pname-chips-hint[hidden]{ display:none; }
+  .pname-chip{
+    flex:0 0 auto; padding:6px 12px; border-radius:999px; cursor:pointer;
+    background: var(--bg-alt); border:1px solid rgba(255,255,255,0.14); color: var(--text);
+    font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:12.5px; font-weight:700;
+    --tap-tint: 200,205,215;
+  }
+  .pname-chip::before{ content:"+ "; color: var(--text-dim); }
+  .pname-chip:active{ transform: scale(0.95); }
+  .pname-chips-hint{ margin:-4px 0 10px; font-size:11px; color: var(--text-dim); text-align:center; }
 
   .settings-sticky-header{
     position: sticky; top:-18px; z-index:1;
@@ -1519,22 +1532,22 @@
   }
   #btn-schedule.visible{ display:flex; }
   .settings-modal{ max-width:420px; width:100%; text-align:left; max-height:80vh; overflow-y:auto; }
-  /* Paramètres : écran à part entière, opaque, qui prend tout l'écran (le
-     menu n'est plus visible ni défilable derrière). #app est bloqué pendant
-     ce temps (body.settings-open), voir openSettingsOverlay. */
-  #settings-overlay{ padding:0; background: var(--bg); align-items:stretch; }
-  #settings-overlay .settings-modal{
+  /* Paramètres et Palmarès : écrans à part entière (.page-overlay), opaques,
+     qui prennent tout l'écran (le menu n'est plus visible ni défilable
+     derrière). #app est bloqué pendant ce temps (body.page-open). */
+  .page-overlay{ padding:0; background: var(--bg); align-items:stretch; }
+  .page-overlay .settings-modal{
     max-width:480px; max-height:none; height:100%;
     border:none; border-radius:0; background:transparent;
     padding: 0 16px calc(32px + env(safe-area-inset-bottom));
     overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
   }
-  #settings-overlay .settings-sticky-header{
+  .page-overlay .settings-sticky-header{
     top:0; margin:0 -16px 14px; border-radius:0;
     padding: calc(16px + env(safe-area-inset-top)) 16px 12px;
     background: var(--bg); font-size:16px;
   }
-  body.settings-open #app{ overflow:hidden; }
+  body.page-open #app{ overflow:hidden; }
 
   /* ---- Menu : Palmarès + Paramètres côte à côte ---- */
   .menu-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -1581,6 +1594,7 @@
   .palmares-table td.best{ color: var(--gold); font-weight:800; }
   .palmares-empty{ color: var(--text-dim); font-size:13px; text-align:center; padding:18px 0; margin:0; }
   .palmares-reset{ display:flex; margin:10px auto 0; color: var(--wrong); }
+  .palmares-reset[hidden]{ display:none; }
   .record-badge{
     align-self:center; font-size:12px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase;
     color:#1a1204; background: linear-gradient(180deg, #ffe08a, var(--gold)); padding:6px 14px; border-radius:999px;
@@ -1802,7 +1816,7 @@
     </div>
   </div>
 
-  <div class="quit-overlay" id="settings-overlay">
+  <div class="quit-overlay page-overlay" id="settings-overlay">
     <div class="card settings-modal">
       <div class="settings-sticky-header">
         <span>⚙️ Paramètres</span>
@@ -1898,7 +1912,7 @@
     </div>
   </div>
 
-  <div class="quit-overlay" id="palmares-overlay">
+  <div class="quit-overlay page-overlay" id="palmares-overlay">
     <div class="card settings-modal">
       <div class="settings-sticky-header">
         <span>🏆 Palmarès</span>
@@ -4471,6 +4485,7 @@
         // au cas où une partie précédente aurait déjà sauvegardé des noms.
         if(saved.names){
           data.names = saved.names;
+          if(Array.isArray(saved.known)) data.known = saved.known;
         } else {
           const merged = [];
           (saved.teamGivers || []).forEach((v, t) => { merged[2*t] = v; });
@@ -4486,6 +4501,29 @@
     return {
       getFlat(i){ return data.names[i] || ''; },
       setFlat(i, val){ data.names[i] = val; save(); },
+      // Prénoms déjà joués, du plus récent au plus ancien (étiquettes du menu,
+      // voir renderPlayerFields) : ceux des parties lancées, complétés par les
+      // prénoms saisis et ceux du palmarès. 12 au plus.
+      known(){
+        const seen = new Set(), out = [];
+        const add = n => {
+          const clean = String(n || '').trim().replace(/\s+/g, ' ');
+          const key = clean.toLowerCase();
+          if(!clean || /^joueur \d+$/i.test(clean) || seen.has(key)) return;
+          seen.add(key); out.push(clean);
+        };
+        (data.known || []).forEach(add);
+        data.names.forEach(add);
+        try { JSON.parse(localStorage.getItem('mdp_palmares') || '[]').slice().reverse().forEach(e => { add(e.giver); add(e.guesser); }); } catch(e){}
+        return out.slice(0, 12);
+      },
+      // Appelé au lancement d'une partie avec les prénoms des champs.
+      remember(list){
+        const fresh = list.map(n => String(n || '').trim().replace(/\s+/g, ' ')).filter(n => n && !/^joueur \d+$/i.test(n));
+        const keys = new Set(fresh.map(n => n.toLowerCase()));
+        data.known = fresh.concat((data.known || []).filter(n => !keys.has(n.toLowerCase()))).slice(0, 12);
+        save();
+      },
       // Échange les noms de deux places (voir renderPlayerFields : boutons ⇄ et ⇅).
       swap(i, j){
         const tmp = data.names[i];
@@ -5071,7 +5109,7 @@
     freezeRound(); // ouvert en pleine manche : le chrono attend la fermeture
     document.getElementById('settings-overlay').classList.add('visible');
     document.getElementById('settings-overlay').querySelector('.settings-modal').scrollTop = 0;
-    document.body.classList.add('settings-open');
+    document.body.classList.add('page-open');
     pruneBlacklistAgainstWordBank();
     renderBlacklistPanel();
     renderWordPoolStatus();
@@ -5107,7 +5145,7 @@
   function closeSettingsOverlay(){
     CUSTOM_SOUNDS.stopPreview();
     document.getElementById('settings-overlay').classList.remove('visible');
-    document.body.classList.remove('settings-open');
+    document.body.classList.remove('page-open');
     unfreezeRound();
   }
   document.getElementById('btn-open-settings').addEventListener('click', openSettingsOverlay);
@@ -5356,6 +5394,48 @@
         container.appendChild(row);
       }
     }
+
+    // Étiquettes des prénoms déjà joués, au-dessus des champs : un toucher met
+    // le prénom dans le champ sélectionné, sinon dans le premier champ vide.
+    // Un prénom déjà présent dans un champ n'est pas proposé.
+    const chipsRow = el('div', 'pname-chips');
+    const chipsHint = el('p', 'pname-chips-hint');
+    chipsHint.textContent = 'Tous les champs sont remplis : touche d\u2019abord celui à remplacer.';
+    chipsHint.hidden = true;
+    let hintTimer = 0;
+    function renderChips(){
+      const used = new Set(inputs.filter(Boolean).map(inp => inp.value.trim().toLowerCase()).filter(Boolean));
+      const names = PLAYERNAMES.known().filter(n => !used.has(n.toLowerCase()));
+      chipsRow.innerHTML = '';
+      chipsRow.hidden = names.length === 0;
+      names.forEach(name => {
+        const chip = el('button', 'pname-chip');
+        chip.type = 'button';
+        chip.textContent = name;
+        chip.setAttribute('aria-label', `Ajouter ${name}`);
+        chip.addEventListener('pointerdown', e => e.preventDefault()); // garde le champ sélectionné (et le clavier)
+        chip.addEventListener('click', () => {
+          const focused = inputs.indexOf(document.activeElement);
+          const i = focused >= 0 ? focused : inputs.findIndex(inp => inp && !inp.value.trim());
+          if(i < 0){
+            chipsHint.hidden = false;
+            clearTimeout(hintTimer);
+            hintTimer = setTimeout(() => { chipsHint.hidden = true; }, 2500);
+            return;
+          }
+          chipsHint.hidden = true;
+          inputs[i].value = name;
+          PLAYERNAMES.setFlat(i, name);
+          renderChips();
+        });
+        chipsRow.appendChild(chip);
+      });
+    }
+    container.insertBefore(chipsHint, container.firstChild);
+    container.insertBefore(chipsRow, chipsHint);
+    container.addEventListener('input', renderChips);
+    renderChips();
+
     // Qui commence à faire deviner (chacun pour soi, 2 joueurs) : choisi via
     // une popup au lancement de la partie, pour afficher les vrais prénoms
     // saisis. Voir btn-start-game.
@@ -5546,13 +5626,19 @@
   document.getElementById('btn-open-palmares').addEventListener('click', () => {
     palmaresTab = 'finales';
     renderPalmares();
-    document.getElementById('palmares-overlay').classList.add('visible');
+    const ov = document.getElementById('palmares-overlay');
+    ov.classList.add('visible');
+    ov.querySelector('.settings-modal').scrollTop = 0;
+    document.body.classList.add('page-open');
   });
   document.querySelectorAll('#palmares-tabs .palmares-tab').forEach(b => b.addEventListener('click', () => {
     palmaresTab = b.dataset.tab;
     renderPalmares();
   }));
-  function closePalmares(){ document.getElementById('palmares-overlay').classList.remove('visible'); }
+  function closePalmares(){
+    document.getElementById('palmares-overlay').classList.remove('visible');
+    document.body.classList.remove('page-open');
+  }
   document.getElementById('btn-close-palmares').addEventListener('click', closePalmares);
   document.getElementById('palmares-overlay').addEventListener('click', e => { if(e.target.id === 'palmares-overlay') closePalmares(); });
   document.getElementById('btn-reset-palmares').addEventListener('click', () => {
@@ -5773,6 +5859,7 @@
       startTraining();
       return;
     }
+    PLAYERNAMES.remember([...document.querySelectorAll('#player-fields input')].map(i => i.value));
 
     if(state.subMode === 'team'){
       buildTeams();
