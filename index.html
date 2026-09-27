@@ -1446,6 +1446,29 @@
   .peek-word{
     font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:34px; text-align:center; color: var(--blue);
   }
+  /* Jeton du joker sous l'échelle, d'après l'émission et l'atelier du joker
+     (https://claude.ai/artifact/VWZMDWZ3D2L5fiBLdgCTz7, choix de Fabien du
+     2026-09-27) : couronne d'environ 50 LED dorées dont la moitié allumée fait
+     le tour en 1 s (sens horaire), J en LED qui clignote rouge. On le touche
+     pour utiliser le joker ; il se referme au centre, puis reste éteint aux
+     paliers suivants. Voir JOKER_TOKEN. */
+  #decision-joker-zone{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  #decision-joker-zone:empty{ display:none; }
+  .jk-token{
+    position:relative; width:58px; height:58px; padding:0; border:0; border-radius:50%;
+    background:none; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .jk-token:disabled{ cursor:default; }
+  .jk-token svg{ width:100%; height:100%; display:block; overflow:visible; }
+  .jk-token.used{ opacity:.7; }
+  .jk-title{
+    font-family:'Archivo', 'Arial Black', Impact, sans-serif; font-weight:800; font-stretch:125%;
+    font-size:15px; letter-spacing:1.4px; white-space:nowrap; color:#ffd02a;
+    text-shadow:0 0 8px rgba(255,190,40,.5), 0 1px 2px rgba(0,0,0,.8);
+  }
+  .jk-title span{ display:inline-block; opacity:0; }
+  .jk-title.show span{ opacity:1; }
+  .jk-hint{ font-size:12.5px; line-height:1.4; color:#dedacd; text-align:center; max-width:30ch; opacity:0; }
 
   .trophy{ font-size:56px; text-align:center; }
   .final-rank{
@@ -8056,16 +8079,9 @@
     if(silent) renderLadder('decision-ladder', turn.level + 1);
     else renderLadder('decision-ladder', turn.level, { forceCurrent: turn.level });
 
-    const jokerZone = document.getElementById('decision-joker-zone');
-    jokerZone.innerHTML = "";
-    if(state.jokerAvailable && !state.jokerUsed){
-      const btn = document.createElement('button');
-      btn.className = 'btn btn-ghost';
-      btn.style.width = '100%';
-      btn.textContent = "🃏 Utiliser le joker (voir les 5 premiers mots)";
-      btn.addEventListener('click', () => { usePeek(turn.level + 1); });
-      jokerZone.appendChild(btn);
-    }
+    // Jeton du joker sous l'échelle : il apparaît (avec son texte) juste après
+    // le bond du cadre au palier de sécurité, et reste touchable ensuite.
+    JOKER_TOKEN.render(turn.level + 1, { unlock: turn.level === SAFE_LEVEL });
 
     document.getElementById('btn-continue-final').textContent = `Jouer pour ${euro(PALIERS[turn.level].gain)}`;
     const controls = document.getElementById('decision-controls');
@@ -8081,8 +8097,12 @@
           if(gen !== state.gen) return;
           btnContinueFinal.disabled = false;
           btnStopFinal.disabled = false;
+          JOKER_TOKEN.appear();
         });
       }, 450); // laisse l'écran finir d'apparaître (fondu de 0,35 s)
+    } else {
+      const gen = state.gen;
+      setTimeout(() => { if(gen === state.gen) JOKER_TOKEN.appear(); }, 450);
     }
   }
 
@@ -8102,6 +8122,182 @@
     state.endedByStop = true;
     endFinal(false);
   });
+
+  // Jeton du joker (écran de décision de la finale), d'après l'émission et les
+  // choix de Fabien dans l'atelier du joker : apparition en fondu + « JOKER
+  // DÉBLOQUÉ » lettre par lettre + phrase dessous, texte effacé sans prévenir au
+  // bout de 6 s ; touché, il se referme au centre puis ouvre l'aperçu des mots ;
+  // une fois utilisé, il reste éteint aux paliers suivants.
+  const JOKER_TOKEN = (() => {
+    // J en LED relevé sur la vidéo de l'émission ('#' = LED).
+    const J_LED = [
+      '....####','....####','....####','....####','....####','....####','....####','....####','....####',
+      '###.####','###.####','###.####','########','.######.'
+    ];
+    const RING = 50, ARC = 0.5, SOFT = 0.12, TURN_MS = 1000, BLINK_MS = 420;
+    const FADE_MS = 600, HIDE_AFTER_MS = 6000, FOLD_MS = 550;
+    const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const svgHtml = (() => {
+      const R = 41.5, w = Math.min(2.6, (2 * Math.PI * R / RING) * 0.52), h = 6.2;
+      let off = '', on = '';
+      for(let i = 0; i < RING; i++){
+        const r = `<rect x="${(50 - w/2).toFixed(2)}" y="${(50 - R - h/2).toFixed(2)}" width="${w.toFixed(2)}" height="${h}" rx="${(w/2).toFixed(2)}" transform="rotate(${(i / RING * 360).toFixed(2)} 50 50)"`;
+        off += `${r} fill="#3a2a15"/>`;
+        on += `${r} fill="url(#jk-led)" opacity="0"/>`;
+      }
+      const p = 2.75, ox = 50 - 8 * p / 2 + 1.2, oy = 50 - J_LED.length * p / 2;
+      let jOff = '', jOn = '';
+      J_LED.forEach((line, r) => [...line].forEach((ch, c) => {
+        if(ch !== '#') return;
+        const cx = ox + (c + .5) * p, cy = oy + (r + .5) * p;
+        jOff += `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(p * .4).toFixed(2)}" fill="#5a5e65"/>`;
+        jOn += `<rect x="${(cx - p * .52).toFixed(2)}" y="${(cy - p * .52).toFixed(2)}" width="${(p * 1.04).toFixed(2)}" height="${(p * 1.04).toFixed(2)}" rx="${(p * .3).toFixed(2)}" fill="#ff3b2f"/>`;
+      }));
+      return `<svg viewBox="0 0 100 100" aria-hidden="true">
+        <defs>
+          <radialGradient id="jk-bezel" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#2d2119"/><stop offset=".7" stop-color="#140d0a"/><stop offset="1" stop-color="#050303"/></radialGradient>
+          <radialGradient id="jk-disc" cx="42%" cy="35%" r="70%"><stop offset="0" stop-color="#26282c"/><stop offset=".6" stop-color="#0d0e10"/><stop offset="1" stop-color="#030304"/></radialGradient>
+          <radialGradient id="jk-led" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#fff2c8"/><stop offset=".45" stop-color="#ffbf45"/><stop offset="1" stop-color="#c77912"/></radialGradient>
+          <radialGradient id="jk-pink" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(255,110,120,.55)"/><stop offset=".7" stop-color="rgba(200,60,70,.22)"/><stop offset="1" stop-color="rgba(200,60,70,0)"/></radialGradient>
+        </defs>
+        <circle cx="50" cy="50" r="49.5" fill="url(#jk-bezel)" stroke="#000" stroke-width="1"/>
+        <g>${off}</g>
+        <g class="jk-lit" style="filter:drop-shadow(0 0 1.4px rgba(255,170,40,.9))">${on}</g>
+        <circle cx="50" cy="50" r="35" fill="url(#jk-disc)" stroke="#000" stroke-width="1.6"/>
+        <circle class="jk-glow" cx="50" cy="50" r="34" fill="url(#jk-pink)" opacity="0"/>
+        <g>${jOff}</g>
+        <g class="jk-on" style="filter:drop-shadow(0 0 1.6px rgba(255,50,40,.9))" opacity="0">${jOn}</g>
+      </svg>`;
+    })();
+
+    let cur = null, raf = 0;
+    const screenActive = () => screens.decision.classList.contains('active');
+
+    function paint(now){
+      const t = cur.live && !reduced() ? now - cur.t0 : 0;
+      const head = (t / TURN_MS) % 1;
+      cur.lit.forEach((el, i) => {
+        let b = 0;
+        if(cur.live){
+          const d = ((head - i / RING) % 1 + 1) % 1; // distance derrière la tête (sens horaire)
+          if(d < ARC){ const u = d / ARC; b = Math.min(1, u / SOFT, (1 - u) / SOFT); }
+        }
+        el.setAttribute('opacity', b.toFixed(3));
+      });
+      const jOn = cur.live && (reduced() || (t % (BLINK_MS * 2)) < BLINK_MS);
+      cur.jOn.setAttribute('opacity', jOn ? 1 : 0);
+      cur.glow.setAttribute('opacity', jOn ? 1 : 0);
+    }
+    function loop(now){
+      raf = 0;
+      if(!cur || !cur.live || !cur.btn.isConnected || !screenActive()) return;
+      paint(now);
+      raf = requestAnimationFrame(loop);
+    }
+
+    function render(nextLevel, opts){
+      opts = opts || {};
+      const zone = document.getElementById('decision-joker-zone');
+      zone.innerHTML = '';
+      cur = null;
+      if(!state.jokerUsed && !state.jokerAvailable) return; // pas encore débloqué
+      const live = !state.jokerUsed;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'jk-token' + (live ? '' : ' used');
+      btn.setAttribute('aria-label', live ? 'Utiliser le joker : voir les 5 premiers mots du prochain palier' : 'Joker déjà utilisé');
+      btn.innerHTML = svgHtml;
+      btn.disabled = true; // rendu touchable par appear(), une fois l'échelle en place
+      zone.appendChild(btn);
+      const svg = btn.querySelector('svg');
+      cur = {
+        btn, live, nextLevel, t0: performance.now(),
+        lit: [...svg.querySelectorAll('.jk-lit rect')], jOn: svg.querySelector('.jk-on'), glow: svg.querySelector('.jk-glow'),
+        pendingAppear: live && !!opts.unlock, title: null, hint: null
+      };
+      if(cur.pendingAppear){
+        btn.style.opacity = 0;
+        const title = document.createElement('div');
+        title.className = 'jk-title';
+        title.innerHTML = [...'JOKER DÉBLOQUÉ'].map(ch => `<span>${ch === ' ' ? '&nbsp;' : ch}</span>`).join('');
+        const hint = document.createElement('div');
+        hint.className = 'jk-hint';
+        hint.textContent = 'Touche-le pour voir les 5 premiers mots du prochain palier';
+        zone.append(title, hint);
+        cur.title = title; cur.hint = hint;
+      }
+      if(live) btn.addEventListener('click', () => use(btn));
+      paint(performance.now());
+      if(live && !raf) raf = requestAnimationFrame(loop);
+    }
+
+    function appear(){
+      const c = cur;
+      if(!c || !c.live) return;
+      c.btn.disabled = false;
+      if(!raf) raf = requestAnimationFrame(loop);
+      if(!c.pendingAppear) return;
+      c.pendingAppear = false;
+      const hide = () => {
+        if(cur !== c) return;
+        [c.title, c.hint].forEach(el => {
+          const from = getComputedStyle(el).opacity;
+          el.style.opacity = 0;
+          if(!reduced()) el.animate([{ opacity:from }, { opacity:0 }], { duration:700, easing:'ease-in-out' });
+        });
+      };
+      c.btn.style.opacity = 1;
+      if(reduced()){
+        c.title.classList.add('show');
+        c.hint.style.opacity = 1;
+        setTimeout(hide, HIDE_AFTER_MS);
+        return;
+      }
+      c.btn.animate([{ opacity:0, transform:'scale(.88)' }, { opacity:1, transform:'scale(1)' }], { duration:FADE_MS, easing:'ease-out' });
+      setTimeout(() => {
+        if(cur !== c) return;
+        setTimeout(hide, HIDE_AFTER_MS); // compté depuis le début du texte
+        // Lettre par lettre : chaque lettre s'allume en blanc puis passe au jaune.
+        const spans = [...c.title.querySelectorAll('span')];
+        spans.forEach((s, i) => s.animate([
+          { opacity:0, color:'#fff', textShadow:'0 0 12px #fff' },
+          { opacity:1, color:'#fff', textShadow:'0 0 14px #fff', offset:.35 },
+          { opacity:1, color:'#ffd02a', textShadow:'0 0 8px rgba(255,190,40,.5)' }
+        ], { duration:320, delay:i * 55, fill:'forwards', easing:'ease-out' }));
+        setTimeout(() => {
+          if(cur !== c) return;
+          c.title.classList.add('show');
+          spans.forEach(s => s.getAnimations().forEach(a => a.cancel()));
+          if(c.title.style.opacity === '0') return; // déjà effacé
+          c.hint.style.opacity = 1;
+          c.hint.animate([{ opacity:0 }, { opacity:1 }], { duration:500, easing:'ease-out' });
+        }, spans.length * 55 + 320);
+      }, FADE_MS * .6);
+    }
+
+    // Touché : il gonfle un peu puis se referme en son centre, et l'aperçu des
+    // mots s'ouvre.
+    function use(btn){
+      const c = cur;
+      if(!c || c.btn !== btn || btn.disabled) return;
+      btn.disabled = true;
+      c.pendingAppear = false;
+      const go = () => { if(cur === c) usePeek(c.nextLevel); };
+      if(reduced()){ go(); return; }
+      [c.title, c.hint].forEach(el => {
+        if(!el) return;
+        el.animate([{ opacity:getComputedStyle(el).opacity }, { opacity:0 }], { duration:250, fill:'forwards' });
+      });
+      const anim = btn.animate([
+        { transform:'scale(1)', opacity:1 },
+        { transform:'scale(1.12)', opacity:1, offset:.25 },
+        { transform:'scale(0)', opacity:.2 }
+      ], { duration:FOLD_MS, easing:'ease-in', fill:'forwards' });
+      anim.finished.then(go, go);
+    }
+
+    return { render, appear };
+  })();
 
   let peekHandle = null;
   function usePeek(nextLevel){
@@ -8128,7 +8324,7 @@
       if(i >= shown.length){
         clearInterval(handle);
         peekHandle = null;
-        document.getElementById('decision-joker-zone').innerHTML = "";
+        JOKER_TOKEN.render(nextLevel); // joker utilisé : jeton éteint
         showScreen('decision');
         return;
       }
