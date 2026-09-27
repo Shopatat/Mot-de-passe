@@ -243,7 +243,7 @@
   .vswap-row{ display:flex; gap:8px; align-items:center; margin:2px 0; }
   .vswap-row > div{ flex:1; display:flex; justify-content:center; }
   .vswap-row .swap-btn{ width:28px; height:28px; font-size:14px; opacity:0.85; }
-  .vswap-row .swap-spacer{ flex:0 0 34px; }
+  .vswap-row .swap-spacer, .field-pair > .swap-spacer{ flex:0 0 34px; }
   .block-header{ display:flex; align-items:center; gap:8px; font-weight:800; font-size:14px; margin-bottom:4px; }
 
   .settings-sticky-header{
@@ -4425,22 +4425,8 @@
     return {
       getFlat(i){ return data.names[i] || ''; },
       setFlat(i, val){ data.names[i] = val; save(); },
-      getTeamGiver(t){ return data.names[2*t] || ''; },
-      getTeamGuesser(t){ return data.names[2*t+1] || ''; },
-      setTeamGiver(t, val){ data.names[2*t] = val; save(); },
-      setTeamGuesser(t, val){ data.names[2*t+1] = val; save(); },
-      swapTeam(t){
-        const tmp = data.names[2*t];
-        data.names[2*t] = data.names[2*t+1];
-        data.names[2*t+1] = tmp;
-        save();
-      },
-      // Échange une seule colonne ("giver" ou "guesser") entre deux équipes
-      // adjacentes t et t+1 — ex: le "Fait deviner" de l'Équipe 1 avec celui
-      // de l'Équipe 2, sans toucher au reste.
-      swapAcrossTeams(col, t){
-        const i = (col === 'giver') ? 2*t : 2*t+1;
-        const j = (col === 'giver') ? 2*(t+1) : 2*(t+1)+1;
+      // Échange les noms de deux places (voir renderPlayerFields : boutons ⇄ et ⇅).
+      swap(i, j){
         const tmp = data.names[i];
         data.names[i] = data.names[j];
         data.names[j] = tmp;
@@ -5167,96 +5153,89 @@
     container.innerHTML = "";
     const N = state.playerCount;
 
-    if(state.subMode === 'team' && state.teamAssignment === 'predefined'){
-      // Références gardées d'une itération à l'autre pour pouvoir câbler les
-      // rangées d'échange vertical entre l'équipe t-1 et l'équipe t (voir
-      // vswap-row ci-dessous), une fois les deux blocs présents dans le DOM.
-      const giverInputs = [], guesserInputs = [];
-      for(let t=0; t<N/2; t++){
-        if(t > 0){
-          // Rangée fine entre deux équipes : un ⇅ sous chaque colonne pour
-          // échanger uniquement ce rôle-là avec l'équipe juste au-dessus,
-          // sans toucher à l'autre colonne ni rouvrir le swap horizontal.
-          const vrow = document.createElement('div');
-          vrow.className = 'vswap-row';
-          vrow.innerHTML = `
-            <div><button type="button" class="swap-btn" id="vswap-giver-${t}" title="Échanger les \u00ab Fait deviner \u00bb avec l'équipe du dessus" aria-label="Échanger les Fait deviner avec l'équipe du dessus">⇅</button></div>
-            <div class="swap-spacer"></div>
-            <div><button type="button" class="swap-btn" id="vswap-guesser-${t}" title="Échanger les \u00ab Devine \u00bb avec l'équipe du dessus" aria-label="Échanger les Devine avec l'équipe du dessus">⇅</button></div>`;
-          container.appendChild(vrow);
-          const vGiverBtn = vrow.querySelector(`#vswap-giver-${t}`);
-          const vGuesserBtn = vrow.querySelector(`#vswap-guesser-${t}`);
-          vGiverBtn.addEventListener('click', () => {
-            PLAYERNAMES.swapAcrossTeams('giver', t-1);
-            const tmp = giverInputs[t-1].value;
-            giverInputs[t-1].value = giverInputs[t].value;
-            giverInputs[t].value = tmp;
-            vGiverBtn.classList.remove('spin');
-            void vGiverBtn.offsetWidth;
-            vGiverBtn.classList.add('spin');
-          });
-          vGuesserBtn.addEventListener('click', () => {
-            PLAYERNAMES.swapAcrossTeams('guesser', t-1);
-            const tmp = guesserInputs[t-1].value;
-            guesserInputs[t-1].value = guesserInputs[t].value;
-            guesserInputs[t].value = tmp;
-            vGuesserBtn.classList.remove('spin');
-            void vGuesserBtn.offsetWidth;
-            vGuesserBtn.classList.add('spin');
-          });
-        }
-        const block = document.createElement('div');
-        block.className = 'team-name-block';
-        block.innerHTML = `
-          <div class="block-header"><span class="dot" style="background:${PLAYER_COLORS[t]};"></span> Équipe ${t+1}</div>
-          <div class="field-pair">
-            <div>
-              <label class="field-label">Fait deviner</label>
-              <input type="text" id="team${t}-giver" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getTeamGiver(t))}">
-            </div>
-            <button type="button" class="swap-btn" id="team${t}-swap" title="Échanger les rôles" aria-label="Échanger les rôles">⇄</button>
-            <div>
-              <label class="field-label">Devine</label>
-              <input type="text" id="team${t}-guesser" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getTeamGuesser(t))}">
-            </div>
-          </div>`;
-        container.appendChild(block);
-        const giverInput = block.querySelector(`#team${t}-giver`);
-        const guesserInput = block.querySelector(`#team${t}-guesser`);
-        const swapBtn = block.querySelector(`#team${t}-swap`);
-        giverInputs[t] = giverInput;
-        guesserInputs[t] = guesserInput;
-        giverInput.addEventListener('input', () => PLAYERNAMES.setTeamGiver(t, giverInput.value.trim()));
-        guesserInput.addEventListener('input', () => PLAYERNAMES.setTeamGuesser(t, guesserInput.value.trim()));
-        swapBtn.addEventListener('click', () => {
-          PLAYERNAMES.swapTeam(t);
-          const tmp = giverInput.value;
-          giverInput.value = guesserInput.value;
-          guesserInput.value = tmp;
-          swapBtn.classList.remove('spin');
-          void swapBtn.offsetWidth; // relance l'animation même en cliquant plusieurs fois de suite
-          swapBtn.classList.add('spin');
-        });
-      }
-    } else {
-      // équipes aléatoires, ou chacun pour soi : liste à plat de N noms
+    // Équipes prédéfinies et chacun pour soi partagent la même grille : la
+    // rangée r contient les joueurs 2r (à gauche) et 2r+1 (à droite), soit en
+    // équipe le « Fait deviner » et le « Devine » de l'équipe r (voir
+    // PLAYERNAMES). Un ⇄ échange les deux voisins d'une rangée, un ⇅ sous
+    // chaque colonne échange avec la rangée du dessus, sans toucher au reste.
+    // En chacun pour soi la place compte aussi (couleur, ordre de passage) ;
+    // en équipes aléatoires elle ne sert à rien, donc pas de boutons.
+    const isTeam = state.subMode === 'team' && state.teamAssignment === 'predefined';
+    const withSwaps = isTeam || state.subMode === 'solo';
+    const inputs = [];
+    const cellId = i => isTeam ? `team${i >> 1}-${i % 2 ? 'guesser' : 'giver'}` : `player${i}`;
+    const cellLabel = i => isTeam ? (i % 2 ? 'Devine' : 'Fait deviner') : `Joueur ${i+1}`;
+    const spacer = () => { const d = document.createElement('div'); d.className = 'swap-spacer'; return d; };
+
+    function makeField(i){
+      const div = document.createElement('div');
+      if(i >= N) return div; // case vide : nombre impair de joueurs
+      div.innerHTML = `<label class="field-label">${cellLabel(i)}</label>
+        <input type="text" id="${cellId(i)}" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getFlat(i))}">`;
+      const input = inputs[i] = div.querySelector('input');
+      input.addEventListener('input', () => PLAYERNAMES.setFlat(i, input.value.trim()));
+      return div;
+    }
+    function makeSwapBtn(i, j, glyph, label){
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'swap-btn';
+      btn.textContent = glyph;
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      btn.addEventListener('click', () => {
+        PLAYERNAMES.swap(i, j);
+        const tmp = inputs[i].value;
+        inputs[i].value = inputs[j].value;
+        inputs[j].value = tmp;
+        btn.classList.remove('spin');
+        void btn.offsetWidth; // relance l'animation même en cliquant plusieurs fois de suite
+        btn.classList.add('spin');
+      });
+      return btn;
+    }
+
+    if(!withSwaps){
+      // équipes aléatoires : liste à plat de N noms
       const wrap = document.createElement('div');
       wrap.style.display = 'grid';
       wrap.style.gridTemplateColumns = '1fr 1fr';
       wrap.style.gap = '8px';
-      for(let i=0; i<N; i++){
-        const div = document.createElement('div');
-        div.innerHTML = `<label class="field-label">Joueur ${i+1}</label>
-          <input type="text" id="player${i}" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getFlat(i))}">`;
-        wrap.appendChild(div);
-        const input = div.querySelector(`#player${i}`);
-        input.addEventListener('input', () => PLAYERNAMES.setFlat(i, input.value.trim()));
-      }
+      for(let i=0; i<N; i++) wrap.appendChild(makeField(i));
       container.appendChild(wrap);
-      // Qui commence à faire deviner (chacun pour soi, 2 joueurs) : désormais
-      // choisi via une popup au lancement de la partie plutôt qu'ici, pour
-      // pouvoir afficher les vrais prénoms saisis. Voir btn-start-game.
+    } else {
+      for(let r=0; r<Math.ceil(N/2); r++){
+        const a = 2*r, b = 2*r+1;
+        if(r > 0){
+          const vrow = document.createElement('div');
+          vrow.className = 'vswap-row';
+          [a, b].forEach((i, k) => {
+            if(k === 1) vrow.appendChild(spacer());
+            const cell = document.createElement('div');
+            if(i < N) cell.appendChild(makeSwapBtn(i-2, i, '⇅', isTeam
+              ? `Échanger les « ${cellLabel(i)} » avec l'équipe du dessus`
+              : `Échanger ${cellLabel(i)} avec ${cellLabel(i-2)}`));
+            vrow.appendChild(cell);
+          });
+          container.appendChild(vrow);
+        }
+        const block = document.createElement('div');
+        block.className = 'team-name-block';
+        if(isTeam) block.innerHTML = `<div class="block-header"><span class="dot" style="background:${PLAYER_COLORS[r]};"></span> Équipe ${r+1}</div>`;
+        const pair = document.createElement('div');
+        pair.className = 'field-pair';
+        pair.appendChild(makeField(a));
+        pair.appendChild(b < N
+          ? makeSwapBtn(a, b, '⇄', isTeam ? 'Échanger les rôles' : `Échanger ${cellLabel(a)} et ${cellLabel(b)}`)
+          : spacer());
+        pair.appendChild(makeField(b));
+        block.appendChild(pair);
+        container.appendChild(block);
+      }
     }
+    // Qui commence à faire deviner (chacun pour soi, 2 joueurs) : choisi via
+    // une popup au lancement de la partie, pour afficher les vrais prénoms
+    // saisis. Voir btn-start-game.
   }
   renderPlayerFields();
 
