@@ -242,6 +242,22 @@
   /* Menu compact : réglages de la partie en une carte, une ligne par question
      (étiquette à gauche, choix à droite). */
   .set-card{ padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  /* « Lancer la partie » collé en bas seulement quand il passerait sous l'écran
+     (position sticky dans #app) ; fondu au-dessus et fond jusqu'au bas de l'écran
+     uniquement dans ce cas (classe .stuck, voir updateStartDock). */
+  /* bottom négatif : le « sticky » se cale sur le bas de #app moins son padding
+     (32px + zone du bas), on veut le bouton à 10px au-dessus de la zone du bas. */
+  .start-dock{ position:sticky; bottom:-22px; z-index:2; display:flex; flex-direction:column; }
+  .start-dock::before, .start-dock::after{
+    content:""; position:absolute; left:-16px; right:-16px; pointer-events:none;
+    opacity:0; transition: opacity .15s ease;
+  }
+  .start-dock::before{ bottom:100%; height:30px; background: linear-gradient(180deg, rgba(3,4,5,0), rgba(3,4,5,0.94)); }
+  .start-dock::after{ top:-2px; height:calc(100% + 12px + env(safe-area-inset-bottom)); background: rgba(3,4,5,0.94); z-index:-1; }
+  .start-dock.stuck::before, .start-dock.stuck::after{ opacity:1; }
+  /* Un champ de prénom sélectionné ne doit pas se retrouver sous le bouton collé. */
+  #app:has(#screen-setup.active){ scroll-padding-bottom:90px; }
+  .start-dock-mark{ height:0; margin-top:-14px; } /* repère de la vraie place du bouton (annule le gap de .screen) */
   .set-rows{ display:flex; flex-direction:column; gap:10px; }
   .set-row{ display:grid; grid-template-columns:58px minmax(0,1fr); align-items:center; gap:8px; }
   .set-label{ font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); }
@@ -1976,7 +1992,12 @@
       </div>
     </div>
 
-    <button class="btn btn-gold" id="btn-start-game">Lancer la partie</button>
+    <!-- Bouton de lancement « collé si besoin » : à sa place sous les noms, mais
+         posé en bas de l'écran s'il passerait dessous (petits iPhone, 6 joueurs...). -->
+    <div class="start-dock" id="start-dock">
+      <button class="btn btn-gold" id="btn-start-game">Lancer la partie</button>
+    </div>
+    <div class="start-dock-mark" id="start-dock-mark"></div>
 
     <div class="menu-cards">
       <div class="settings-card" id="btn-open-palmares">Palmarès</div>
@@ -5175,6 +5196,25 @@
     const group = document.getElementById(groupId);
     group.querySelectorAll('.toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.val === val));
   }
+
+  // « Lancer la partie » collé en bas : il l'est quand sa vraie place (le repère
+  // juste après lui) est plus bas que l'endroit où il est posé.
+  (function(){
+    const app = document.getElementById('app');
+    const dock = document.getElementById('start-dock');
+    const mark = document.getElementById('start-dock-mark');
+    let raf = 0;
+    function update(){
+      raf = 0;
+      if(!dock.offsetParent) return; // menu caché
+      dock.classList.toggle('stuck', mark.getBoundingClientRect().top - dock.getBoundingClientRect().bottom > 1);
+    }
+    const later = () => { if(!raf) raf = requestAnimationFrame(update); };
+    app.addEventListener('scroll', later, { passive:true });
+    window.addEventListener('resize', later);
+    if(window.ResizeObserver) new ResizeObserver(later).observe(document.getElementById('screen-setup'));
+    later();
+  })();
 
   // Partie complète : lignes de réglages + noms ; entraînement : le texte du mode libre.
   function showModeBlocks(full){
