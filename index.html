@@ -848,12 +848,12 @@
      cadre est bas (4 px au-dessus et au-dessous du mot) : les chevrons LED ont
      la hauteur de son intérieur. La piste de diodes garde son boîtier gris
      argent. Les qualifs gardent leur habillage sombre et rouge. */
-  #screen-play.finale-style .word-pill{
+  :is(#screen-play, #screen-peek).finale-style .word-pill{
     border-width:3px; border-radius:18px; padding:4px 22px;
     background: linear-gradient(100.5deg, #180b05 0%, #2f190d 42%, #392011 58%, #220e07 100%);
     box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.5);
   }
-  #screen-play.finale-style .word-pill::before{
+  :is(#screen-play, #screen-peek).finale-style .word-pill::before{
     inset:-3px; padding:3px;
     background: linear-gradient(180deg, #f6f6f8 0%, #c2c3c9 22%, #6d6e75 48%, #b9bac1 70%, #e4e5ea 86%, #7a7b82 100%);
     filter: brightness(0.7);
@@ -869,7 +869,7 @@
   #screen-play.finale-style .word-pill .word-flare{ inset:-3px; }
   /* Mot plus petit en finale (30 px au maximum) : sa hauteur de ligne suit
      (voir .word-text et fitWordText). */
-  #screen-play.finale-style .word-text{ --word-max:30px; }
+  :is(#screen-play, #screen-peek).finale-style .word-text{ --word-max:30px; }
   /* Piste de diodes de la finale, réglée par Fabien dans l'atelier du bandeau
      des LED (https://claude.ai/artifact/LVPWUAcB7XerkevjJFmC8h, doc
      bandeau/finale, 2026-09-25) : même forme que le cadre du mot — coins
@@ -1183,7 +1183,7 @@
      laisser de trace. Ceux de droite sont le même dessin en miroir. */
   .chevrons.left{ order:1; margin-right:-4px; }   /* 2 px entre les chevrons et le cadre */
   .chevrons.right{ order:3; margin-left:-4px; }
-  #screen-play.finale-style .word-row{ padding-inline:2px; } /* 2 px entre l'écran et les chevrons */
+  :is(#screen-play, #screen-peek).finale-style .word-row{ padding-inline:2px; } /* 2 px entre l'écran et les chevrons */
   .chevrons svg{ display:block; overflow:visible; }
   .chevrons.right svg{ transform:scaleX(-1); }
   .chevrons .base{ fill:url(#fin-led-g); }
@@ -1443,9 +1443,7 @@
     background: rgba(90,169,230,0.14); border:1px solid var(--blue); color: var(--blue);
     padding: 5px 12px; border-radius:999px;
   }
-  .peek-word{
-    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:34px; text-align:center; color: var(--blue);
-  }
+  #peek-label{ text-align:center; }
   /* Jeton du joker sous l'échelle, d'après l'émission et l'atelier du joker
      (https://claude.ai/artifact/VWZMDWZ3D2L5fiBLdgCTz7, choix de Fabien du
      2026-09-27) : couronne d'environ 50 LED dorées dont la moitié allumée fait
@@ -2307,11 +2305,19 @@
   </section>
 
   <!-- JOKER PEEK -->
-  <section class="screen" id="screen-peek">
+  <section class="screen finale-style" id="screen-peek">
     <div class="joker-badge">🃏 Joker — aperçu des mots</div>
-    <div class="card handoff-wrap">
-      <div class="handoff-label" id="peek-label">Mot 1 / 5</div>
-      <div class="peek-word" id="peek-word">—</div>
+    <div class="handoff-label" id="peek-label">Mot 1 / 5</div>
+    <div class="word-row">
+      <div class="chevrons left active" id="peek-chev-left"></div>
+      <div class="word-pill" id="peek-pill">
+        <div class="word-wipe">
+          <div class="travel-half left"><div class="chevron-travel left" id="peek-travel-left"></div></div>
+          <div class="travel-half right"><div class="chevron-travel right" id="peek-travel-right"></div></div>
+        </div>
+        <div class="word-text" id="peek-word"></div>
+      </div>
+      <div class="chevrons right active" id="peek-chev-right"></div>
     </div>
     <p class="footer-note">Chaque mot s'affiche 3 secondes.</p>
   </section>
@@ -4928,7 +4934,6 @@
     state.running = false;
     roundFrozen = false;
     if(state.mode === 'full' && !state.isDebug) SAVED_GAME.clear(); // "Abandonner la partie" : elle ne se reprend pas (entraînement / test : on ne touche pas à une vraie partie enregistrée)
-    if(peekHandle){ clearInterval(peekHandle); peekHandle = null; }
     document.getElementById('screen-play').classList.remove('finale-pending-start');
     showScreen('setup');
   });
@@ -6904,17 +6909,22 @@
   // 4. les chevrons d'indices se rallument un par un en s'éloignant du mot.
   const FIN_TRAVEL_MS = 460;
 
-  function runFinaleTravel(pillEl, onCross, onDone){
+  // at : les éléments d'un autre cadre que celui de la manche (aperçu du
+  // joker) : { travelLeft, travelRight, sides } ; sans lui, ceux de l'écran
+  // de jeu. Renvoie le délai (ms) au bout duquel les pointes des deux trains
+  // se rejoignent au centre (pour caler un son).
+  function runFinaleTravel(pillEl, onCross, onDone, at){
     const wipe = pillEl.querySelector('.word-wipe'), wordEl = pillEl.querySelector('.word-text');
-    const travelLeft = document.getElementById('chevron-travel-left');
-    const travelRight = document.getElementById('chevron-travel-right');
+    const travelLeft = at ? at.travelLeft : document.getElementById('chevron-travel-left');
+    const travelRight = at ? at.travelRight : document.getElementById('chevron-travel-right');
+    const sides = at ? at.sides : ['chevrons-left', 'chevrons-right'].map(id => document.getElementById(id));
     // Trains communs (voir buildLedTrain), rideau couleur cuivre de l'intérieur
     // du cadre de finale ; ils se croisent au centre et ressortent.
     const W = wipe.clientWidth;
     wipe.classList.remove('through-middle');
     const train = buildLedTrain(wipe, travelLeft, travelRight, '#2b170c');
     const tw = train.w, T = FIN_TRAVEL_MS;
-    const delay = enterFinaleChevrons((W + tw) / T);
+    const delay = enterFinaleChevrons((W + tw) / T, sides);
     const easing = `steps(${Math.max(1, Math.round((W + tw) / FIN_LED_PITCH))}, end)`;
     [travelLeft, travelRight].forEach(el => el.style.opacity = '1');
     const moves = [
@@ -6930,10 +6940,11 @@
       moves.forEach(m => m.cancel());
       travelLeft.style.opacity = '0';
       travelRight.style.opacity = '0';
-      renderChevrons();
-      relightFinaleChevrons();
+      if(!at) renderChevrons();
+      relightFinaleChevrons(sides);
       if(onDone) onDone();
     }, delay + T);
+    return delay + T * (W / 2) / (W + tw);
   }
 
   // Étape 1 : les chevrons d'indices encore allumés filent vers le mot à la
@@ -6941,11 +6952,11 @@
   // au bout duquel le plus proche atteint le bord intérieur du cadre : c'est là
   // que les trains sortent (0 s'il n'en restait aucun, mot en rouge).
   let finEnterAnims = [];
-  function enterFinaleChevrons(v){
+  function enterFinaleChevrons(v, sides){
     const step = FIN_CHEV_STEP * FIN_LED_PITCH, wc = FIN_CHEV_LED[0].length * FIN_LED_PITCH;
     let any = false;
-    ['chevrons-left', 'chevrons-right'].forEach(id => {
-      document.getElementById(id).querySelectorAll('.cv').forEach((cv, i) => {
+    sides.forEach(side => {
+      side.querySelectorAll('.cv').forEach((cv, i) => {
         if(cv.classList.contains('gone')) return;
         any = true;
         const g = Math.max(0, FIN_CHEV_GAP + (MAX_CLUES - 1 - i) * step); // pointe -> bord extérieur de l'anneau
@@ -6963,11 +6974,11 @@
   // Étape 4 : rallumage un par un, du chevron collé au mot vers l'extérieur
   // (~33 ms d'écart). On retire d'abord les animations d'entrée, qui les
   // gardaient cachés.
-  function relightFinaleChevrons(){
+  function relightFinaleChevrons(sides){
     finEnterAnims.forEach(a => a.cancel());
     finEnterAnims = [];
-    ['chevrons-left', 'chevrons-right'].forEach(id => {
-      document.getElementById(id).querySelectorAll('.cv').forEach((cv, i) => {
+    sides.forEach(side => {
+      side.querySelectorAll('.cv').forEach((cv, i) => {
         if(cv.classList.contains('gone')) return;
         cv.animate([{ opacity:0 }, { opacity:1 }], { duration:33, delay:(MAX_CLUES - 1 - i) * 33, fill:'backwards', easing:'steps(1, end)' });
       });
@@ -8299,7 +8310,15 @@
     return { render, appear };
   })();
 
-  let peekHandle = null;
+  // Aperçu du joker : les 5 premiers mots du prochain palier, dans le cadre du
+  // mot de la finale et avec ses animations. Le cadre naît comme au début d'un
+  // palier (chevrons allumés un par un), chaque mot reste 3 s, puis les
+  // chevrons passent comme à un changement de mot et amènent le suivant, avec
+  // le son « word reveal » au passage (et à l'apparition du 1er). Après le 5e,
+  // les chevrons emportent le mot et le cadre se replie sur lui-même, comme à
+  // la fin d'une manche, puis on revient à l'échelle.
+  const PEEK_WORD_MS = 3000;
+  const PEEK_SOUND_LEAD_MS = 30; // le son part juste avant que les pointes se rejoignent (voir LADDER_SOUND_LEAD_PX)
   function usePeek(nextLevel){
     state.jokerUsed = true;
     state.jokerAvailable = false;
@@ -8308,28 +8327,69 @@
     state.peekedPool = preview;
     state.peekedLevel = nextLevel;
     saveGameProgress({ at:'decision' }); // les mots vus au joker restent ceux du palier, même après une reprise
-    const shown = preview.slice(0, 5);
-    let i = 0;
-    showScreen('peek');
-    const render = () => {
-      document.getElementById('peek-label').textContent = `Mot ${i+1} / ${shown.length}`;
-      document.getElementById('peek-word').textContent = shown[i].toUpperCase();
+    const shown = preview.slice(0, 5).map(w => w.toUpperCase());
+    // Quitter la partie (retour au menu) change state.gen : tout s'arrête là,
+    // sinon on reviendrait tout seul sur l'écran de décision.
+    const gen = state.gen;
+    const alive = () => gen === state.gen;
+    const sleep = ms => new Promise(r => setTimeout(r, Math.max(0, ms)));
+    const pill = document.getElementById('peek-pill');
+    const wordEl = document.getElementById('peek-word');
+    const label = document.getElementById('peek-label');
+    const at = {
+      travelLeft: document.getElementById('peek-travel-left'),
+      travelRight: document.getElementById('peek-travel-right'),
+      sides: [document.getElementById('peek-chev-left'), document.getElementById('peek-chev-right')],
     };
-    render();
-    // Gardé à part pour que "Quitter" puisse l'arrêter : sinon, une fois au
-    // menu, il ramenait tout seul sur l'écran de décision.
-    if(peekHandle) clearInterval(peekHandle);
-    const handle = peekHandle = setInterval(() => {
-      i += 1;
-      if(i >= shown.length){
-        clearInterval(handle);
-        peekHandle = null;
-        JOKER_TOKEN.render(nextLevel); // joker utilisé : jeton éteint
-        showScreen('decision');
-        return;
+    const reveal = () => { try{ SFX.wordReveal(); }catch(e){} };
+    const setLabel = i => { label.textContent = `Mot ${i + 1} / ${shown.length}`; };
+    // Un passage de chevrons : swap au croisement, tenu quand ils sont ressortis.
+    // Il part un peu avant l'heure (lead : du départ au croisement, mesuré au
+    // passage précédent) pour que le mot change pile toutes les 3 s.
+    let lead = 300;
+    const pass = (swap, sound) => new Promise(done => {
+      const t = performance.now();
+      const crossAt = runFinaleTravel(pill, () => { lead = performance.now() - t; swap(); }, done, at);
+      if(sound) setTimeout(() => { if(alive()) reveal(); }, Math.max(0, crossAt - PEEK_SOUND_LEAD_MS));
+    });
+
+    cancelWordBirth(pill);
+    at.sides.forEach(side => { buildChevrons(side); side.style.opacity = '0'; });
+    pill.style.opacity = '0';
+    wordEl.style.animation = '';
+    wordEl.style.opacity = '';
+    setLabel(0);
+    showScreen('peek');
+    setWordText(shown[0], 'peek-word'); // mesuré une fois l'écran affiché
+
+    (async () => {
+      await sleep(450); // l'écran finit d'apparaître
+      if(!alive()) return;
+      pill.style.opacity = '';
+      at.sides.forEach(side => side.style.opacity = '');
+      void pill.offsetWidth;
+      reveal();
+      let shownAt = performance.now() + 650 + WB.white + WB.black; // le mot apparaît (voir playWordBirth)
+      await playWordBirth({ pill, finale: true, chevrons: at.sides, word: wordEl });
+      for(let i = 1; i < shown.length; i++){
+        await sleep(shownAt + PEEK_WORD_MS - lead - performance.now());
+        if(!alive()) return;
+        await pass(() => { showWordNow('peek-word', shown[i]); setLabel(i); shownAt = performance.now(); }, true);
       }
-      render();
-    }, 3000);
+      await sleep(shownAt + PEEK_WORD_MS - lead - performance.now());
+      if(!alive()) return;
+      // Fin : les chevrons emportent le dernier mot, sans remplaçant, puis le
+      // cadre (vide) se referme, l'apparition jouée à l'envers.
+      await pass(() => { wordEl.style.animation = 'none'; wordEl.style.opacity = '0'; }, false);
+      if(!alive()) return;
+      cancelWordBirth(pill);
+      at.sides.forEach(side => side.style.opacity = '0');
+      await playWordBirth({ pill, finale: true, reverse: true });
+      await sleep(250);
+      if(!alive()) return;
+      JOKER_TOKEN.render(nextLevel); // joker utilisé : jeton éteint
+      showScreen('decision');
+    })();
   }
 
   function endFinal(wonAll){
