@@ -227,8 +227,6 @@
     font-size: 15px; font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-weight:600;
   }
   input[type="text"]:focus{ outline:2px solid var(--red-dim); }
-  .field-pair{ display:flex; gap:8px; align-items:flex-end; }
-  .field-pair > div{ flex:1; min-width:0; }
   .swap-btn{
     flex:0 0 auto; width:34px; height:34px; margin-bottom:0;
     border-radius:50%; border:1px solid var(--card-edge);
@@ -240,11 +238,28 @@
   .swap-btn:active{ transform: scale(0.88); }
   .swap-btn.spin{ animation: swapSpin .3s ease; }
   @keyframes swapSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(180deg); } }
-  .vswap-row{ display:flex; gap:8px; align-items:center; margin:2px 0; }
-  .vswap-row > div{ flex:1; display:flex; justify-content:center; }
-  .vswap-row .swap-btn{ width:28px; height:28px; font-size:14px; opacity:0.85; }
-  .vswap-row .swap-spacer, .field-pair > .swap-spacer{ flex:0 0 34px; }
   .block-header{ display:flex; align-items:center; gap:8px; font-weight:800; font-size:14px; margin-bottom:4px; }
+  /* Menu compact : réglages de la partie en une carte, une ligne par question
+     (étiquette à gauche, choix à droite). */
+  .set-card{ padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+  .set-rows{ display:flex; flex-direction:column; gap:10px; }
+  .set-row{ display:grid; grid-template-columns:58px minmax(0,1fr); align-items:center; gap:8px; }
+  .set-label{ font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); }
+  .set-row .toggle-row{ flex-wrap:nowrap; gap:6px; }
+  .set-row .toggle-btn{ min-width:0; padding:8px 4px; font-size:12.5px; }
+  .set-card .footer-note{ margin:-2px 0 0; text-align:left; padding-left:66px; }
+  /* Noms des joueurs : titres de colonnes écrits une fois (équipes), pastille
+     de couleur de l'équipe en début de ligne, ⇄ entre deux voisins, ⇅ entre deux lignes. */
+  .names-card{ padding:14px; }
+  .pname-row, .pname-vrow{ display:grid; grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr); gap:0 8px; align-items:center; }
+  .pname-row.with-dot, .pname-vrow.with-dot, .pname-heads{ display:grid; grid-template-columns:18px minmax(0,1fr) 34px minmax(0,1fr); gap:0 8px; align-items:center; }
+  .pname-heads{ margin-bottom:6px; }
+  .pname-heads span{ font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); }
+  .pname-vrow{ margin:2px 0; }
+  .pname-vrow > div{ display:flex; justify-content:center; }
+  .pname-vrow .swap-btn{ width:28px; height:28px; font-size:14px; opacity:0.85; }
+  .pname-row input[type="text"], .pname-grid input[type="text"]{ padding:10px 11px; }
+  .pname-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 
   .settings-sticky-header{
     position: sticky; top:-18px; z-index:1;
@@ -1448,9 +1463,6 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 0 10px rgba(232,228,221,0.28);
   }
   .toggle-btn.disabled{ opacity:0.3; pointer-events:none; }
-  .team-name-block{ margin-bottom:12px; }
-  .team-name-block:last-child{ margin-bottom:0; }
-  .team-name-block .block-header{ font-size:13px; margin-bottom:8px; }
 
   #btn-quit-game{
     display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:14px; z-index:3;
@@ -1899,8 +1911,6 @@
   <!-- SETUP -->
   <section class="screen active" id="screen-setup">
     <div class="tile-row" id="title-tiles"></div>
-    <p class="marquee-sub">Choisis ton mode de jeu.</p>
-
     <!-- Partie interrompue (appli fermée par iOS...) : proposée à la reprise, voir SAVED_GAME -->
     <div class="resume-card" id="resume-card" hidden>
       <div class="resume-kicker" id="resume-kicker">Partie en cours</div>
@@ -1912,45 +1922,48 @@
       </div>
     </div>
 
-    <div class="card">
-      <label class="field-label" style="text-align:center;">Quel mode ?</label>
-      <div class="toggle-row" id="mode-group">
-        <div class="toggle-btn selected" data-val="full">Partie complète</div>
-        <div class="toggle-btn" data-val="training">Entraînement</div>
+    <!-- Réglages de la partie : une seule carte, une ligne par question (menu
+         compact, pour que « Lancer la partie » tienne dans l'écran d'un iPhone). -->
+    <div class="card set-card">
+      <div class="set-row">
+        <span class="set-label">Mode</span>
+        <div class="toggle-row" id="mode-group">
+          <div class="toggle-btn selected" data-val="full">Partie complète</div>
+          <div class="toggle-btn" data-val="training">Entraînement</div>
+        </div>
+      </div>
+      <div class="set-rows" id="full-mode-rows">
+        <div class="set-row">
+          <span class="set-label">Joueurs</span>
+          <div class="toggle-row" id="playercount-group">
+            <div class="toggle-btn" data-val="2">2</div>
+            <div class="toggle-btn" data-val="3">3</div>
+            <div class="toggle-btn selected" data-val="4">4</div>
+            <div class="toggle-btn" data-val="5">5</div>
+            <div class="toggle-btn" data-val="6">6</div>
+          </div>
+        </div>
+        <div class="set-row">
+          <span class="set-label">Jeu</span>
+          <div class="toggle-row" id="submode-group">
+            <div class="toggle-btn selected" data-val="team">Équipes de 2</div>
+            <div class="toggle-btn" data-val="solo">Chacun pour soi</div>
+          </div>
+        </div>
+        <p class="footer-note" id="submode-note" style="display:none;">Équipes : 4 ou 6 joueurs.</p>
+        <div class="set-row" id="team-assignment-card">
+          <span class="set-label">Équipes</span>
+          <div class="toggle-row" id="teamassign-group">
+            <div class="toggle-btn selected" data-val="predefined">Prédéfinies</div>
+            <div class="toggle-btn" data-val="random">Aléatoires</div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div id="full-mode-block">
-      <div class="card">
-        <label class="field-label" style="text-align:center;">Combien de joueurs ?</label>
-        <div class="toggle-row" id="playercount-group">
-          <div class="toggle-btn" data-val="2">2</div>
-          <div class="toggle-btn" data-val="3">3</div>
-          <div class="toggle-btn selected" data-val="4">4</div>
-          <div class="toggle-btn" data-val="5">5</div>
-          <div class="toggle-btn" data-val="6">6</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <label class="field-label" style="text-align:center;">Jeu en équipe ou chacun pour soi ?</label>
-        <div class="toggle-row" id="submode-group">
-          <div class="toggle-btn selected" data-val="team">Équipes de 2</div>
-          <div class="toggle-btn" data-val="solo">Chacun pour soi</div>
-        </div>
-        <p class="footer-note" id="submode-note" style="display:none; margin-top:8px;">Il faut au moins 4 joueurs, en nombre pair, pour jouer en équipes.</p>
-      </div>
-
-      <div class="card" id="team-assignment-card">
-        <label class="field-label" style="text-align:center;">Équipes aléatoires ou définies ?</label>
-        <div class="toggle-row" id="teamassign-group">
-          <div class="toggle-btn selected" data-val="predefined">Prédéfinies</div>
-          <div class="toggle-btn" data-val="random">Aléatoires</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <label class="field-label" style="text-align:center;">Quels sont les noms des joueurs ?</label>
+      <div class="card names-card">
+        <label class="field-label" style="text-align:center;">Joueurs</label>
         <div id="player-fields"></div>
       </div>
     </div>
@@ -5163,10 +5176,15 @@
     group.querySelectorAll('.toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.val === val));
   }
 
+  // Partie complète : lignes de réglages + noms ; entraînement : le texte du mode libre.
+  function showModeBlocks(full){
+    document.getElementById('full-mode-rows').style.display = full ? '' : 'none';
+    document.getElementById('full-mode-block').style.display = full ? '' : 'none';
+    document.getElementById('training-mode-block').style.display = full ? 'none' : '';
+  }
   wireToggleGroup('mode-group', val => {
     state.mode = val;
-    document.getElementById('full-mode-block').style.display = (val === 'full') ? '' : 'none';
-    document.getElementById('training-mode-block').style.display = (val === 'training') ? '' : 'none';
+    showModeBlocks(val === 'full');
     document.getElementById('btn-start-game').textContent = (val === 'training') ? "Commencer l'entraînement" : "Lancer la partie";
   });
 
@@ -5221,21 +5239,26 @@
     const inputs = [];
     const cellId = i => isTeam ? `team${i >> 1}-${i % 2 ? 'guesser' : 'giver'}` : `player${i}`;
     const cellLabel = i => isTeam ? (i % 2 ? 'Devine' : 'Fait deviner') : `Joueur ${i+1}`;
-    const spacer = () => { const d = document.createElement('div'); d.className = 'swap-spacer'; return d; };
+    const el = (tag, cls) => { const d = document.createElement(tag); if(cls) d.className = cls; return d; };
 
+    // Menu compact : plus d'étiquette au-dessus de chaque champ. En équipe, les
+    // titres « Fait deviner / Devine » sont écrits une fois en haut ; sinon le
+    // numéro du joueur sert de texte d'attente (« Joueur 3 »).
     function makeField(i){
-      const div = document.createElement('div');
-      if(i >= N) return div; // case vide : nombre impair de joueurs
-      div.innerHTML = `<label class="field-label">${cellLabel(i)}</label>
-        <input type="text" id="${cellId(i)}" placeholder="Prénom" maxlength="14" value="${escapeHtml(PLAYERNAMES.getFlat(i))}">`;
-      const input = inputs[i] = div.querySelector('input');
+      if(i >= N) return el('div'); // case vide : nombre impair de joueurs
+      const input = inputs[i] = el('input');
+      input.type = 'text';
+      input.id = cellId(i);
+      input.maxLength = 14;
+      input.placeholder = isTeam ? 'Prénom' : cellLabel(i);
+      input.setAttribute('aria-label', cellLabel(i));
+      input.value = PLAYERNAMES.getFlat(i);
       input.addEventListener('input', () => PLAYERNAMES.setFlat(i, input.value.trim()));
-      return div;
+      return input;
     }
     function makeSwapBtn(i, j, glyph, label){
-      const btn = document.createElement('button');
+      const btn = el('button', 'swap-btn');
       btn.type = 'button';
-      btn.className = 'swap-btn';
       btn.textContent = glyph;
       btn.title = label;
       btn.setAttribute('aria-label', label);
@@ -5253,21 +5276,24 @@
 
     if(!withSwaps){
       // équipes aléatoires : liste à plat de N noms
-      const wrap = document.createElement('div');
-      wrap.style.display = 'grid';
-      wrap.style.gridTemplateColumns = '1fr 1fr';
-      wrap.style.gap = '8px';
+      const wrap = el('div', 'pname-grid');
       for(let i=0; i<N; i++) wrap.appendChild(makeField(i));
       container.appendChild(wrap);
     } else {
+      const dotCls = isTeam ? ' with-dot' : '';
+      if(isTeam){
+        const heads = el('div', 'pname-heads');
+        heads.innerHTML = '<span></span><span>Fait deviner</span><span></span><span>Devine</span>';
+        container.appendChild(heads);
+      }
       for(let r=0; r<Math.ceil(N/2); r++){
         const a = 2*r, b = 2*r+1;
         if(r > 0){
-          const vrow = document.createElement('div');
-          vrow.className = 'vswap-row';
+          const vrow = el('div', 'pname-vrow' + dotCls);
+          if(isTeam) vrow.appendChild(el('div'));
           [a, b].forEach((i, k) => {
-            if(k === 1) vrow.appendChild(spacer());
-            const cell = document.createElement('div');
+            if(k === 1) vrow.appendChild(el('div'));
+            const cell = el('div');
             if(i < N) cell.appendChild(makeSwapBtn(i-2, i, '⇅', isTeam
               ? `Échanger les « ${cellLabel(i)} » avec l'équipe du dessus`
               : `Échanger ${cellLabel(i)} avec ${cellLabel(i-2)}`));
@@ -5275,18 +5301,19 @@
           });
           container.appendChild(vrow);
         }
-        const block = document.createElement('div');
-        block.className = 'team-name-block';
-        if(isTeam) block.innerHTML = `<div class="block-header"><span class="dot" style="background:${PLAYER_COLORS[r]};"></span> Équipe ${r+1}</div>`;
-        const pair = document.createElement('div');
-        pair.className = 'field-pair';
-        pair.appendChild(makeField(a));
-        pair.appendChild(b < N
+        const row = el('div', 'pname-row' + dotCls);
+        if(isTeam){
+          const dot = el('span', 'dot');
+          dot.style.background = PLAYER_COLORS[r];
+          dot.title = `Équipe ${r+1}`;
+          row.appendChild(dot);
+        }
+        row.appendChild(makeField(a));
+        row.appendChild(b < N
           ? makeSwapBtn(a, b, '⇄', isTeam ? 'Échanger les rôles' : `Échanger ${cellLabel(a)} et ${cellLabel(b)}`)
-          : spacer());
-        pair.appendChild(makeField(b));
-        block.appendChild(pair);
-        container.appendChild(block);
+          : el('div'));
+        row.appendChild(makeField(b));
+        container.appendChild(row);
       }
     }
     // Qui commence à faire deviner (chacun pour soi, 2 joueurs) : choisi via
@@ -5368,8 +5395,7 @@
   // "Rejouer" en fin de partie relance bien la même configuration).
   function syncMenuToState(){
     selectToggle('mode-group', 'full');
-    document.getElementById('full-mode-block').style.display = '';
-    document.getElementById('training-mode-block').style.display = 'none';
+    showModeBlocks(true);
     document.getElementById('btn-start-game').textContent = "Lancer la partie";
     selectToggle('playercount-group', String(state.playerCount));
     const teamImpossible = state.playerCount % 2 === 1 || state.playerCount < 4;
@@ -5671,8 +5697,7 @@
     // que le raccourci finale ci-dessus : éviter un retour au menu désynchronisé.
     state.mode = 'full';
     selectToggle('mode-group', 'full');
-    document.getElementById('full-mode-block').style.display = '';
-    document.getElementById('training-mode-block').style.display = 'none';
+    showModeBlocks(true);
     state.playerCount = 6;
     selectToggle('playercount-group', '6');
     state.subMode = 'team';
