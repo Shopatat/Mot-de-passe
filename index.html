@@ -287,6 +287,11 @@
     --tap-tint: 200,205,215;
   }
   .pname-chip::before{ content:"+ "; color: var(--text-dim); }
+  .pname-chips.editing .pname-chip{ border-color: rgba(230,97,79,0.55); }
+  .pname-chips.editing .pname-chip::before{ content:"× "; color: var(--wrong); font-weight:800; }
+  .pname-chip-edit{ color: var(--text-dim); }
+  .pname-chips .pname-chip.pname-chip-edit::before{ content:none; }
+  .pname-chips.editing .pname-chip-edit{ border-color: rgba(255,255,255,0.35); color: var(--text); }
   .pname-chip:active{ transform: scale(0.95); }
   .pname-chips-hint{ margin:-4px 0 10px; font-size:11px; color: var(--text-dim); text-align:center; }
 
@@ -4486,6 +4491,7 @@
         if(saved.names){
           data.names = saved.names;
           if(Array.isArray(saved.known)) data.known = saved.known;
+          if(Array.isArray(saved.forgotten)) data.forgotten = saved.forgotten;
         } else {
           const merged = [];
           (saved.teamGivers || []).forEach((v, t) => { merged[2*t] = v; });
@@ -4503,9 +4509,10 @@
       setFlat(i, val){ data.names[i] = val; save(); },
       // Prénoms déjà joués, du plus récent au plus ancien (étiquettes du menu,
       // voir renderPlayerFields) : ceux des parties lancées, complétés par les
-      // prénoms saisis et ceux du palmarès. 12 au plus.
+      // prénoms saisis et ceux du palmarès. 12 au plus. Les prénoms supprimés
+      // (forget) n'y sont plus, sauf s'ils rejouent une partie.
       known(){
-        const seen = new Set(), out = [];
+        const seen = new Set(data.forgotten || []), out = [];
         const add = n => {
           const clean = String(n || '').trim().replace(/\s+/g, ' ');
           const key = clean.toLowerCase();
@@ -4522,6 +4529,14 @@
         const fresh = list.map(n => String(n || '').trim().replace(/\s+/g, ' ')).filter(n => n && !/^joueur \d+$/i.test(n));
         const keys = new Set(fresh.map(n => n.toLowerCase()));
         data.known = fresh.concat((data.known || []).filter(n => !keys.has(n.toLowerCase()))).slice(0, 12);
+        data.forgotten = (data.forgotten || []).filter(k => !keys.has(k));
+        save();
+      },
+      // Retire un prénom des étiquettes (faute de frappe, joueur de passage).
+      forget(name){
+        const key = String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+        data.known = (data.known || []).filter(n => n.toLowerCase() !== key);
+        data.forgotten = (data.forgotten || []).filter(k => k !== key).concat(key).slice(-50);
         save();
       },
       // Échange les noms de deux places (voir renderPlayerFields : boutons ⇄ et ⇅).
@@ -5403,18 +5418,28 @@
     chipsHint.textContent = 'Tous les champs sont remplis : touche d\u2019abord celui à remplacer.';
     chipsHint.hidden = true;
     let hintTimer = 0;
+    // ✎ au bout de la ligne : mode tri, où chaque étiquette porte un × et se
+    // supprime d'un toucher ; « OK » revient au mode normal.
+    let chipsEditing = false;
     function renderChips(){
       const used = new Set(inputs.filter(Boolean).map(inp => inp.value.trim().toLowerCase()).filter(Boolean));
       const names = PLAYERNAMES.known().filter(n => !used.has(n.toLowerCase()));
+      if(names.length === 0) chipsEditing = false;
       chipsRow.innerHTML = '';
       chipsRow.hidden = names.length === 0;
+      chipsRow.classList.toggle('editing', chipsEditing);
       names.forEach(name => {
         const chip = el('button', 'pname-chip');
         chip.type = 'button';
         chip.textContent = name;
-        chip.setAttribute('aria-label', `Ajouter ${name}`);
+        chip.setAttribute('aria-label', chipsEditing ? `Supprimer ${name}` : `Ajouter ${name}`);
         chip.addEventListener('pointerdown', e => e.preventDefault()); // garde le champ sélectionné (et le clavier)
         chip.addEventListener('click', () => {
+          if(chipsEditing){
+            PLAYERNAMES.forget(name);
+            renderChips();
+            return;
+          }
           const focused = inputs.indexOf(document.activeElement);
           const i = focused >= 0 ? focused : inputs.findIndex(inp => inp && !inp.value.trim());
           if(i < 0){
@@ -5430,6 +5455,20 @@
         });
         chipsRow.appendChild(chip);
       });
+      if(names.length){
+        const edit = el('button', 'pname-chip pname-chip-edit');
+        edit.type = 'button';
+        edit.textContent = chipsEditing ? 'OK' : '✎';
+        edit.setAttribute('aria-label', chipsEditing ? 'Terminer le tri des prénoms' : 'Trier les prénoms enregistrés');
+        edit.title = edit.getAttribute('aria-label');
+        edit.addEventListener('pointerdown', e => e.preventDefault());
+        edit.addEventListener('click', () => {
+          chipsEditing = !chipsEditing;
+          chipsHint.hidden = true;
+          renderChips();
+        });
+        chipsRow.appendChild(edit);
+      }
     }
     container.insertBefore(chipsHint, container.firstChild);
     container.insertBefore(chipsRow, chipsHint);
