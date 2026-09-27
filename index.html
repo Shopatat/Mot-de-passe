@@ -8165,7 +8165,9 @@
 
     // Étapes. t = titre, x = texte (x2 : une fois en pause), note (sous les
     // prénoms), go = consigne du geste, cta = bouton des bulles centrales,
-    // after = bulle qui explique l'effet du geste, tr = variante de
+    // after = bulle qui explique l'effet du geste. Les textes de base ne
+    // nomment personne ; n = variante avec les prénoms, quand les deux joueurs
+    // de la manche ont un vrai prénom (pas « Joueur 2 ») ; tr = variante de
     // l'entraînement (pas de prénoms, chrono sans limite). {donneur},
     // {devineur}, {mot} (mot affiché), {passe}, {perdu}, {temps}, {cible},
     // {total}, {gain}, {reste} se remplacent tout seuls. act = geste attendu :
@@ -8175,30 +8177,34 @@
       qualif: [
         { id:'accueil', center:true, duel:true, t:'Répétition générale',
           x:"Avant le direct, un tour des commandes. Rien ne compte : touche à tout !",
-          note:"Le téléphone reste dans les mains de **{donneur}** : **{devineur}** ne regarde jamais l'écran !",
-          tr:{ note:"Le téléphone reste dans tes mains : ton partenaire ne regarde jamais l'écran !" },
+          note:"Le téléphone reste dans tes mains : ton partenaire ne regarde jamais l'écran !",
+          n:{ note:"Le téléphone reste dans les mains de **{donneur}** : **{devineur}** ne regarde jamais l'écran !" },
           cta:"C'est parti" },
         { id:'depart', spot:['#word-pill'], act:'start', t:'Le mot secret',
-          x:"Toi seul le vois : fais-le trouver à **{devineur}**. Tape dessus pour lancer le chrono.",
-          tr:{ x:"Toi seul le vois : fais-le trouver à ton partenaire. Tape dessus pour lancer le chrono." },
+          x:"Il n'y a que toi qui le vois : fais-le trouver à ton partenaire. Tape dessus pour lancer le chrono.",
+          n:{ x:"**{donneur}**, il n'y a que toi qui le vois : fais-le trouver à **{devineur}**. Tape dessus pour lancer le chrono." },
           go:'Tape le mot' },
         { id:'haut', spot:['#play-timer-num', '#play-dots'], t:'30 secondes, 5 mots',
           x:"Chaque voyant est un mot de la manche. Trouvé, il passe au vert.",
           tr:{ t:'Le chrono et les voyants', x:"En entraînement, le chrono compte sans limite. Chaque voyant est un mot : trouvé, il passe au vert." } },
         { id:'echange', spot:['#word-pill'], demo:true, t:'Un indice, une réponse',
-          x:"Un seul mot par indice. **{devineur}** répond un mot, ou « passe ». Puis indice suivant.",
-          tr:{ x:"Un seul mot par indice. Ton partenaire répond un mot, ou « passe ». Puis indice suivant." } },
+          x:"Un seul mot par indice. Ton partenaire répond un mot, ou « passe ». Puis indice suivant.",
+          n:{ x:"Un seul mot par indice. **{devineur}** répond un mot, ou « passe ». Puis indice suivant." } },
         { id:'trouve', spot:['#btn-correct'], act:'correct', t:'Trouvé !',
-          x:"**{devineur}** a dit « {mot} » ? Tape **Trouvé**.",
-          tr:{ x:"Ton partenaire a dit « {mot} » ? Tape **Trouvé**." },
+          x:"Ton partenaire a dit « {mot} » ? Tape **Trouvé**.",
+          n:{ x:"**{devineur}** a dit « {mot} » ? Tape **Trouvé**." },
           go:'Tape Trouvé',
-          after:{ spot:['#play-dots', '#word-pill'], t:'Un voyant vert', x:"Un point de gagné, et le mot suivant arrive tout seul." } },
+          after:{ spot:['#play-dots', '#word-pill'], t:'Un voyant vert',
+            x:"Un point de gagné, et le mot suivant arrive tout seul.",
+            n:{ x:"Un point pour **{donneur}** et **{devineur}**, et le mot suivant arrive tout seul." } } },
         { id:'passer', spot:['#btn-not-found'], act:'pass', t:'Passer',
           x:"Ça coince sur « {mot} » ? Tape **Passer** : le mot file en fin de liste.",
+          n:{ x:"**{devineur}** sèche sur « {mot} » ? Tape **Passer** : le mot file en fin de liste." },
           go:'Tape Passer',
           after:{ spot:['#word-pill'], t:'Il reviendra', x:"Aucun point perdu : « {passe} » repassera plus tard dans la manche." } },
         { id:'interdit', spot:['#btn-interdit'], act:'forbidden', t:'Interdit',
-          x:"Un indice interdit ? Sois beau joueur : tape **Interdit**, le mot est perdu.",
+          x:"Un indice interdit t'a échappé ? Pas de triche : tape **Interdit**, le mot est perdu.",
+          n:{ x:"**{donneur}**, un indice interdit t'a échappé ? Pas de triche : tape **Interdit**, le mot est perdu." },
           go:'Tape Interdit',
           after:{ spot:['#play-dots', '#word-pill'], t:'Un voyant de moins', x:"« {perdu} » ne compte plus : son voyant a disparu." } },
         { id:'regles', center:true, rules:true, t:'Les 4 interdits',
@@ -8211,25 +8217,31 @@
           x:"En entraînement, pas de fin imposée : **Terminer la manche** arrête quand tu veux." },
         { id:'go', center:true, last:true, t:'À vous de jouer !',
           x:"Fin de la répétition. Cette fois, c'est le direct : 30 secondes, jusqu'à 5 mots !",
+          n:{ t:'À vous, {donneur} et {devineur} !' },
           tr:{ t:'À toi de jouer !', x:"Fin de la répétition. Place à l'échauffement : 5 mots, à ton rythme !" },
           cta:'Jouer' },
       ],
       final: [
         { id:'f-accueil', center:true, t:'La finale !',
           x:"Même plateau, nouvelle règle : ici, **chaque indice se compte**. Trois par mot, pas un de plus.",
+          n:{ x:"**{donneur}** et **{devineur}**, même plateau mais nouvelle règle : ici, **chaque indice se compte**. Trois par mot, pas un de plus." },
           cta:'Voyons ça' },
         { id:'f-indice', spot:['#word-pill', '#chevrons-left', '#chevrons-right'], act:'start', t:'1er indice',
           x:"Dis ton indice et tape la zone du mot : le chrono part, un chevron s'éteint.",
+          n:{ x:"**{donneur}**, dis ton indice et tape la zone du mot : le chrono part, un chevron s'éteint." },
           go:'Tape le mot' },
         { id:'f-haut', spot:['#play-timer-num', '#play-dots'], t:'{temps}, {cible} mots sur {total}',
           x:"Pour décrocher le palier, trouve {cible} mots parmi ces {total} voyants." },
         { id:'f-encore', spot:['#word-pill', '#chevrons-left', '#chevrons-right'], act:'clues', t:'Et de deux… et de trois',
           x:"Pas trouvé ? Nouvel indice, nouveau tap. Les chevrons montrent ce qu'il te reste.",
+          n:{ x:"**{devineur}** n'a pas trouvé ? Nouvel indice, nouveau tap. Les chevrons montrent ce qu'il te reste." },
           go:'Tape encore {reste} fois' },
         { id:'f-rouge', spot:['#word-pill', '#play-hint'], t:'Zone rouge',
-          x:"Plus d'indice : le mot passe au rouge. Si **{devineur}** se trompe encore, tape la zone : le mot est perdu." },
+          x:"Plus d'indice : le mot passe au rouge. Si ton partenaire se trompe encore, tape la zone : le mot est perdu.",
+          n:{ x:"Plus d'indice : le mot passe au rouge. Si **{devineur}** se trompe encore, tape la zone : le mot est perdu." } },
         { id:'f-trouve', spot:['#btn-correct'], act:'correct', t:'Ouf, trouvé !',
-          x:"Disons que **{devineur}** a trouvé au dernier moment : tape **Trouvé**.",
+          x:"Disons que ton partenaire a trouvé au dernier moment : tape **Trouvé**.",
+          n:{ x:"Disons que **{devineur}** a trouvé au dernier moment : tape **Trouvé**." },
           go:'Tape Trouvé',
           after:{ spot:['#play-dots', '#word-pill', '#chevrons-left', '#chevrons-right'], t:'Un voyant vert', x:"Un de fait ! Pour le mot suivant, les 3 chevrons se rallument." } },
         { id:'f-passer', spot:['#btn-not-found'], act:'pass', t:'Passer = perdu',
@@ -8238,28 +8250,32 @@
           after:{ spot:['#play-dots', '#word-pill', '#chevrons-left', '#chevrons-right'], t:'Un voyant de moins', x:"Chaque mot perdu fait tomber un voyant : il en faut {cible} verts pour gagner." } },
         { id:'f-go', center:true, last:true, t:'Palier 1 : {gain}',
           x:"Fin de la répétition. {cible} mots sur {total} en {temps} : à vous de jouer !",
+          n:{ x:"Fin de la répétition. {cible} mots sur {total} en {temps} : à vous, **{donneur}** et **{devineur}** !" },
           cta:'Jouer' },
       ],
     };
 
     let active = false, finishing = false, waiting = false, started = false;
     let chapter = null, turn = null, list = [], idx = -1, phase = 'step', pauseStage = 0;
-    let memo = {}, curBox = null;
+    let memo = {}, curBox = null, named = null;
 
     // ---------- Textes ----------
     function field(st, key, sub){
       const src = sub ? st[sub] : st;
       if(!src) return '';
       if(turn && turn.kind === 'training' && src.tr && src.tr[key]) return src.tr[key];
+      if(named && src.n && src.n[key]) return src.n[key];
       return src[key] || '';
     }
+    // Vrais prénoms seulement : les noms par défaut (« Joueur 2 ») ne comptent pas.
+    const realName = n => { n = String(n || '').trim(); return (n && !/^Joueur\s+\S+$/i.test(n)) ? n : ''; };
     const cap = w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : '';
     function fill(str){
       if(!str) return '';
       const t = turn || {};
-      const temps = t.time >= 60 ? `${Math.floor(t.time / 60)} min ${String(t.time % 60).padStart(2, '0')}` : `${t.time} secondes`;
+      const temps = t.time >= 60 ? `${Math.floor(t.time / 60)}\u00a0min\u00a0${String(t.time % 60).padStart(2, '0')}` : `${t.time}\u00a0secondes`;
       const vars = {
-        donneur: t.giverName || 'toi', devineur: t.guesserName || 'ton partenaire',
+        donneur: named ? named.g : 'toi', devineur: named ? named.r : 'ton partenaire',
         mot: cap(state.pool[0] || ''), passe: cap(memo.passed || ''), perdu: cap(memo.lost || ''),
         temps, cible: t.target, total: t.poolSize,
         gain: t.kind === 'final' ? euro(PALIERS[(t.level || 1) - 1].gain) : '',
@@ -8269,7 +8285,7 @@
       // Une variable en tête de phrase (« ton partenaire a dit… ») prend sa majuscule.
       out = out.replace(/(^|[.!?]\s+)(\*\*)?([a-zà-ÿ])/g, (m, a, b, c) => a + (b || '') + c.toUpperCase());
       // Espaces insécables à la française : pas de « : » ou de « ! » seul en début de ligne.
-      out = out.replace(/ ([:;!?»])/g, ' $1').replace(/« /g, '« ');
+      out = out.replace(/ ([:;!?»])/g, '\u00a0$1').replace(/« /g, '«\u00a0');
       return out;
     }
     const md = str => escapeHtml(str).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
@@ -8397,17 +8413,15 @@
 
     // ---------- Contenu de la bulle ----------
     function duelHtml(){
-      const tr = turn.kind === 'training';
-      const g = tr ? 'Toi' : turn.giverName, r = tr ? 'Ton partenaire' : turn.guesserName;
+      const g = named ? named.g : 'Toi', r = named ? named.r : 'Ton partenaire';
       // Prénoms longs : les deux plus petits (même taille) plutôt que coupés.
       const L = Math.max(g.length, r.length), sz = L > 11 ? ' s' : (L > 7 ? ' m' : '');
-      return `<div class="tc-duel"><div class="tc-p giver"><div class="tc-n${sz}">${escapeHtml(g)}</div><div class="tc-r">${tr ? 'fais deviner' : 'fait deviner'}</div></div>` +
+      return `<div class="tc-duel"><div class="tc-p giver"><div class="tc-n${sz}">${escapeHtml(g)}</div><div class="tc-r">${named ? 'fait deviner' : 'fais deviner'}</div></div>` +
         `<div class="tc-chev" aria-hidden="true"><span></span><span></span><span></span></div>` +
         `<div class="tc-p"><div class="tc-n${sz}">${escapeHtml(r)}</div><div class="tc-r">devine</div></div></div>`;
     }
     function demoHtml(){
-      const tr = turn.kind === 'training';
-      const names = { g: tr ? 'Toi' : turn.giverName, r: tr ? 'Partenaire' : turn.guesserName };
+      const names = { g: named ? named.g : 'Toi', r: named ? named.r : 'Partenaire' };
       return '<div class="tc-chat">' + DEMO.map(([who, txt], i) =>
         `<div class="tc-b ${who}${i === DEMO.length - 1 ? ' ok' : ''}" style="animation-delay:${(0.35 + i * 0.8).toFixed(2)}s">` +
         (i < 2 ? `<small>${escapeHtml(names[who])}</small>` : '') + escapeHtml(txt) + '</div>').join('') + '</div>';
@@ -8598,6 +8612,8 @@
       resetReplayRow();
       active = true; finishing = false; waiting = false; started = false;
       chapter = kind; turn = t; memo = {}; idx = -1; phase = 'step'; pauseStage = 0;
+      const g = realName(t.giverName), r = realName(t.guesserName);
+      named = (g && r) ? { g, r } : null;
       list = STEPS[chapter].filter(st => !st.only || (st.only === 'training') === (t.kind === 'training'));
     }
     function practicePool(){
