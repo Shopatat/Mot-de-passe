@@ -1584,6 +1584,50 @@
   }
   body.page-open #app{ overflow:hidden; }
 
+  /* ---- Paramètres en cartes (même principe que la carte du menu) ----
+     Une carte par thème, une ligne par réglage : étiquette courte à gauche,
+     choix qui se lisent tout seuls à droite ; une note d'une ligne seulement
+     quand le choix ne suffit pas. */
+  .pset-card{ padding:12px 14px; display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+  .pset-title{ font-size:11px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color: var(--gold-dim); }
+  .set-row.pset-row{ grid-template-columns:66px minmax(0,1fr); }
+  .pset-row .toggle-btn{ font-size:12px; padding:8px 3px; white-space:nowrap; }
+  .pset-card .footer-note.pset-note{ margin:-5px 0 0; padding-left:74px; text-align:left; font-size:10.5px; line-height:1.35; }
+  .pset-card .footer-note.pset-note-full{ padding-left:0; margin-top:2px; }
+  .pset-note:empty{ display:none; }
+  .pset-row .toggle-btn.pset-small, .pset-small{ flex:0 0 auto; padding:7px 12px; font-size:11.5px; }
+  .pset-volume{ display:flex; align-items:center; gap:10px; }
+  .pset-volume input[type="range"]{ margin:0; flex:1; }
+  .pset-volume.muted input[type="range"]{ opacity:.35; }
+  .pset-inline{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12.5px; color: var(--text); }
+  .pset-link{
+    display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;
+    background:none; border:none; padding:6px 0; color: var(--text); font:inherit; font-size:12.5px; font-weight:700; cursor:pointer; text-align:left;
+  }
+  .pset-chev{ color: var(--text-dim); font-size:10px; transition: transform .25s ease; }
+  .pset-link.open .pset-chev{ transform: rotate(180deg); }
+  .pset-fold{ max-height:0; overflow:hidden; transition: max-height .3s ease; margin-top:-10px; }
+  .pset-fold .sound-row{ margin:6px 0 0; }
+  .pset-fold .text-action{ margin-top:4px; }
+  .pset-reset{ display:flex; width:fit-content; margin:2px auto 0; }
+  /* Sons : une ligne chacun (nom, volume, écoute) ; un toucher sur le nom
+     ouvre l'import (📁) et le retour au son d'origine (↺). */
+  .custom-sound-row.compact{ gap:0; padding:6px 0; }
+  .custom-sound-line{ display:flex; align-items:center; gap:8px; }
+  .custom-sound-line .custom-sound-name{
+    flex:0 0 40%; min-width:0; background:none; border:none; padding:4px 0; text-align:left; cursor:pointer;
+    font:inherit; font-size:12.5px; font-weight:700; color: var(--text);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .custom-sound-row.has-custom .custom-sound-line .custom-sound-name{ color: var(--correct); }
+  .custom-sound-line input[type="range"]{ flex:1; min-width:0; margin:0; }
+  .custom-sound-line .volume-pct{ font-size:10.5px; color: var(--text-dim); width:30px; flex:0 0 auto; text-align:right; }
+  .custom-sound-more{ display:none; align-items:center; gap:8px; padding:6px 0 2px; }
+  .custom-sound-row.open .custom-sound-more{ display:flex; }
+  .custom-sound-more .custom-sound-status{ flex:1; min-width:0; margin:0; }
+  .custom-sound-row.compact .icon-action-btn.reset-btn{ display:none; }
+  .custom-sound-row.compact.has-custom .icon-action-btn.reset-btn{ display:flex; }
+
   /* ---- Menu : Palmarès + Paramètres côte à côte ---- */
   .menu-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 
@@ -1857,82 +1901,81 @@
         <span>⚙️ Paramètres</span>
         <button class="settings-close-x" id="btn-close-settings" title="Fermer">✕</button>
       </div>
-      <label class="field-label">Sons</label>
-      <div class="sound-row">
-        <span>Volume général (musiques et bruitages)</span>
-        <div class="toggle-row sound-toggle" id="game-sound-toggle">
-          <div class="toggle-btn" data-val="on">Activé</div>
-          <div class="toggle-btn" data-val="off">Désactivé</div>
+      <!-- Paramètres en cartes, comme la carte du menu : une ligne par réglage,
+           étiquette courte à gauche, choix qui se lisent tout seuls à droite. -->
+      <div class="card pset-card">
+        <div class="pset-title">Pendant la manche</div>
+        <div class="set-row pset-row">
+          <span class="set-label">Arbitre</span>
+          <div class="toggle-row" id="arbitre-group">
+            <div class="toggle-btn" data-val="off">Non</div>
+            <div class="toggle-btn" data-val="left">← Interdit</div>
+            <div class="toggle-btn" data-val="right">Interdit →</div>
+          </div>
+        </div>
+        <p class="footer-note pset-note">L'adversaire, à côté du donneur, valide : « Trouvé » en grand, « Interdit » de son côté.</p>
+        <div class="set-row pset-row">
+          <span class="set-label">Interdits</span>
+          <div class="toggle-row" id="forbidden-reminder-toggle">
+            <div class="toggle-btn" data-val="on">Affichés</div>
+            <div class="toggle-btn" data-val="off">Cachés</div>
+          </div>
+        </div>
+        <div class="set-row pset-row">
+          <span class="set-label">Consigne</span>
+          <div class="toggle-row" id="finale-help-toggle">
+            <div class="toggle-btn" data-val="on">Affichée</div>
+            <div class="toggle-btn" data-val="off">Cachée</div>
+          </div>
+        </div>
+        <p class="footer-note pset-note">Sous le mot, en finale. Le message du mot rouge reste toujours.</p>
+        <div class="set-row pset-row">
+          <span class="set-label">Pause</span>
+          <div class="toggle-row" id="pause-hide-toggle">
+            <div class="toggle-btn" data-val="on">Mot caché</div>
+            <div class="toggle-btn" data-val="off">Mot visible</div>
+          </div>
+        </div>
+        <div class="set-row pset-row">
+          <span class="set-label">Tuto</span>
+          <div class="toggle-row" style="justify-content:flex-start;"><button type="button" class="toggle-btn pset-small" id="btn-tuto-replay">Revoir</button></div>
+        </div>
+        <p class="footer-note pset-note" id="tuto-replay-note"></p>
+      </div>
+
+      <div class="card pset-card">
+        <div class="pset-title">Son</div>
+        <div class="set-row pset-row">
+          <span class="set-label">Volume</span>
+          <div class="pset-volume">
+            <button type="button" class="icon-action-btn" id="game-mute-btn" title="Couper le son">🔊</button>
+            <input type="range" id="game-volume-slider" min="0" max="100" value="100" aria-label="Volume général">
+          </div>
+        </div>
+        <div id="custom-sound-list"></div>
+        <p class="footer-note pset-note pset-note-full">Touche le nom d'un son pour le remplacer par un fichier de ton téléphone.</p>
+      </div>
+
+      <div class="card pset-card">
+        <div class="pset-title">Mots</div>
+        <div class="set-row pset-row">
+          <span class="set-label">De côté</span>
+          <button type="button" class="pset-link" id="blacklist-toggle"><span id="blacklist-count">Aucun</span><span class="pset-chev">▼</span></button>
+        </div>
+        <div class="pset-fold" id="blacklist-fold">
+          <div id="blacklist-word-list"></div>
+          <button class="text-action subtle" id="btn-export-blacklist">Copier la liste</button>
+        </div>
+        <div class="set-row pset-row">
+          <span class="set-label">Réserve</span>
+          <div class="pset-inline">
+            <span id="word-pool-status"></span>
+            <button type="button" class="toggle-btn pset-small" id="btn-reset-word-pool">Réinitialiser</button>
+          </div>
         </div>
       </div>
-      <input type="range" id="game-volume-slider" min="0" max="100" value="100">
 
-      <label class="field-label" style="margin-top:18px;">Aide</label>
-      <div class="sound-row">
-        <span>Afficher les interdits pendant la manche</span>
-        <div class="toggle-row sound-toggle" id="forbidden-reminder-toggle">
-          <div class="toggle-btn" data-val="on">Activé</div>
-          <div class="toggle-btn" data-val="off">Désactivé</div>
-        </div>
-      </div>
-      <div class="sound-row">
-        <span>Consigne sous le mot en finale<small style="display:block; margin-top:3px; font-size:10.5px; opacity:.65;">Le message du mot rouge reste toujours affiché.</small></span>
-        <div class="toggle-row sound-toggle" id="finale-help-toggle">
-          <div class="toggle-btn" data-val="on">Activé</div>
-          <div class="toggle-btn" data-val="off">Désactivé</div>
-        </div>
-      </div>
-      <div class="sound-row">
-        <span>Mode arbitre<small style="display:block; margin-top:3px; font-size:10.5px; opacity:.65;">Gros boutons pour quelqu'un qui valide à côté du joueur : « Trouvé » en très grand, « Passer » et « Interdit » dessous.</small></span>
-        <div class="toggle-row sound-toggle" id="arbitre-mode-toggle">
-          <div class="toggle-btn" data-val="on">Activé</div>
-          <div class="toggle-btn" data-val="off">Désactivé</div>
-        </div>
-      </div>
-      <div class="sound-row" id="interdit-side-row">
-        <span>Côté du bouton « Interdit »<small style="display:block; margin-top:3px; font-size:10.5px; opacity:.65;">En mode arbitre : du côté où se place l'adversaire qui surveille les interdits (« Passer » prend l'autre côté).</small></span>
-        <div class="toggle-row sound-toggle" id="interdit-side-toggle">
-          <div class="toggle-btn" data-val="on">À gauche</div>
-          <div class="toggle-btn" data-val="off">À droite</div>
-        </div>
-      </div>
-
-      <div class="sound-row">
-        <span>Tuto de la première partie<small id="tuto-replay-note" style="display:block; margin-top:3px; font-size:10.5px; opacity:.65;">Se lance au premier mot d'une première partie, puis à la première finale.</small></span>
-        <button class="text-action" id="btn-tuto-replay" type="button" style="flex-shrink:0; padding:8px 12px; border:1px solid var(--card-edge); border-radius:12px;">Revoir</button>
-      </div>
-
-      <label class="field-label" style="margin-top:18px;">Pause en cours de manche</label>
-      <div class="sound-row">
-        <span>Masquer le mot pendant la pause</span>
-        <div class="toggle-row sound-toggle" id="pause-hide-toggle">
-          <div class="toggle-btn" data-val="on">Activé</div>
-          <div class="toggle-btn" data-val="off">Désactivé</div>
-        </div>
-      </div>
-
-      <label class="field-label" style="margin-top:18px;">🎧 Personnalisation sonore</label>
-      <p class="marquee-sub" style="text-align:left; font-style:normal; margin:-4px 0 8px;">
-        Remplace n'importe quel son du jeu par un fichier audio importé depuis ton téléphone. Le fichier est copié dans le jeu — pas besoin de le garder dans tes fichiers.
-      </p>
-      <div id="custom-sound-list"></div>
-
-      <label class="field-label" style="margin-top:18px;">🚫 Mots mis de côté</label>
-      <p class="marquee-sub" style="text-align:left; font-style:normal; margin:-4px 0 8px;">
-        Mots touchés dans le détail des mots en fin de manche : ils ne sont plus proposés tant qu'ils restent dans cette liste.
-      </p>
-      <div id="blacklist-word-list"></div>
-      <button class="text-action subtle" id="btn-export-blacklist" style="margin-top:6px; opacity:0.85;">Copier la liste</button>
-
-      <label class="field-label" style="margin-top:18px;">📚 Réserve de mots</label>
-      <p class="marquee-sub" style="text-align:left; font-style:normal; margin:-4px 0 8px;" id="word-pool-status"></p>
-      <button class="text-action subtle" id="btn-reset-word-pool" style="margin-top:6px; opacity:0.85;">Réinitialiser maintenant</button>
-
-      <label class="field-label" style="margin-top:18px;">↺ Réglages d'origine</label>
-      <p class="marquee-sub" style="text-align:left; font-style:normal; margin:-4px 0 8px;">
-        Remet les sons, les volumes, l'aide, le mode arbitre et la pause comme au premier lancement. Les sons importés, les mots mis de côté, les prénoms et le palmarès ne bougent pas.
-      </p>
-      <button class="text-action subtle" id="btn-reset-settings" style="margin-top:6px; opacity:0.85;">Revenir aux réglages par défaut</button>
+      <button class="text-action subtle pset-reset" id="btn-reset-settings">Revenir aux réglages d'origine</button>
     </div>
   </div>
 
@@ -4220,6 +4263,14 @@
     { key:'music-finale-early',   label:'Musique — Finale, paliers 1 à 3',     kind:'music', cat:'game' },
     { key:'music-finale-late',    label:'Musique — Finale, paliers 4 et 5',    kind:'music', cat:'game' },
   ];
+  // Noms courts des Paramètres (une ligne par son, voir renderCustomSoundList).
+  const SOUND_SHORT = {
+    correct:'Bonne réponse', indice:'Indice (finale)', forbidden:'Interdit', pass:'Passer',
+    roundStart:'Lancement', roundWin:'Manche gagnée', qualifsEnd:'Fin des qualifs',
+    wordReveal:'1er mot d’un palier', palier:'Palier franchi', finaleTimeout:'Palier perdu', jackpot:'Victoire finale',
+    'music-menu':'Menu', 'music-qualif-wait':'Attente (qualifs)', 'music-qualif':'Qualifications',
+    'music-finale-ambient':'Attente (finale)', 'music-finale-early':'Finale 1 à 3', 'music-finale-late':'Finale 4 et 5',
+  };
   // Piste MUSIC (voir MUSIC_FILES) -> slot de réglage volume ci-dessus.
   const MUSIC_KEY_TO_SLOT = {
     menu: 'music-menu', qualifWait: 'music-qualif-wait', qualif: 'music-qualif',
@@ -4439,6 +4490,8 @@
   // Repliés par défaut ; se souvient de l'état ouvert/fermé d'une session à
   // l'autre du menu réglages (mais pas d'un rechargement de page à l'autre).
   const soundGroupExpanded = { sfx:false, music:false };
+  const openSoundRows = new Set(); // sons dont la ligne d'import est ouverte
+  const currentBodyOf = row => row.closest('.sound-group-body');
   function renderCustomSoundList(){
     const container = document.getElementById('custom-sound-list');
     if(!container) return;
@@ -4479,27 +4532,30 @@
       const entry = CUSTOM_SOUNDS.get(slot.key);
       const vol = SLOT_VOLUMES.get(slot.key);
       const row = document.createElement('div');
-      row.className = 'custom-sound-row' + (has ? ' has-custom' : '');
+      // Une ligne : nom court (touché, il ouvre la ligne d'import), volume,
+      // écoute. Un son importé a son nom en vert.
+      row.className = 'custom-sound-row compact' + (has ? ' has-custom' : '') + (openSoundRows.has(slot.key) ? ' open' : '');
       row.dataset.key = slot.key;
       row.innerHTML = `
-        <div class="custom-sound-top">
-          <div class="custom-sound-info">
-            <div class="custom-sound-name">${slot.label}</div>
-            <div class="custom-sound-status ${has ? 'is-custom' : ''}">${has ? 'Importé : ' + entry.fileName : 'Son par défaut'}</div>
-          </div>
-          <div class="custom-sound-actions">
-            <button type="button" class="icon-action-btn preview-btn" title="Écouter">▶</button>
-            <button type="button" class="icon-action-btn import-btn" title="Importer un fichier">📁</button>
-            <button type="button" class="icon-action-btn reset-btn" title="Revenir au son par défaut">↺</button>
-          </div>
-        </div>
-        <div class="custom-sound-volume">
-          <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="${vol}">
+        <div class="custom-sound-line">
+          <button type="button" class="custom-sound-name" title="${escapeHtml(slot.label)}">${escapeHtml(SOUND_SHORT[slot.key] || slot.label)}</button>
+          <input type="range" class="volume-slider" min="0" max="1" step="0.01" value="${vol}" aria-label="Volume : ${escapeHtml(slot.label)}">
           <span class="volume-pct">${Math.round(vol*100)}%</span>
+          <button type="button" class="icon-action-btn preview-btn" title="Écouter">▶</button>
+        </div>
+        <div class="custom-sound-more">
+          <div class="custom-sound-status ${has ? 'is-custom' : ''}">${has ? 'Importé : ' + escapeHtml(entry.fileName) : 'Son d’origine · 📁 pour importer le tien'}</div>
+          <button type="button" class="icon-action-btn import-btn" title="Importer un fichier">📁</button>
+          <button type="button" class="icon-action-btn reset-btn" title="Revenir au son d’origine">↺</button>
         </div>
         <input type="file" accept="audio/*" class="custom-sound-file-input" style="display:none;">
       `;
       currentBody.appendChild(row);
+      row.querySelector('.custom-sound-name').addEventListener('click', () => {
+        const open = row.classList.toggle('open');
+        if(open) openSoundRows.add(slot.key); else openSoundRows.delete(slot.key);
+        currentBodyOf(row).style.maxHeight = currentBodyOf(row).scrollHeight + 'px'; // le groupe déplié suit la nouvelle hauteur
+      });
       const fileInput = row.querySelector('.custom-sound-file-input');
       row.querySelector('.import-btn').addEventListener('click', () => { fileInput.click(); });
       row.querySelector('.preview-btn').addEventListener('click', () => { CUSTOM_SOUNDS.previewSlot(slot.key); });
@@ -5109,7 +5165,20 @@
   }
   const initialSfxSettings = SFX.getSettings();
   document.getElementById('game-volume-slider').value = Math.round(initialSfxSettings.gameVol * 100);
-  wireSoundToggle('game-sound-toggle', () => SFX.getSettings().gameOn, v => { SFX.setGameOn(v); MUSIC.applyVolume(); });
+  // Son coupé / remis : le bouton 🔊 à gauche du volume (le curseur se grise).
+  function renderMuteBtn(){
+    const on = SFX.getSettings().gameOn, btn = document.getElementById('game-mute-btn');
+    btn.textContent = on ? '🔊' : '🔇';
+    btn.title = on ? 'Couper le son' : 'Remettre le son';
+    btn.closest('.pset-volume').classList.toggle('muted', !on);
+  }
+  document.getElementById('game-mute-btn').addEventListener('click', () => {
+    ensureAudioCtxRunning();
+    SFX.setGameOn(!SFX.getSettings().gameOn);
+    MUSIC.applyVolume();
+    renderMuteBtn();
+  });
+  renderMuteBtn();
   wireSoundToggle('pause-hide-toggle', () => UIPREFS.getHideWordOnPause(), v => UIPREFS.setHideWordOnPause(v));
   wireSoundToggle('forbidden-reminder-toggle', () => UIPREFS.getShowForbiddenInPlay(), v => {
     UIPREFS.setShowForbiddenInPlay(v);
@@ -5120,44 +5189,40 @@
     updateFinaleHint();
   });
   // Mode arbitre : réorganise les boutons de l'écran de jeu (voir le CSS
-  // "#screen-play.arbitre-mode"). Appliqué au démarrage, puis à chaque changement.
-  // Le choix du côté de « Interdit » n'apparaît qu'avec le mode arbitre.
+  // "#screen-play.arbitre-mode"). Un seul choix à trois cases dans les
+  // Paramètres : Non / ← Interdit (à gauche) / Interdit → (à droite).
+  function arbitreChoice(){ return !UIPREFS.getArbitreMode() ? 'off' : (UIPREFS.getInterditLeft() ? 'left' : 'right'); }
   function applyArbitreMode(){
-    const on = UIPREFS.getArbitreMode();
     const screen = document.getElementById('screen-play');
-    screen.classList.toggle('arbitre-mode', on);
+    screen.classList.toggle('arbitre-mode', UIPREFS.getArbitreMode());
     screen.classList.toggle('interdit-left', UIPREFS.getInterditLeft());
-    document.getElementById('interdit-side-row').style.display = on ? '' : 'none';
+    const cur = arbitreChoice();
+    document.querySelectorAll('#arbitre-group .toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.val === cur));
   }
-  wireSoundToggle('arbitre-mode-toggle', () => UIPREFS.getArbitreMode(), v => {
-    UIPREFS.setArbitreMode(v);
+  document.querySelectorAll('#arbitre-group .toggle-btn').forEach(b => b.addEventListener('click', () => {
+    UIPREFS.setArbitreMode(b.dataset.val !== 'off');
+    if(b.dataset.val !== 'off') UIPREFS.setInterditLeft(b.dataset.val === 'left');
     applyArbitreMode();
-  });
-  wireSoundToggle('interdit-side-toggle', () => UIPREFS.getInterditLeft(), v => {
-    UIPREFS.setInterditLeft(v);
-    applyArbitreMode();
-  });
+  }));
   applyArbitreMode();
 
-  // Paramètres > « Revenir aux réglages par défaut » : remet les réglages
+  // Paramètres > « Revenir aux réglages d'origine » : remet les réglages
   // (pas les données : sons importés, mots mis de côté, prénoms, palmarès)
   // puis resynchronise tout l'écran des paramètres et ce qui en dépend.
   function syncToggle(groupId, on){
     document.querySelectorAll(`#${groupId} .toggle-btn`).forEach(b => b.classList.toggle('selected', b.dataset.val === (on ? 'on' : 'off')));
   }
   document.getElementById('btn-reset-settings').addEventListener('click', () => {
-    askConfirm('Revenir aux réglages par défaut ? Les sons importés, les mots mis de côté, les prénoms et le palmarès sont gardés.', 'Réinitialiser', () => {
+    askConfirm('Revenir aux réglages d\u2019origine ? Les sons importés, les mots mis de côté, les prénoms et le palmarès sont gardés.', 'Réinitialiser', () => {
       UIPREFS.reset();
       SFX.reset();
       SLOT_VOLUMES.reset();
       const snd = SFX.getSettings();
-      syncToggle('game-sound-toggle', snd.gameOn);
+      renderMuteBtn();
       document.getElementById('game-volume-slider').value = Math.round(snd.gameVol * 100);
       syncToggle('pause-hide-toggle', UIPREFS.getHideWordOnPause());
       syncToggle('forbidden-reminder-toggle', UIPREFS.getShowForbiddenInPlay());
       syncToggle('finale-help-toggle', UIPREFS.getShowFinaleHelp());
-      syncToggle('arbitre-mode-toggle', UIPREFS.getArbitreMode());
-      syncToggle('interdit-side-toggle', UIPREFS.getInterditLeft());
       updateForbiddenReminderVisibility();
       updateFinaleHint();
       applyArbitreMode();
@@ -5205,13 +5270,16 @@
     MUSIC.applyVolume();
   });
 
+  // Mots mis de côté : une ligne « 3 mots ▼ » qui déplie la liste (chaque mot
+  // avec « Restaurer ») et « Copier la liste ».
   function renderBlacklistPanel(){
     const list = document.getElementById('blacklist-word-list');
     const words = WORD_BLACKLIST.all();
-    if(words.length === 0){
-      list.innerHTML = '<p class="marquee-sub" style="text-align:left; font-style:normal;">Aucun mot mis de côté pour l\u2019instant.</p>';
-      return;
-    }
+    const toggle = document.getElementById('blacklist-toggle');
+    const fold = document.getElementById('blacklist-fold');
+    document.getElementById('blacklist-count').textContent = words.length ? `${words.length} mot${words.length > 1 ? 's' : ''}` : 'Aucun';
+    toggle.disabled = words.length === 0;
+    toggle.querySelector('.pset-chev').style.visibility = words.length ? '' : 'hidden';
     list.innerHTML = "";
     words.forEach(w => {
       const row = document.createElement('div');
@@ -5226,18 +5294,26 @@
       row.appendChild(span); row.appendChild(btn);
       list.appendChild(row);
     });
+    if(!words.length) toggle.classList.remove('open');
+    fold.style.maxHeight = toggle.classList.contains('open') ? fold.scrollHeight + 'px' : '0px';
   }
+  document.getElementById('blacklist-toggle').addEventListener('click', () => {
+    const toggle = document.getElementById('blacklist-toggle');
+    toggle.classList.toggle('open');
+    renderBlacklistPanel();
+  });
 
   function pruneBlacklistAgainstWordBank(){
     const validWords = new Set();
     Object.keys(WORD_BANK).forEach(cat => WORD_BANK[cat].forEach(item => validWords.add(item.w)));
     WORD_BLACKLIST.all().forEach(w => { if(!validWords.has(w)) WORD_BLACKLIST.remove(w); });
   }
+  // Réserve : les mots pas encore tirés (le cycle repart tout seul quand il en
+  // reste WORD_RECYCLE_THRESHOLD).
   function renderWordPoolStatus(){
-    const used = PLAYED_WORDS.count();
-    const fresh = TOTAL_WORD_COUNT - used;
+    const fresh = TOTAL_WORD_COUNT - PLAYED_WORDS.count();
     document.getElementById('word-pool-status').textContent =
-      `${used} mots utilisés sur ${TOTAL_WORD_COUNT} — réinitialisation automatique à ${WORD_RECYCLE_THRESHOLD} mots frais restants (reste ${fresh}).`;
+      `${fresh.toLocaleString('fr-FR')} frais sur ${TOTAL_WORD_COUNT.toLocaleString('fr-FR')}`;
   }
   document.getElementById('btn-reset-word-pool').addEventListener('click', () => {
     PLAYED_WORDS.reset();
