@@ -1610,6 +1610,33 @@
   .pset-fold .sound-row{ margin:6px 0 0; }
   .pset-fold .text-action{ margin-top:4px; }
   .pset-reset{ display:flex; width:fit-content; margin:2px auto 0; }
+  /* Mini-aperçu de la régie (à l'essai) : les trois boutons du jeu en
+     miniature, qui glissent à leur place selon le choix. */
+  .regie-preview{ display:flex; align-items:center; gap:8px; margin:-2px 0 0 74px; }
+  .rp-phone{
+    position:relative; width:132px; height:66px; flex:0 0 auto;
+    border:1.5px solid rgba(255,255,255,0.18); border-radius:10px; background:#07080b; padding:0;
+  }
+  .rp-btn{
+    position:absolute; display:flex; align-items:center; justify-content:center;
+    border-radius:5px; font-style:normal; font-size:8px; font-weight:800; letter-spacing:.2px; color:#fff;
+    transition: left .35s ease, top .35s ease, width .35s ease, height .35s ease;
+  }
+  .rp-ok{ background:#2f9e5c; }
+  .rp-pass{ background:#c9443a; }
+  .rp-no{ background:#2a0d0b; border:1px solid #d9463a; color:#ffb3aa; }
+  /* Jeu normal : Passer | Trouvé, puis le bandeau Interdit */
+  .rp-pass{ left:6px; top:6px; width:57px; height:24px; }
+  .rp-ok{ left:69px; top:6px; width:57px; height:24px; }
+  .rp-no{ left:6px; top:36px; width:120px; height:22px; }
+  /* Régie : Trouvé en grand, Interdit du côté de l'adversaire */
+  .regie-preview.on .rp-ok{ left:6px; top:6px; width:120px; height:30px; }
+  .regie-preview.on .rp-pass, .regie-preview.on .rp-no{ top:40px; width:57px; height:20px; }
+  .regie-preview.right .rp-pass, .regie-preview.left .rp-no{ left:6px; }
+  .regie-preview.right .rp-no, .regie-preview.left .rp-pass{ left:69px; }
+  .rp-who{ font-size:18px; line-height:1; opacity:0; transition: opacity .25s ease; }
+  .regie-preview.left .rp-who.left, .regie-preview.right .rp-who.right{ opacity:1; }
+  @media (prefers-reduced-motion:reduce){ .rp-btn, .rp-who{ transition:none; } }
   /* Sons : une ligne chacun (nom, volume, écoute) ; un toucher sur le nom
      ouvre l'import (📁) et le retour au son d'origine (↺). */
   .custom-sound-row.compact{ gap:0; padding:6px 0; }
@@ -1906,14 +1933,28 @@
       <div class="card pset-card">
         <div class="pset-title">Pendant la manche</div>
         <div class="set-row pset-row">
-          <span class="set-label">Arbitre</span>
+          <span class="set-label">Régie</span>
+          <!-- Mode « régie » (ex-arbitre) : comme la régie de l'émission, un
+               adversaire assis à côté du donneur tape les boutons ; le choix dit
+               de quel côté il est assis (« Interdit » passe de son côté). -->
           <div class="toggle-row" id="arbitre-group">
             <div class="toggle-btn" data-val="off">Non</div>
-            <div class="toggle-btn" data-val="left">← Interdit</div>
-            <div class="toggle-btn" data-val="right">Interdit →</div>
+            <div class="toggle-btn" data-val="left">À gauche</div>
+            <div class="toggle-btn" data-val="right">À droite</div>
           </div>
         </div>
-        <p class="footer-note pset-note">L'adversaire, à côté du donneur, valide : « Trouvé » en grand, « Interdit » de son côté.</p>
+        <p class="footer-note pset-note">Un adversaire assis à côté du donneur s'occupe des boutons à sa place. Indique de quel côté il est assis.</p>
+        <!-- Mini-aperçu de la régie (à l'essai, 2026-09-28) : les boutons du jeu
+             en miniature, qui se placent selon le choix ; 👤 = l'adversaire.
+             Pour le retirer : ce bloc, le CSS « .regie-preview » et la ligne
+             qui le met à jour dans applyArbitreMode. -->
+        <div class="regie-preview" id="regie-preview" aria-hidden="true">
+          <span class="rp-who left">👤</span>
+          <div class="rp-phone">
+            <i class="rp-btn rp-pass">Passer</i><i class="rp-btn rp-ok">Trouvé</i><i class="rp-btn rp-no">Interdit</i>
+          </div>
+          <span class="rp-who right">👤</span>
+        </div>
         <div class="set-row pset-row">
           <span class="set-label">Interdits</span>
           <div class="toggle-row" id="forbidden-reminder-toggle">
@@ -5198,6 +5239,9 @@
     screen.classList.toggle('interdit-left', UIPREFS.getInterditLeft());
     const cur = arbitreChoice();
     document.querySelectorAll('#arbitre-group .toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.val === cur));
+    // Mini-aperçu (à l'essai) : boutons placés comme en jeu.
+    const rp = document.getElementById('regie-preview');
+    if(rp) rp.className = 'regie-preview' + (cur === 'off' ? '' : ' on ' + cur);
   }
   document.querySelectorAll('#arbitre-group .toggle-btn').forEach(b => b.addEventListener('click', () => {
     UIPREFS.setArbitreMode(b.dataset.val !== 'off');
