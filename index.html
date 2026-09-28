@@ -1504,6 +1504,7 @@
   #play-hint .hint-in{ animation:hintIn .25s ease; }
   #play-hint .hint-arrow{ display:inline-block; margin-right:7px; color:var(--gold); font-weight:800; }
   #play-hint .hint-arrow.end{ margin-right:0; margin-left:7px; }
+  #play-hint.danger .hint-arrow{ color:inherit; } /* mot rouge : flèches rouges comme le texte */
   @keyframes hintIn{ from{ opacity:0; transform:translateY(2px); } to{ opacity:1; transform:none; } }
   @media (prefers-reduced-motion:reduce){ #play-hint .hint-in{ animation:none; } }
 
@@ -3905,7 +3906,11 @@
     // sur une longue piste mais très audible ici. On les décode entièrement en
     // AudioBuffer et on boucle via Web Audio (AudioBufferSourceNode), qui est
     // sample-accurate et donc parfaitement gapless.
-    const GAPLESS_KEYS = new Set(['qualifWait']);
+    // L'ambiance de la finale aussi : elle repart seule, sans appui, à la fin
+    // du jingle de palier gagné (ou du son des qualifs). Sur iPhone, une balise
+    // <audio> neuve lancée hors appui reste muette (Fabien, 2026-09-28 : rien
+    // jusqu'au « Jouer pour… ») ; Web Audio, déjà débloqué, joue sans appui.
+    const GAPLESS_KEYS = new Set(['qualifWait', 'finaleAmbient']);
     // Les musiques d'ambiance (menu + attente de la finale) restent en permanence
     // à un quart de leur volume max, quel que soit l'écran — pour rester en
     // retrait. Les musiques de chrono (qualif/finale) et les bruitages, eux,
@@ -6498,7 +6503,7 @@
       updateFinaleHint();
     } else {
       playHint.classList.remove('hint-finale', 'danger');
-      putHintLine(playHint, "Tape par ici pour lancer le chrono", true);
+      putHintLine(playHint, "Touche cette zone pour lancer le chrono", true);
     }
     playHint.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
     updateForbiddenReminderVisibility();
@@ -6597,7 +6602,7 @@
     MUSIC.pause();
     document.getElementById('word-pill').classList.add('waiting');
     if(UIPREFS.getHideWordOnPause()) document.getElementById('word-pill').classList.add('paused-hidden');
-    putHintLine(document.getElementById('play-hint'), "En pause — tape par ici pour reprendre", true);
+    putHintLine(document.getElementById('play-hint'), "En pause — touche cette zone pour reprendre", true);
     setPlayControlsEnabled(false);
   }
 
@@ -6733,28 +6738,28 @@
     const inDanger = state.clueCount > MAX_CLUES;
     let text = '';
     if(inDanger){
-      text = 'Pas trouvé ? Tape par ici pour passer';
+      text = 'Pas trouvé ? Touche cette zone pour passer';
     } else if(UIPREFS.getShowFinaleHelp()){
       // Taper le mot = DONNER l'indice n°X (pas signaler que l'autre s'est trompé) :
       // les trois états disent donc la même chose, avec le numéro de l'indice.
       // Seul l'appui suivant, une fois les 3 donnés, veut dire "raté" (voir ci-dessus).
-      if(!state.turnMusicStarted)      text = 'Tape par ici pour donner le 1er indice et lancer le chrono';
+      if(!state.turnMusicStarted)      text = 'Touche cette zone pour donner le 1er indice et lancer le chrono';
       // (sans "donner" : avec, la ligne dépasse la largeur d'un téléphone et
-      // passe sur deux lignes ; ainsi elle tient sur une seule, jusqu'à 375 px)
-      else if(state.clueCount === 1)   text = 'Tape par ici pour le 1er indice';
-      else if(state.clueCount === 2)   text = 'Tape par ici pour le 2e indice';
-      else                             text = 'Tape par ici pour le dernier indice';
+      // passe sur deux lignes ; ainsi elle tient sur une seule sur un grand iPhone)
+      else if(state.clueCount === 1)   text = 'Touche cette zone pour le 1er indice';
+      else if(state.clueCount === 2)   text = 'Touche cette zone pour le 2e indice';
+      else                             text = 'Touche cette zone pour le dernier indice';
     }
     const key = (inDanger ? '!' : '') + text;
     if(el.dataset.hintKey === key) return; // rien de neuf : pas de nouvelle animation
     el.dataset.hintKey = key;
     el.classList.add('hint-finale');
     el.classList.toggle('danger', inDanger);
-    putHintLine(el, text, !inDanger);
+    putHintLine(el, text, true);
   }
   // Écrit la consigne sous le mot. Flèches de part et d'autre : tout le haut
   // de l'écran est la zone d'appui (voir .word-pill::after), elles montrent
-  // « par ici » plutôt que le mot. Sert à la finale et aux qualifs.
+  // « cette zone » plutôt que le mot. Sert à la finale et aux qualifs.
   function putHintLine(el, text, arrows){
     el.textContent = '';
     if(!text) return;
@@ -8330,6 +8335,8 @@
     goToHandoff();
   }
 
+  // Jingle du dernier palier gagné, coupé si l'équipe s'arrête avant sa fin.
+  let palierJingle = null;
   // silent : reprise d'une partie enregistrée, sans rejouer le jingle du palier.
   function goToDecision(turn, success, silent){
     const p = PALIERS[turn.level-1];
@@ -8337,6 +8344,7 @@
       if(turn.level < PALIERS.length && !silent){ // le palier 5 a son propre son (jackpot), voir endFinal
         state.holdFinaleAmbient = true;
         const node = SFX.palier();
+        palierJingle = node;
         if(node){
           node.addEventListener('ended', releaseFinaleAmbient, { once:true });
         } else {
@@ -8422,6 +8430,11 @@
   document.getElementById('btn-stop-final').addEventListener('click', () => {
     JOKER_TOKEN.disable();
     state.endedByStop = true;
+    // L'équipe repart avec l'argent : le son de fin des qualifs, seul (on
+    // coupe l'ambiance, et le jingle du palier s'il jouait encore).
+    if(palierJingle){ try{ palierJingle.stop ? palierJingle.stop() : palierJingle.pause(); }catch(e){} palierJingle = null; }
+    MUSIC.stop();
+    if(state.bank > 0) SFX.qualifsEnd();
     endFinal(false);
   });
 
