@@ -59,6 +59,11 @@
     -webkit-overflow-scrolling: touch;
     overscroll-behavior:contain;
   }
+  /* Boutons ✕ et ⚙ affichés (tous les écrans de partie) : ils sont posés en
+     bas à gauche, par-dessus le contenu. On réserve leur hauteur sous le
+     dernier élément, sinon sur un petit écran (ou dans Safari avec sa barre)
+     ils recouvrent « S'arrêter » ou « Jouer pour 1 000 € » une fois défilé. */
+  #app:has(#btn-quit-game.visible){ padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
   .bg-halo{
     position:fixed; z-index:0; border-radius:50%; filter:blur(38px);
     pointer-events:none;
@@ -1305,6 +1310,10 @@
   #screen-play.arbitre-mode #btn-not-found{ grid-column:1; grid-row:2; height:88px; font-size:15px; }
   #screen-play.arbitre-mode #btn-not-found svg{ margin-right:0 !important; width:28px; height:28px; }
   #screen-play.arbitre-mode #btn-interdit{ grid-column:2; grid-row:2; height:88px; }
+  /* « Interdit » du côté de l'adversaire qui fait la régie (réglage Aide) :
+     c'est lui qui surveille les bourdes du donneur. */
+  #screen-play.arbitre-mode.interdit-left #btn-interdit{ grid-column:1; }
+  #screen-play.arbitre-mode.interdit-left #btn-not-found{ grid-column:2; }
 
   /* Retour visuel au toucher ("flash") : un éclair clair traverse l'élément touché
      et un halo de sa teinte s'élargit autour, puis tout s'éteint (~0,5 s). Posé
@@ -1880,6 +1889,13 @@
           <div class="toggle-btn" data-val="off">Désactivé</div>
         </div>
       </div>
+      <div class="sound-row" id="interdit-side-row">
+        <span>Côté du bouton « Interdit »<small style="display:block; margin-top:3px; font-size:10.5px; opacity:.65;">En mode arbitre : du côté où se place l'adversaire qui surveille les interdits (« Passer » prend l'autre côté).</small></span>
+        <div class="toggle-row sound-toggle" id="interdit-side-toggle">
+          <div class="toggle-btn" data-val="on">À gauche</div>
+          <div class="toggle-btn" data-val="off">À droite</div>
+        </div>
+      </div>
 
       <div class="sound-row">
         <span>Tuto de la première partie<small id="tuto-replay-note" style="display:block; margin-top:3px; font-size:10.5px; opacity:.65;">Se lance au premier mot d'une première partie, puis à la première finale.</small></span>
@@ -2014,6 +2030,11 @@
             <div class="toggle-btn" data-val="random">Aléatoires</div>
           </div>
         </div>
+        <div class="set-row">
+          <span class="set-label" id="rounds-label">Manches</span>
+          <div class="toggle-row" id="rounds-group"></div>
+        </div>
+        <p class="footer-note rounds-note" id="rounds-note"></p>
       </div>
     </div>
 
@@ -2027,7 +2048,7 @@
     <div id="training-mode-block" style="display:none;">
       <div class="card">
         <p style="margin:0; font-size:13px; color:var(--text-dim); line-height:1.6;">
-          Mode libre : des manches à la suite (30 secondes, 5 mots, indices illimités, les mots passés reviennent). Pas de classement, pas de progression — on s'échauffe autant qu'on veut.
+          Mode libre : des manches à la suite (5 mots, chrono sans limite, indices illimités, les mots passés reviennent). Pas de classement, pas de progression — on s'échauffe autant qu'on veut.
         </p>
       </div>
     </div>
@@ -4530,7 +4551,7 @@
   // ---------- PRÉFÉRENCES UI ----------
   // Petites préférences d'affichage persistées, séparées des réglages sons.
   const UIPREFS = (function(){
-    const DEFAULTS = { hideWordOnPause: true, showForbiddenInPlay: false, showFinaleHelp: true, arbitreMode: false };
+    const DEFAULTS = { hideWordOnPause: true, showForbiddenInPlay: false, showFinaleHelp: true, arbitreMode: false, interditLeft: false };
     const prefs = Object.assign({}, DEFAULTS);
     try {
       const saved = JSON.parse(localStorage.getItem('mdp_ui_prefs') || 'null');
@@ -4548,6 +4569,8 @@
       setShowFinaleHelp(v){ prefs.showFinaleHelp = v; save(); },
       getArbitreMode(){ return prefs.arbitreMode; },
       setArbitreMode(v){ prefs.arbitreMode = v; save(); },
+      getInterditLeft(){ return prefs.interditLeft; },
+      setInterditLeft(v){ prefs.interditLeft = v; save(); },
       reset(){ Object.assign(prefs, DEFAULTS); save(); },
     };
   })();
@@ -4840,7 +4863,9 @@
   }
   initBackgroundHalos();
 
-  function euro(n){ return n.toLocaleString('fr-FR') + " €"; }
+  // Espace insécable avant « € » : sinon le symbole peut passer seul à la ligne
+  // (« Jouer pour 5 000 / € » sur un bouton étroit).
+  function euro(n){ return n.toLocaleString('fr-FR') + " €"; }
 
   // ---------- STATE ----------
   const state = {
@@ -4937,6 +4962,8 @@
     // permanence à un quart du volume max, géré directement dans MUSIC.applyVolume().
     updateBackgroundMusic(name);
   }
+  // Nom de l'écran affiché (clé de `screens`).
+  function activeScreen(){ return Object.keys(screens).find(k => screens[k].classList.contains('active')) || 'setup'; }
   // Musique de fond "ambiante" selon l'écran affiché. Le "play" n'est PAS géré
   // ici : tant que le mot n'est pas tapé pour lancer le chrono, l'ambiance en
   // cours (menu ou finale) continue de tourner — c'est le clic sur le mot qui
@@ -4970,11 +4997,13 @@
     });
   }
   document.getElementById('btn-schedule').addEventListener('click', () => {
+    freezeRound(); // ouvert en pleine manche : le chrono attend la fermeture, comme avec ✕ et ⚙
     renderScheduleOverlay();
     document.getElementById('schedule-overlay').classList.add('visible');
   });
   document.getElementById('btn-close-schedule').addEventListener('click', () => {
     document.getElementById('schedule-overlay').classList.remove('visible');
+    unfreezeRound();
   });
   document.getElementById('btn-quit-game').addEventListener('click', () => {
     freezeRound(); // le chrono ne tourne pas pendant qu'on se décide
@@ -5092,11 +5121,20 @@
   });
   // Mode arbitre : réorganise les boutons de l'écran de jeu (voir le CSS
   // "#screen-play.arbitre-mode"). Appliqué au démarrage, puis à chaque changement.
+  // Le choix du côté de « Interdit » n'apparaît qu'avec le mode arbitre.
   function applyArbitreMode(){
-    document.getElementById('screen-play').classList.toggle('arbitre-mode', UIPREFS.getArbitreMode());
+    const on = UIPREFS.getArbitreMode();
+    const screen = document.getElementById('screen-play');
+    screen.classList.toggle('arbitre-mode', on);
+    screen.classList.toggle('interdit-left', UIPREFS.getInterditLeft());
+    document.getElementById('interdit-side-row').style.display = on ? '' : 'none';
   }
   wireSoundToggle('arbitre-mode-toggle', () => UIPREFS.getArbitreMode(), v => {
     UIPREFS.setArbitreMode(v);
+    applyArbitreMode();
+  });
+  wireSoundToggle('interdit-side-toggle', () => UIPREFS.getInterditLeft(), v => {
+    UIPREFS.setInterditLeft(v);
     applyArbitreMode();
   });
   applyArbitreMode();
@@ -5119,6 +5157,7 @@
       syncToggle('forbidden-reminder-toggle', UIPREFS.getShowForbiddenInPlay());
       syncToggle('finale-help-toggle', UIPREFS.getShowFinaleHelp());
       syncToggle('arbitre-mode-toggle', UIPREFS.getArbitreMode());
+      syncToggle('interdit-side-toggle', UIPREFS.getInterditLeft());
       updateForbiddenReminderVisibility();
       updateFinaleHint();
       applyArbitreMode();
@@ -5562,6 +5601,45 @@
     // Qui commence à faire deviner (chacun pour soi, 2 joueurs) : choisi via
     // une popup au lancement de la partie, pour afficher les vrais prénoms
     // saisis. Voir btn-start-game.
+
+    renderRoundsRow(); // le nombre de manches et le total dépendent des mêmes choix
+  }
+
+  // ---- Nombre de manches (menu) ----
+  // Équipes : manches par équipe (4 par défaut, les rôles s'inversent une
+  // manche sur deux). Chacun pour soi : combien de fois chacun fait deviner
+  // (et devine) ; par défaut tout le monde fait deviner à tout le monde, soit
+  // joueurs - 1 fois (2 fois à 2 joueurs). La ligne dessous donne le total et
+  // une durée indicative (~1 min par manche, téléphone passé compris).
+  const ROUND_CHOICES = { team:[2, 3, 4, 5, 6], solo:[1, 2, 3, 4, 5] };
+  state.roundsTeam = 4;
+  state.roundsSolo = null; // null : valeur par défaut selon le nombre de joueurs
+  function soloRoundsDefault(n){ return n === 2 ? 2 : n - 1; }
+  function roundsPerUnit(){
+    return state.subMode === 'team' ? state.roundsTeam : (state.roundsSolo || soloRoundsDefault(state.playerCount));
+  }
+  function renderRoundsRow(){
+    const group = document.getElementById('rounds-group');
+    if(!group) return;
+    const isTeam = state.subMode === 'team';
+    const cur = roundsPerUnit();
+    group.innerHTML = '';
+    ROUND_CHOICES[isTeam ? 'team' : 'solo'].forEach(v => {
+      const b = document.createElement('div');
+      b.className = 'toggle-btn' + (v === cur ? ' selected' : '');
+      b.textContent = v;
+      b.addEventListener('click', () => {
+        if(isTeam) state.roundsTeam = v; else state.roundsSolo = v;
+        renderRoundsRow();
+      });
+      group.appendChild(b);
+    });
+    const n = state.playerCount;
+    const total = isTeam ? (n / 2) * cur : n * cur;
+    const note = isTeam
+      ? `${n / 2} équipes × ${cur} = ${total} manches · environ ${total} min`
+      : `Chacun fait deviner ${cur} fois · ${total} duos · environ ${total} min`;
+    document.getElementById('rounds-note').textContent = note;
   }
   renderPlayerFields();
 
@@ -5590,7 +5668,8 @@
   const SAVED_STATE_FIELDS = ['mode', 'subMode', 'playerCount', 'teamAssignment', 'teams', 'soloStats',
     'turnQueue', 'currentTurnIndex', 'soloFirstGiver', 'buzz', 'finaleGiverName', 'finaleGuesserName',
     'finaleColorIdx', 'inFinale', 'currentLevel', 'bank', 'safeBank', 'jokerAvailable', 'jokerUsed',
-    'finalHistory', 'endedByStop', 'peekedPool', 'peekedLevel', 'wordsFound', 'wordsFailed', 'pool'];
+    'finalHistory', 'endedByStop', 'peekedPool', 'peekedLevel', 'wordsFound', 'wordsFailed', 'pool',
+    'roundsTeam', 'roundsSolo'];
   // where : { at:'handoff'|'afterTurn'|'buzz'|'finalist'|'decision', ...détails }
   function saveGameProgress(where){
     if(state.mode !== 'full' || state.isDebug) return;
@@ -5619,7 +5698,7 @@
       const next = sv.at === 'afterTurn' ? st.currentTurnIndex + 1 : st.currentTurnIndex;
       const t = st.turnQueue[next];
       if(st.subMode === 'team'){
-        title = t ? `Équipes · Manche ${t.manche} sur 4` : 'Équipes · fin des qualifications';
+        title = t ? `Équipes · Manche ${t.manche} sur ${t.manches || 4}` : 'Équipes · fin des qualifications';
         detail = st.teams.map(tm => `${dot(tm.colorIdx)}${escapeHtml(tm.giverName)} et ${escapeHtml(tm.guesserName)} <b>${tm.score}</b>`).join(' &nbsp; ');
       } else {
         title = 'Chacun pour soi · ' + (t ? (t.progressLabel || 'Qualifications') : 'fin des qualifications');
@@ -5987,13 +6066,13 @@
     if(state.subMode === 'team'){
       buildTeams();
       state.turnQueue = [];
-      const ROUNDS_PER_TEAM = 4;
+      const ROUNDS_PER_TEAM = roundsPerUnit(); // choisi dans le menu (4 par défaut)
       for(let r=1; r<=ROUNDS_PER_TEAM; r++){
         state.teams.forEach((team, idx) => {
           const swap = (r % 2 === 0); // manches paires : les partenaires inversent leur rôle
           state.turnQueue.push({
             kind: 'qualif', style: 'cycle',
-            teamIdx: idx, manche: r,
+            teamIdx: idx, manche: r, manches: ROUNDS_PER_TEAM,
             giverName: swap ? team.guesserName : team.giverName,
             guesserName: swap ? team.giverName : team.guesserName,
             colorIdx: team.colorIdx,
@@ -6005,16 +6084,15 @@
     } else {
       buildSoloStats();
       let schedule;
+      const rounds = roundsPerUnit(); // combien de fois chacun fait deviner (menu)
       if(state.playerCount === 2){
-        // À 2 joueurs : pas de tirage au sort, l'ordre est fixe (A-B répété deux fois)
+        // À 2 joueurs : pas de tirage au sort, l'ordre est fixe (A-B répété)
         // à partir du choix fait sur l'écran de configuration.
         const first = state.soloFirstGiver, second = 1 - first;
-        schedule = [
-          {giver:first, guesser:second}, {giver:second, guesser:first},
-          {giver:first, guesser:second}, {giver:second, guesser:first}
-        ];
+        schedule = [];
+        for(let r = 0; r < rounds; r++) schedule.push({giver:first, guesser:second}, {giver:second, guesser:first});
       } else {
-        schedule = buildSoloSchedule(state.playerCount);
+        schedule = buildSoloSchedule(state.playerCount, rounds);
       }
       state.turnQueue = schedule.map((pair, idx) => ({
         kind: 'qualif', style: 'cycle',
@@ -6063,15 +6141,21 @@
     }
   }
 
-  function buildSoloSchedule(N){
-    const pairs = [];
-    for(let i=0;i<N;i++){
-      for(let j=i+1;j<N;j++){
-        pairs.push({giver:i, guesser:j});
-        pairs.push({giver:j, guesser:i});
-      }
+  // Chacun fait deviner `rounds` fois et devine `rounds` fois (par défaut
+  // N - 1 : tout le monde avec tout le monde). Tour t : chaque joueur i fait
+  // deviner au joueur i + d (d = 1, 2, … N - 1, puis on recommence), donc des
+  // partenaires tous différents tant que rounds ≤ N - 1. On joue tour par
+  // tour (ordre mélangé dans chaque tour) : tout le monde a fait deviner
+  // autant de fois à chaque fin de tour, et le classement reste comparable.
+  function buildSoloSchedule(N, rounds){
+    rounds = rounds || (N - 1);
+    const out = [];
+    for(let t = 0; t < rounds; t++){
+      const d = (t % (N - 1)) + 1, tour = [];
+      for(let i = 0; i < N; i++) tour.push({ giver:i, guesser:(i + d) % N });
+      out.push(...shuffle(tour));
     }
-    return shuffle(pairs);
+    return out;
   }
 
   function renderScorebar(targetId, highlightColorIdx){
@@ -6136,7 +6220,7 @@
         kicker.classList.add('gold');
         kicker.textContent = `La finale · Palier 1 · ${euro(PALIERS[0].gain)}`;
       } else if(state.subMode === 'team' && turn.manche){
-        kicker.textContent = `Manche ${turn.manche} sur 4`;
+        kicker.textContent = `Manche ${turn.manche} sur ${turn.manches || 4}`;
       } else {
         kicker.textContent = turn.progressLabel || 'Qualification';
       }
@@ -6289,7 +6373,7 @@
       updateFinaleHint();
     } else {
       playHint.classList.remove('hint-finale', 'danger');
-      playHint.textContent = "Tape sur le mot pour lancer le chrono";
+      putHintLine(playHint, "Tape par ici pour lancer le chrono", true);
     }
     playHint.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
     updateForbiddenReminderVisibility();
@@ -6388,7 +6472,7 @@
     MUSIC.pause();
     document.getElementById('word-pill').classList.add('waiting');
     if(UIPREFS.getHideWordOnPause()) document.getElementById('word-pill').classList.add('paused-hidden');
-    document.getElementById('play-hint').textContent = "En pause — tape sur le mot pour reprendre";
+    putHintLine(document.getElementById('play-hint'), "En pause — tape par ici pour reprendre", true);
     setPlayControlsEnabled(false);
   }
 
@@ -6541,12 +6625,16 @@
     el.dataset.hintKey = key;
     el.classList.add('hint-finale');
     el.classList.toggle('danger', inDanger);
+    putHintLine(el, text, !inDanger);
+  }
+  // Écrit la consigne sous le mot. Flèches de part et d'autre : tout le haut
+  // de l'écran est la zone d'appui (voir .word-pill::after), elles montrent
+  // « par ici » plutôt que le mot. Sert à la finale et aux qualifs.
+  function putHintLine(el, text, arrows){
     el.textContent = '';
     if(!text) return;
     const line = document.createElement('span');
     line.className = 'hint-in';
-    // Flèches de part et d'autre : tout le haut de l'écran est la zone d'appui
-    // (voir .word-pill::after), elles montrent « par ici » plutôt que le mot.
     const arrow = end => {
       const a = document.createElement('span');
       a.className = 'hint-arrow' + (end ? ' end' : '');
@@ -6554,9 +6642,9 @@
       a.textContent = '↑';
       return a;
     };
-    if(!inDanger) line.appendChild(arrow(false));
+    if(arrows) line.appendChild(arrow(false));
     line.appendChild(document.createTextNode(text));
-    if(!inDanger) line.appendChild(arrow(true));
+    if(arrows) line.appendChild(arrow(true));
     el.appendChild(line);
   }
   function renderChevrons(){
@@ -7184,7 +7272,9 @@
     MUSIC.stop();
     const node = SFX.roundWin();
     if(node){
-      node.addEventListener('ended', () => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); }, { once:true });
+      // Menu seulement si rien d'autre n'a démarré entretemps : en enchaînant
+      // vite, la musique d'attente du mot suivant tourne déjà.
+      node.addEventListener('ended', () => { if(!state.inFinale && !MUSIC.current()) MUSIC.play('menu', {loop:true}); }, { once:true });
     } else {
       MUSIC.play('menu', {loop:true}); // pas de jingle dispo (son coupé...) : retour immédiat
     }
@@ -7277,13 +7367,16 @@
   // sont trouvés, puis enchaîne sur le résumé d'entraînement habituel.
   document.getElementById('btn-training-end').addEventListener('click', () => {
     if(inputLocked) return;
+    freezeRound(); // le chrono attend la réponse
     document.getElementById('training-end-confirm-overlay').classList.add('visible');
   });
   document.getElementById('btn-training-end-cancel').addEventListener('click', () => {
     document.getElementById('training-end-confirm-overlay').classList.remove('visible');
+    unfreezeRound();
   });
   document.getElementById('btn-training-end-confirm').addEventListener('click', () => {
     document.getElementById('training-end-confirm-overlay').classList.remove('visible');
+    roundFrozen = false; // la manche se termine : rien à faire repartir
     if(inputLocked) return;
     lockInput();
     playQualifRoundWinJingle();
@@ -7330,10 +7423,18 @@
         if(turn.giverName === team.giverName) team.giverNamePoints += state.foundCount;
         else team.guesserNamePoints += state.foundCount;
       } else {
-        state.soloStats[turn.giverIdx].giverScore += state.foundCount;
-        state.soloStats[turn.giverIdx].giverTime += elapsed;
-        state.soloStats[turn.guesserIdx].guesserScore += state.foundCount;
-        state.soloStats[turn.guesserIdx].guesserTime += elapsed;
+        // Duel de départage : seul le rôle départagé compte. Sinon le
+        // partenaire neutre empochait des points dans l'autre rôle et pouvait
+        // passer devant le vrai meilleur (ex. un devineur à 0 point qui part en
+        // finale grâce au duel des donneurs).
+        if(turn.duelRole !== 'guesser'){
+          state.soloStats[turn.giverIdx].giverScore += state.foundCount;
+          state.soloStats[turn.giverIdx].giverTime += elapsed;
+        }
+        if(turn.duelRole !== 'giver'){
+          state.soloStats[turn.guesserIdx].guesserScore += state.foundCount;
+          state.soloStats[turn.guesserIdx].guesserTime += elapsed;
+        }
       }
       // Manche comptée : une reprise repartira de la manche suivante.
       saveGameProgress({ at:'afterTurn' });
@@ -7653,13 +7754,20 @@
     state.holdFinaleAmbient = true;
     const node = SFX.qualifsEnd();
     if(node){
-      node.addEventListener('ended', () => {
-        state.holdFinaleAmbient = false;
-        if(state.inFinale) MUSIC.play('finaleAmbient', {loop:true});
-      }, { once:true });
+      node.addEventListener('ended', releaseFinaleAmbient, { once:true });
     } else {
       state.holdFinaleAmbient = false; // son coupé/indisponible : ambiance immédiate
     }
+  }
+  // Fin d'un son qui retenait l'ambiance de la finale (qualifiés, palier
+  // gagné) : l'ambiance reprend, sauf si un palier a déjà démarré entretemps
+  // (joueurs rapides) — on ne remplace jamais la musique du chrono.
+  function releaseFinaleAmbient(){
+    state.holdFinaleAmbient = false;
+    if(!state.inFinale) return;
+    const scr = activeScreen();
+    if(scr === 'play'){ if(!state.turnMusicStarted) MUSIC.play('finaleAmbient', {loop:true}); return; }
+    updateBackgroundMusic(scr);
   }
 
   // silent : reprise d'une partie enregistrée, sans rejouer le son d'annonce.
@@ -7741,7 +7849,7 @@
       const giverIdx = role === 'giver' ? pid : neutralIdx;
       const guesserIdx = role === 'giver' ? neutralIdx : pid;
       return {
-        kind:'qualif', style:'cycle', giverIdx, guesserIdx,
+        kind:'qualif', style:'cycle', giverIdx, guesserIdx, duelRole: role,
         giverName: state.soloStats[giverIdx].name, guesserName: state.soloStats[guesserIdx].name,
         colorIdx: state.soloStats[giverIdx].colorIdx,
         poolSize: QUALIF_WORDS, target: QUALIF_WORDS, time: QUALIF_TIME,
@@ -7755,7 +7863,7 @@
     return buildSoloSchedule(tiedIdxs.length).map(pair => {
       const giverIdx = tiedIdxs[pair.giver], guesserIdx = tiedIdxs[pair.guesser];
       return {
-        kind:'qualif', style:'cycle', giverIdx, guesserIdx,
+        kind:'qualif', style:'cycle', giverIdx, guesserIdx, duelRole: role,
         giverName: state.soloStats[giverIdx].name, guesserName: state.soloStats[guesserIdx].name,
         colorIdx: state.soloStats[giverIdx].colorIdx,
         poolSize: QUALIF_WORDS, target: QUALIF_WORDS, time: QUALIF_TIME,
@@ -8105,10 +8213,7 @@
         state.holdFinaleAmbient = true;
         const node = SFX.palier();
         if(node){
-          node.addEventListener('ended', () => {
-            state.holdFinaleAmbient = false;
-            if(state.inFinale) MUSIC.play('finaleAmbient', {loop:true});
-          }, { once:true });
+          node.addEventListener('ended', releaseFinaleAmbient, { once:true });
         } else {
           state.holdFinaleAmbient = false; // pas de jingle dispo (son coupé...) : ambiance immédiate
         }
@@ -8182,6 +8287,7 @@
     const btnStop = document.getElementById('btn-stop-final');
     btnContinue.disabled = true;
     btnStop.disabled = true;
+    JOKER_TOKEN.disable(); // sinon le joker touché pendant la révélation ouvrait l'aperçu par-dessus le palier
     const gen = state.gen;
     playLadderReveal('decision-ladder', nextLevel, () => {
       if(gen !== state.gen) return;
@@ -8189,6 +8295,7 @@
     });
   });
   document.getElementById('btn-stop-final').addEventListener('click', () => {
+    JOKER_TOKEN.disable();
     state.endedByStop = true;
     endFinal(false);
   });
@@ -8352,6 +8459,10 @@
       if(!c || c.btn !== btn || btn.disabled) return;
       btn.disabled = true;
       c.pendingAppear = false;
+      // Plus de « Jouer pour… » ni de « S'arrêter » pendant que le jeton se
+      // replie et que l'aperçu défile (rendus au retour sur l'écran de décision).
+      document.getElementById('btn-continue-final').disabled = true;
+      document.getElementById('btn-stop-final').disabled = true;
       const go = () => { if(cur === c) usePeek(c.nextLevel); };
       if(reduced()){ go(); return; }
       [c.title, c.hint].forEach(el => {
@@ -8366,7 +8477,10 @@
       anim.finished.then(go, go);
     }
 
-    return { render, appear };
+    // Plus touchable (« Jouer pour… » ou « S'arrêter » vient d'être choisi).
+    function disable(){ if(cur) cur.btn.disabled = true; }
+
+    return { render, appear, disable };
   })();
 
   // Aperçu du joker : les 5 premiers mots du prochain palier, dans le cadre du
@@ -8448,6 +8562,8 @@
       await sleep(250);
       if(!alive()) return;
       JOKER_TOKEN.render(nextLevel); // joker utilisé : jeton éteint
+      document.getElementById('btn-continue-final').disabled = false;
+      document.getElementById('btn-stop-final').disabled = false;
       showScreen('decision');
     })();
   }
@@ -8631,7 +8747,7 @@
     // l'appel à play(), avant même de savoir si audio.play() a réussi ou pas
     // (promesse async). On relance donc systématiquement au premier clic/tap ;
     // play() se charge lui-même de ne rien faire si une musique tourne déjà pour de vrai.
-    updateBackgroundMusic(Object.keys(screens).find(k => screens[k].classList.contains('active')) || 'setup');
+    updateBackgroundMusic(activeScreen());
     document.removeEventListener('click', retryMusicOnFirstInteraction);
     document.removeEventListener('touchstart', retryMusicOnFirstInteraction);
   }
