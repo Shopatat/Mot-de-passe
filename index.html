@@ -1453,6 +1453,9 @@
     padding: 5px 12px; border-radius:999px;
   }
   #peek-label{ text-align:center; }
+  /* Pas de chevrons d'indices autour du cadre à l'aperçu du joker ; leur place
+     est gardée pour que le cadre ait la même taille qu'en finale. */
+  #screen-peek .chevrons{ visibility:hidden; }
   /* Jeton du joker sous l'échelle, d'après l'émission et l'atelier du joker
      (https://claude.ai/artifact/VWZMDWZ3D2L5fiBLdgCTz7, choix de Fabien du
      2026-09-27) : couronne d'environ 50 LED dorées dont la moitié allumée fait
@@ -8633,7 +8636,7 @@
     const at = {
       travelLeft: document.getElementById('peek-travel-left'),
       travelRight: document.getElementById('peek-travel-right'),
-      sides: [document.getElementById('peek-chev-left'), document.getElementById('peek-chev-right')],
+      sides: [], // pas de chevrons d'indices autour du cadre (voir #screen-peek .chevrons)
     };
     const reveal = () => { try{ SFX.wordReveal(); }catch(e){} };
     const setLabel = i => { label.textContent = `Mot ${i + 1} / ${shown.length}`; };
@@ -8648,7 +8651,6 @@
     });
 
     cancelWordBirth(pill);
-    at.sides.forEach(side => { buildChevrons(side); side.style.opacity = '0'; });
     pill.style.opacity = '0';
     wordEl.style.animation = '';
     wordEl.style.opacity = '';
@@ -8660,11 +8662,10 @@
       await sleep(450); // l'écran finit d'apparaître
       if(!alive()) return;
       pill.style.opacity = '';
-      at.sides.forEach(side => side.style.opacity = '');
       void pill.offsetWidth;
       reveal();
       let shownAt = performance.now() + 650 + WB.white + WB.black; // le mot apparaît (voir playWordBirth)
-      await playWordBirth({ pill, finale: true, chevrons: at.sides, word: wordEl });
+      await playWordBirth({ pill, finale: true, word: wordEl });
       for(let i = 1; i < shown.length; i++){
         const startAt = shownAt + PEEK_WORD_MS - lead;
         setTimeout(() => { if(alive()) reveal(); }, startAt + tipsAt - REVEAL_SOUND_HIT_MS - performance.now());
@@ -8679,7 +8680,6 @@
       await pass(() => { wordEl.style.animation = 'none'; wordEl.style.opacity = '0'; });
       if(!alive()) return;
       cancelWordBirth(pill);
-      at.sides.forEach(side => side.style.opacity = '0');
       await playWordBirth({ pill, finale: true, reverse: true });
       await sleep(250);
       if(!alive()) return;
