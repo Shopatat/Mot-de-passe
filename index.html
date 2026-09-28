@@ -1612,7 +1612,9 @@
   .pset-reset{ display:flex; width:fit-content; margin:2px auto 0; }
   /* Mini-aperçu de la régie (à l'essai) : les trois boutons du jeu en
      miniature, qui glissent à leur place selon le choix. */
-  .regie-preview{ display:flex; align-items:center; gap:8px; margin:-2px 0 0 74px; }
+  /* Centré sur la colonne des choix, donc pile sous « À gauche » (le bouton
+     du milieu) ; les deux 👤 gardent leur place même cachés. */
+  .regie-preview{ display:flex; justify-content:center; align-items:center; gap:8px; margin:-2px 0 0 74px; }
   .rp-phone{
     position:relative; width:132px; height:66px; flex:0 0 auto;
     border:1.5px solid rgba(255,255,255,0.18); border-radius:10px; background:#07080b; padding:0;
