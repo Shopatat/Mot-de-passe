@@ -3853,9 +3853,13 @@
           if(audio === thisAudio) play(opts.fallback, { loop:true });
         }, { once:true });
       }
+      connectElement();
+      audio.play().catch(()=>{}); // le navigateur peut refuser avant une interaction utilisateur, sans gravité
+    }
+    function connectElement(){
       const ctx = getAudioCtx();
       if(ctx){
-        if(ctx.state === 'suspended') ctx.resume();
+        if(ctx.state !== 'running') ctx.resume().catch(()=>{});
         const source = ctx.createMediaElementSource(audio);
         gainNode = ctx.createGain();
         source.connect(gainNode).connect(ctx.destination);
@@ -3863,7 +3867,34 @@
         gainNode = null;
       }
       applyVolume();
-      audio.play().catch(()=>{}); // le navigateur peut refuser avant une interaction utilisateur, sans gravité
+      audio.addEventListener('ended', fireEnded);
+    }
+    // Contexte audio recréé (voir rebuildAudioCtx) : une balise déjà branchée
+    // sur l'ancien contexte ne peut pas l'être sur le nouveau, on la remplace
+    // par une copie à la même position (la musique est en pause à ce moment-là,
+    // resume() la relancera). Piste en boucle Web Audio : rien à rebrancher,
+    // resume() repart de bufferPauseOffset sur le contexte du moment.
+    function rebind(oldCtx){
+      if(mode === 'buffer'){
+        if(!bufferSource) return;
+        const at = bufferDuration ? (((oldCtx.currentTime - bufferStartCtxTime) % bufferDuration) + bufferDuration) % bufferDuration : 0;
+        try{ bufferSource.stop(); }catch(e){}
+        startBufferSource(decodedBuffers[currentBufferUrl], at);
+        return;
+      }
+      if(!audio) return;
+      const old = audio;
+      const wasPlaying = !old.paused;
+      const t = old.currentTime;
+      old.removeEventListener('ended', fireEnded);
+      old.pause();
+      audio = new Audio(old.src);
+      audio.loop = old.loop;
+      audio.preload = 'auto';
+      try { audio.currentTime = t; } catch(e){}
+      audio.addEventListener('loadedmetadata', () => { if(Math.abs(audio.currentTime - t) > 0.25) audio.currentTime = t; }, { once:true });
+      connectElement();
+      if(wasPlaying) audio.play().catch(()=>{});
     }
     async function playGapless(key, url, opts){
       const ctx = getAudioCtx();
@@ -3912,6 +3943,7 @@
       mode = null;
       gainNode = null;
       currentKey = null;
+      endedCbs = [];
     }
     function pause(){
       if(mode === 'buffer'){
@@ -3934,9 +3966,13 @@
     // musique) — pas via un stop() manuel, qui ne déclenche jamais 'ended'.
     // Sans objet pour les pistes 'buffer' : toujours en boucle volontaire,
     // jamais censées se terminer seules.
+    // Les rappels sont gardés ici plutôt que sur la balise, pour survivre à un
+    // rebind (balise remplacée au retour d'arrière-plan).
+    let endedCbs = [];
+    function fireEnded(){ const cbs = endedCbs; endedCbs = []; cbs.forEach(cb => cb()); }
     function onEnded(cb){
       if(!audio || audio.ended){ cb(); return; }
-      audio.addEventListener('ended', cb, { once:true });
+      endedCbs.push(cb);
     }
     // Musique importée ou retirée dans les réglages alors que sa piste joue
     // (ex. la musique du menu) : on relance tout de suite avec le bon fichier.
@@ -3958,7 +3994,7 @@
       const ctx = getAudioCtx();
       if(GAPLESS_KEYS.has(key) && ctx && !decodedBuffers[url]) decodedBuffers[url] = await ctx.decodeAudioData(arr);
     }
-    return { play, stop, pause, resume, isPlaying, applyVolume, onEnded, refreshSlot, preload, current(){ return currentKey; } };
+    return { play, stop, pause, resume, rebind, isPlaying, applyVolume, onEnded, refreshSlot, preload, current(){ return currentKey; } };
   })();
 
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
@@ -3998,6 +4034,23 @@
     const ctx = getAudioCtx();
     if(ctx && ctx.state !== 'running') ctx.resume().catch(()=>{});
   }
+  // Parfois, même relancé, le contexte reste muet pour de bon après un passage
+  // en arrière-plan (Fabien, 2026-09-28 : sorti en pleine finale, revenu peu
+  // après, plus aucun son jusqu'à relancer l'appli). Au retour au premier plan,
+  // on repart donc d'un contexte tout neuf : la musique est en pause à ce
+  // moment-là (coupée au passage en arrière-plan), MUSIC.rebind la rebranche
+  // sur le nouveau contexte à la même position ; les bruitages déjà décodés
+  // (AudioBuffer) servent tels quels avec n'importe quel contexte.
+  function rebuildAudioCtx(){
+    const old = audioCtx;
+    if(!old) return;
+    audioCtx = null;
+    const ctx = getAudioCtx();
+    if(!ctx){ audioCtx = old; return; }
+    MUSIC.rebind(old);
+    try { old.close().catch(()=>{}); } catch(e){}
+    ctx.resume().catch(()=>{});
+  }
   const GAIN_BOOST = { indice: 1.6 }; // ajuster ici si besoin de plus/moins de punch
 
   // Lecture des bruitages via des buffers Web Audio décodés en mémoire à
@@ -4022,6 +4075,8 @@
     // 3 ms avant ; le fichier n'est pas modifié.
     const SKIP_LEAD = { indice:true };
     const offsets = {};     // key -> secondes à sauter au début
+    // (le contexte peut être recréé au retour d'arrière-plan : on le relit à
+    // chaque lecture, les buffers décodés restent valables)
     function leadSilence(buf){
       let peak = 0;
       const chans = [];
@@ -4057,8 +4112,9 @@
       if(!s.gameOn) return null;
       const vol = s.gameVol * SLOT_VOLUMES.get(slotKey || key) * (GAIN_BOOST[key] || 1);
       // Cas normal : le buffer est prêt, lecture Web Audio quasi instantanée.
+      const ctx = getAudioCtx();
       if(ctx && buffers[key]){
-        if(ctx.state === 'suspended') ctx.resume();
+        if(ctx.state !== 'running') ctx.resume().catch(()=>{});
         const source = ctx.createBufferSource();
         source.buffer = buffers[key];
         const gainNode = ctx.createGain();
@@ -4280,7 +4336,7 @@
       // seul ne fait rien une fois la lecture démarrée (voir updatePreviewVolume).
       const ctx = getAudioCtx();
       if(ctx){
-        if(ctx.state === 'suspended') ctx.resume();
+        if(ctx.state !== 'running') ctx.resume().catch(()=>{});
         const source = ctx.createMediaElementSource(audio);
         const gainNode = ctx.createGain();
         gainNode.gain.value = vol;
@@ -8599,10 +8655,14 @@
       }
       musicWasPlayingBeforeHidden = MUSIC.isPlaying();
       MUSIC.pause();
+      CUSTOM_SOUNDS.stopPreview();
     } else {
-      // Retour au premier plan : l'AudioContext peut être resté "suspended"
-      // (voir ensureAudioCtxRunning) — hors geste utilisateur, iOS refuse
-      // parfois de le relancer ici, donc on retente aussi au prochain tap.
+      // Retour au premier plan : contexte audio tout neuf (voir
+      // rebuildAudioCtx) — hors geste utilisateur, iOS refuse parfois de le
+      // lancer ici, donc on retente aussi au prochain tap.
+      // (pas pendant l'écran de chargement : les bruitages s'y décodent encore
+      // sur le contexte en place, et aucun son n'a encore joué)
+      if(!document.body.classList.contains('booting')) rebuildAudioCtx();
       ensureAudioCtxRunning();
       document.addEventListener('click', ensureAudioCtxRunning, { once:true });
       document.addEventListener('touchstart', ensureAudioCtxRunning, { once:true, passive:true });
