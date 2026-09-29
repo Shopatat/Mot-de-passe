@@ -3952,6 +3952,15 @@
     // <audio> neuve lancée hors appui reste muette (Fabien, 2026-09-28 : rien
     // jusqu'au « Jouer pour… ») ; Web Audio, déjà débloqué, joue sans appui.
     const GAPLESS_KEYS = new Set(['qualifWait', 'finaleAmbient']);
+    // Musiques de chrono (qualifs 30 s, paliers de finale) : même moteur Web
+    // Audio, sans boucle, lancées pile à la seconde du chrono (timed : fonction
+    // qui donne cette seconde). Avec une balise <audio>, l'iPhone mettait un
+    // moment à démarrer puis à se recaler : la musique finissait en retard sur
+    // le chrono (Fabien, 2026-09-29). Décodées d'avance (prepare, pendant
+    // l'apparition du mot), une seule à la fois pour ménager la mémoire.
+    const TIMED_KEYS = new Set(['qualif', 'finaleEarly', 'finaleLate']);
+    let bufferLoop = true;  // la source en cours boucle-t-elle ? (non : musique de chrono)
+    let timedPos = null;    // musique de chrono : position voulue, lue à l'instant
     // Les musiques d'ambiance (menu + attente de la finale) restent en permanence
     // à un quart de leur volume max, quel que soit l'écran — pour rester en
     // retrait. Les musiques de chrono (qualif/finale) et les bruitages, eux,
@@ -3995,8 +4004,66 @@
       wantPlay = true;
       rebindAt = null;
       currentOpts = opts;
-      if(GAPLESS_KEYS.has(key)) playGapless(key, url, opts);
+      timedPos = opts.timed || null;
+      if(TIMED_KEYS.has(key) && opts.timed && getAudioCtx()) playTimed(key, url, opts);
+      else if(GAPLESS_KEYS.has(key)) playGapless(key, url, opts);
       else playElement(key, url, opts);
+    }
+    // Décodage d'un fichier (une seule fois, même demandé deux fois de suite).
+    const decoding = {};
+    function decodeUrl(url){
+      if(decodedBuffers[url]) return Promise.resolve(decodedBuffers[url]);
+      if(!decoding[url]){
+        decoding[url] = fetch(url)
+          .then(r => { if(!r.ok) throw new Error('fichier introuvable'); return r.arrayBuffer(); })
+          .then(a => getAudioCtx().decodeAudioData(a))
+          .then(b => { decodedBuffers[url] = b; delete decoding[url]; return b; }, e => { delete decoding[url]; throw e; });
+      }
+      return decoding[url];
+    }
+    // Musique de chrono décodée d'avance ; les autres musiques de chrono sont
+    // oubliées (une piste de 90 s décodée pèse ~30 Mo).
+    async function prepare(key){
+      const url = urlFor(key);
+      if(!url || !getAudioCtx()) return;
+      TIMED_KEYS.forEach(k => { const u = urlFor(k); if(u && u !== url && u !== currentBufferUrl) delete decodedBuffers[u]; });
+      try { await decodeUrl(url); } catch(e){}
+    }
+    async function playTimed(key, url, opts){
+      try {
+        await decodeUrl(url);
+        if(currentKey !== key) return; // autre musique demandée entretemps
+        currentBufferUrl = url;
+        mode = 'buffer';
+        bufferLoop = false;
+        bufferDuration = decodedBuffers[url].duration;
+        if(!wantPlay){ const at = timedPos(); bufferPauseOffset = at != null ? at : 0; return; } // mise en pause pendant le décodage
+        startTimed();
+      } catch(e){
+        if(currentKey === key && !mode) playElement(key, url, opts); // repli : lecteur classique
+      }
+    }
+    // Lance la musique de chrono à la seconde du chrono. Moteur audio pas
+    // encore débloqué (retour d'arrière-plan sur iPhone) : elle part tout de
+    // suite, et se recale sur le chrono dès que le moteur tourne.
+    function startTimed(){
+      const buffer = decodedBuffers[currentBufferUrl];
+      const ctx = getAudioCtx();
+      if(!buffer || !ctx || !wantPlay || bufferSource) return;
+      const posNow = () => { const at = timedPos ? timedPos() : null; return at != null ? at : bufferPauseOffset; };
+      startBufferSource(buffer, posNow(), false);
+      if(ctx.state !== 'running'){
+        const onState = () => {
+          if(ctx.state !== 'running') return;
+          ctx.removeEventListener('statechange', onState);
+          if(!bufferSource || bufferLoop || !wantPlay) return;
+          const old = bufferSource; bufferSource = null;
+          try { old.stop(); } catch(e){}
+          startBufferSource(buffer, posNow(), false);
+        };
+        ctx.addEventListener('statechange', onState);
+        ctx.resume().catch(()=>{});
+      }
     }
     function playElement(key, url, opts){
       mode = 'element';
@@ -4038,9 +4105,10 @@
     function rebind(oldCtx){
       if(mode === 'buffer'){
         if(!bufferSource) return;
-        const at = bufferDuration ? (((oldCtx.currentTime - bufferStartCtxTime) % bufferDuration) + bufferDuration) % bufferDuration : 0;
-        try{ bufferSource.stop(); }catch(e){}
-        startBufferSource(decodedBuffers[currentBufferUrl], at);
+        const at = bufferOffset(oldCtx);
+        const old = bufferSource; bufferSource = null;
+        try{ old.stop(); }catch(e){}
+        startBufferSource(decodedBuffers[currentBufferUrl], at, bufferLoop);
         return;
       }
       if(!audio) return;
@@ -4084,18 +4152,30 @@
         if(currentKey === key && opts.fallback) play(opts.fallback, { loop:true });
       }
     }
-    function startBufferSource(buffer, offsetSec){
+    // loop : boucle sans fin (attente, ambiance) ; sinon musique de chrono,
+    // qui prévient à sa fin naturelle (onEnded).
+    function startBufferSource(buffer, offsetSec, loop = true){
       const ctx = getAudioCtx();
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      source.loop = true;
+      source.loop = loop;
+      bufferLoop = loop;
       gainNode = ctx.createGain();
       source.connect(gainNode).connect(ctx.destination);
       applyVolume();
-      const offset = buffer.duration ? (offsetSec % buffer.duration) : 0;
+      const d = buffer.duration;
+      const offset = !d ? 0 : (loop ? offsetSec % d : Math.min(Math.max(0, offsetSec), d));
+      // Fin naturelle (après un stop, bufferSource a déjà changé : rien).
+      source.onended = () => { if(bufferSource === source){ bufferSource = null; if(!loop) fireEnded(); } };
       source.start(0, offset);
       bufferSource = source;
       bufferStartCtxTime = ctx.currentTime - offset;
+    }
+    // Position de la source en cours (s).
+    function bufferOffset(ctx){
+      const t = ctx.currentTime - bufferStartCtxTime;
+      if(!bufferLoop) return Math.max(0, t);
+      return bufferDuration ? ((t % bufferDuration) + bufferDuration) % bufferDuration : 0;
     }
     function stop(){
       if(audio){ audio.pause(); audio.currentTime = 0; }
@@ -4108,15 +4188,16 @@
       endedCbs = [];
       wantPlay = false;
       rebindAt = null;
+      bufferLoop = true;
+      timedPos = null;
     }
     function pause(){
       wantPlay = false;
       if(mode === 'buffer'){
         if(!bufferSource) return;
-        const ctx = getAudioCtx();
-        bufferPauseOffset = bufferDuration ? (((ctx.currentTime - bufferStartCtxTime) % bufferDuration) + bufferDuration) % bufferDuration : 0;
-        try{ bufferSource.stop(); }catch(e){}
-        bufferSource = null;
+        bufferPauseOffset = bufferOffset(getAudioCtx());
+        const old = bufferSource; bufferSource = null;
+        try{ old.stop(); }catch(e){}
       } else if(audio){ audio.pause(); }
     }
     // Musique voulue en lecture (false après pause/stop) : une relance en
@@ -4198,9 +4279,10 @@
       // Balise recréée au retour d'arrière-plan (musique du menu...) : elle
       // reprend là où elle était, pas au début du morceau.
       if(mode === 'element' && audio && rebindAt != null){ const at = rebindAt; rebindAt = null; playAt(() => at); return; }
+      if(mode === 'buffer' && !bufferLoop){ if(typeof pos === 'function') timedPos = pos; startTimed(); return; }
       if(mode === 'buffer'){
         const buffer = currentBufferUrl && decodedBuffers[currentBufferUrl];
-        if(buffer) startBufferSource(buffer, bufferPauseOffset);
+        if(buffer && !bufferSource) startBufferSource(buffer, bufferPauseOffset);
       } else if(audio){
         const el = audio;
         applyVolume();
@@ -4219,6 +4301,7 @@
     let endedCbs = [];
     function fireEnded(){ const cbs = endedCbs; endedCbs = []; cbs.forEach(cb => cb()); }
     function onEnded(cb){
+      if(mode === 'buffer' && !bufferLoop && bufferSource){ endedCbs.push(cb); return; } // musique de chrono en cours
       if(!audio || audio.ended){ cb(); return; }
       endedCbs.push(cb);
     }
@@ -4242,7 +4325,7 @@
       const ctx = getAudioCtx();
       if(GAPLESS_KEYS.has(key) && ctx && !decodedBuffers[url]) decodedBuffers[url] = await ctx.decodeAudioData(arr);
     }
-    return { play, stop, pause, resume, rebind, isPlaying, applyVolume, onEnded, refreshSlot, preload, current(){ return currentKey; } };
+    return { play, stop, pause, resume, rebind, isPlaying, applyVolume, onEnded, refreshSlot, preload, prepare, current(){ return currentKey; } };
   })();
 
   // ---------- SFX "FICHIERS" (remplacent certains SFX synthétisés en dur) ----------
@@ -6621,6 +6704,9 @@
     // la musique de menu héritée du handoff. Coupée automatiquement au tap
     // qui lance le chrono, puisque ce tap bascule vers 'qualif' (voir plus bas).
     if(turn.kind === 'qualif') MUSIC.play('qualifWait', {loop:true, fallback:'menu'});
+    // Musique du chrono décodée pendant l'apparition du mot : elle partira pile au 1er appui.
+    if(turn.kind === 'qualif') MUSIC.prepare('qualif');
+    else if(turn.kind === 'final') MUSIC.prepare(turn.level <= 3 ? 'finaleEarly' : 'finaleLate');
 
     const nameEl = document.getElementById('play-team-name');
     if(turn.kind === 'final'){
@@ -6854,7 +6940,7 @@
     // finale (pas l'entraînement, qui reste sur la musique de menu —
     // toujours à un quart du volume, voir MUSIC.applyVolume()).
     if(turn.kind === 'qualif'){
-      MUSIC.play('qualif', {loop:false});
+      MUSIC.play('qualif', {loop:false, timed:chronoMusicAt});
     } else if(turn.kind === 'final'){
       // Ce tout premier tap sur le mot du palier démarre le chrono ET
       // vaut, de fait, pour l'annonce du 1er indice.
@@ -6862,7 +6948,7 @@
       SFX.indice();
       state.clueCount += 1;
       renderChevrons();
-      MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
+      MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false, timed:chronoMusicAt});
     }
     syncPauseBtn();
   });
