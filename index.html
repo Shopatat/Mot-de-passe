@@ -8895,6 +8895,24 @@
       tipsAt = runFinaleTravel(pill, () => { lead = performance.now() - t; swap(); }, done, at);
     });
 
+    // Attente du passage suivant (mot affiché PEEK_WORD_MS), son « word reveal »
+    // compris, en relisant shownAt à chaque tour : écran verrouillé pendant
+    // l'aperçu, au retour le mot affiché repart pour 3 s entières (sinon, les
+    // minuteries en retard le faisaient disparaître aussitôt).
+    let shownAt = 0;
+    const onVis = () => { if(!document.hidden && alive()) shownAt = performance.now(); };
+    document.addEventListener('visibilitychange', onVis);
+    const waitNext = async withSound => {
+      let played = !withSound;
+      for(;;){
+        if(!alive()){ document.removeEventListener('visibilitychange', onVis); return; }
+        const startAt = shownAt + PEEK_WORD_MS - lead, soundAt = startAt + tipsAt - REVEAL_SOUND_HIT_MS, now = performance.now();
+        if(!played && now >= soundAt){ played = true; reveal(); }
+        if(now >= startAt){ if(!played) setTimeout(() => { if(alive()) reveal(); }, soundAt - now); return; }
+        await sleep(Math.min(50, startAt - now));
+      }
+    };
+
     cancelWordBirth(pill);
     pill.style.opacity = '0';
     wordEl.style.animation = '';
@@ -8909,16 +8927,15 @@
       pill.style.opacity = '';
       void pill.offsetWidth;
       reveal();
-      let shownAt = performance.now() + 650 + WB.white + WB.black; // le mot apparaît (voir playWordBirth)
+      shownAt = performance.now() + 650 + WB.white + WB.black; // le mot apparaît (voir playWordBirth)
       await playWordBirth({ pill, finale: true, word: wordEl });
       for(let i = 1; i < shown.length; i++){
-        const startAt = shownAt + PEEK_WORD_MS - lead;
-        setTimeout(() => { if(alive()) reveal(); }, startAt + tipsAt - REVEAL_SOUND_HIT_MS - performance.now());
-        await sleep(startAt - performance.now());
+        await waitNext(true);
         if(!alive()) return;
         await pass(() => { showWordNow('peek-word', shown[i]); setLabel(i); shownAt = performance.now(); });
       }
-      await sleep(shownAt + PEEK_WORD_MS - lead - performance.now());
+      await waitNext(false);
+      document.removeEventListener('visibilitychange', onVis);
       if(!alive()) return;
       // Fin : les chevrons emportent le dernier mot, sans remplaçant, puis le
       // cadre (vide) se referme, l'apparition jouée à l'envers.
@@ -9555,6 +9572,7 @@
       state.running = true;
       document.getElementById('word-pill').classList.remove('waiting', 'paused-hidden');
       if(chapter !== 'final') document.getElementById('play-hint').textContent = '';
+      else { delete document.getElementById('play-hint').dataset.hintKey; updateFinaleHint(); } // sinon « En pause… » restait affiché
       setPlayControlsEnabled(true);
       MUSIC.resume();
       syncPauseBtn();
