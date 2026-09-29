@@ -268,6 +268,12 @@
   .set-label{ font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); }
   .set-row .toggle-row{ flex-wrap:nowrap; gap:6px; }
   .set-row .toggle-btn{ min-width:0; padding:8px 4px; font-size:12.5px; }
+  /* Nombre de manches conseillé : petit point doré sous le chiffre. */
+  #rounds-group .toggle-btn{ position:relative; }
+  #rounds-group .toggle-btn.is-default::after{
+    content:''; position:absolute; left:50%; bottom:3px; width:4px; height:4px; margin-left:-2px;
+    border-radius:50%; background:var(--gold); box-shadow:0 0 5px rgba(242,201,76,.8); pointer-events:none;
+  }
   .set-card .footer-note{ margin:-2px 0 0; text-align:left; padding-left:66px; }
   /* Noms des joueurs : titres de colonnes écrits une fois (équipes), pastille
      de couleur de l'équipe en début de ligne, ⇄ entre deux voisins, ⇅ entre deux lignes. */
@@ -3951,7 +3957,10 @@
     // du jingle de palier gagné (ou du son des qualifs). Sur iPhone, une balise
     // <audio> neuve lancée hors appui reste muette (Fabien, 2026-09-28 : rien
     // jusqu'au « Jouer pour… ») ; Web Audio, déjà débloqué, joue sans appui.
-    const GAPLESS_KEYS = new Set(['qualifWait', 'finaleAmbient']);
+    // La musique du menu aussi : elle repart seule à la fin du jingle de
+    // manche gagnée (qualifs, entraînement) et restait muette jusqu'au
+    // prochain appui (Fabien, 2026-09-29).
+    const GAPLESS_KEYS = new Set(['qualifWait', 'finaleAmbient', 'menu']);
     // Musiques de chrono (qualifs 30 s, paliers de finale) : même moteur Web
     // Audio, sans boucle, lancées pile à la seconde du chrono (timed : fonction
     // qui donne cette seconde). Avec une balise <audio>, l'iPhone mettait un
@@ -4130,20 +4139,16 @@
       const ctx = getAudioCtx();
       if(!ctx){ playElement(key, url, { loop:true, fallback:opts.fallback }); return; } // repli si Web Audio indisponible
       ensureAudioCtxRunning();
+      const seq = playSeq;
       try {
         // Cache par fichier (et non par piste) : une musique importée remplace
         // bien l'ancienne au lieu de ressortir la version déjà décodée.
-        let buffer = decodedBuffers[url];
-        if(!buffer){
-          const res = await fetch(url);
-          if(!res.ok) throw new Error('fichier introuvable');
-          const arr = await res.arrayBuffer();
-          buffer = await ctx.decodeAudioData(arr);
-          decodedBuffers[url] = buffer;
-        }
+        // (decodeUrl : un seul décodage même si le préchargement est en cours)
+        const buffer = decodedBuffers[url] || await decodeUrl(url);
         // Le décodage est asynchrone : la piste demandée a pu changer entretemps
-        // (nouvel appel à play() pendant le fetch/decode) — on abandonne alors.
-        if(currentKey !== key) return;
+        // (nouvel appel à play() pendant le fetch/decode) — on abandonne alors,
+        // y compris si c'est la même piste relancée (sinon elle jouerait en double).
+        if(currentKey !== key || seq !== playSeq) return;
         currentBufferUrl = url;
         mode = 'buffer';
         bufferDuration = buffer.duration;
@@ -4177,7 +4182,9 @@
       if(!bufferLoop) return Math.max(0, t);
       return bufferDuration ? ((t % bufferDuration) + bufferDuration) % bufferDuration : 0;
     }
+    let playSeq = 0; // change à chaque stop() : un décodage en retard sait qu'il est dépassé
     function stop(){
+      playSeq++;
       if(audio){ audio.pause(); audio.currentTime = 0; }
       if(bufferSource){ try{ bufferSource.stop(); }catch(e){} }
       audio = null;
@@ -4319,11 +4326,8 @@
     async function preload(key){
       const url = urlFor(key);
       if(!url) return;
-      const res = await fetch(url);
-      if(!res.ok) return;
-      const arr = await res.arrayBuffer();
-      const ctx = getAudioCtx();
-      if(GAPLESS_KEYS.has(key) && ctx && !decodedBuffers[url]) decodedBuffers[url] = await ctx.decodeAudioData(arr);
+      if(GAPLESS_KEYS.has(key) && getAudioCtx()){ try { await decodeUrl(url); } catch(e){} return; }
+      await fetch(url);
     }
     return { play, stop, pause, resume, rebind, isPlaying, applyVolume, onEnded, refreshSlot, preload, prepare, current(){ return currentKey; } };
   })();
@@ -5760,7 +5764,11 @@
   });
 
   wireToggleGroup('playercount-group', val => {
+    const prevCount = state.playerCount;
     state.playerCount = parseInt(val, 10);
+    // Autre nombre de joueurs : le nombre de manches repart sur le conseillé
+    // (un choix fait à 4 n'a plus de sens à 6). Voir renderRoundsRow.
+    if(state.playerCount !== prevCount){ state.roundsTeam = ROUNDS_TEAM_DEFAULT; state.roundsSolo = null; }
     const teamImpossible = state.playerCount % 2 === 1 || state.playerCount < 4;
     const teamBtn = document.querySelector('#submode-group .toggle-btn[data-val="team"]');
     teamBtn.classList.toggle('disabled', teamImpossible);
@@ -5969,8 +5977,11 @@
   // (et devine) ; par défaut tout le monde fait deviner à tout le monde, soit
   // joueurs - 1 fois (2 fois à 2 joueurs). La ligne dessous donne le total et
   // une durée indicative (~1 min par manche, téléphone passé compris).
+  // Le chiffre conseillé porte un point doré (.is-default) ; changer le
+  // nombre de joueurs y ramène (Fabien, 2026-09-29).
   const ROUND_CHOICES = { team:[2, 3, 4, 5, 6], solo:[1, 2, 3, 4, 5] };
-  state.roundsTeam = 4;
+  const ROUNDS_TEAM_DEFAULT = 4;
+  state.roundsTeam = ROUNDS_TEAM_DEFAULT;
   state.roundsSolo = null; // null : valeur par défaut selon le nombre de joueurs
   function soloRoundsDefault(n){ return n === 2 ? 2 : n - 1; }
   function roundsPerUnit(){
@@ -5981,10 +5992,11 @@
     if(!group) return;
     const isTeam = state.subMode === 'team';
     const cur = roundsPerUnit();
+    const conseille = isTeam ? ROUNDS_TEAM_DEFAULT : soloRoundsDefault(state.playerCount);
     group.innerHTML = '';
     ROUND_CHOICES[isTeam ? 'team' : 'solo'].forEach(v => {
       const b = document.createElement('div');
-      b.className = 'toggle-btn' + (v === cur ? ' selected' : '');
+      b.className = 'toggle-btn' + (v === cur ? ' selected' : '') + (v === conseille ? ' is-default' : '');
       b.textContent = v;
       b.addEventListener('click', () => {
         if(isTeam) state.roundsTeam = v; else state.roundsSolo = v;
@@ -7714,13 +7726,16 @@
   // ou pool épuisé à cause de mots interdits) : on coupe net la musique du
   // chrono et on joue le jingle "fin de la manche" ; le retour à la musique du
   // menu se cale sur la fin réelle du jingle, pas sur un délai fixe.
+  let roundWinJingleOn = false; // endTurn (entraînement) laisse alors le jingle relancer le menu
   function playQualifRoundWinJingle(){
     MUSIC.stop();
     const node = SFX.roundWin();
     if(node){
+      roundWinJingleOn = true;
+      setTimeout(() => { roundWinJingleOn = false; }, 8000); // filet : 'ended' perdu (arrière-plan...)
       // Menu seulement si rien d'autre n'a démarré entretemps : en enchaînant
       // vite, la musique d'attente du mot suivant tourne déjà.
-      node.addEventListener('ended', () => { if(!state.inFinale && !MUSIC.current()) MUSIC.play('menu', {loop:true}); }, { once:true });
+      node.addEventListener('ended', () => { roundWinJingleOn = false; if(!state.inFinale && !MUSIC.current()) MUSIC.play('menu', {loop:true}); }, { once:true });
     } else {
       MUSIC.play('menu', {loop:true}); // pas de jingle dispo (son coupé...) : retour immédiat
     }
@@ -7741,7 +7756,8 @@
       // Manche de qualif finie avant la fin des 30s : son de victoire dédié.
       // Si le temps est déjà écoulé pile à ce moment, la musique du timer
       // couvre déjà la fin (pas besoin de son en plus).
-      if(turn.kind === 'qualif' && state.timeLeft > 0) playQualifRoundWinJingle();
+      // Entraînement : même jingle quand tous les mots sont trouvés (Fabien, 2026-09-29).
+      if((turn.kind === 'qualif' && state.timeLeft > 0) || turn.kind === 'training') playQualifRoundWinJingle();
       stopTimer();
       renderDots();
       playClosingChevronTransition(() => endTurn());
@@ -7852,6 +7868,9 @@
       if(state.timeLeft <= 0){
         MUSIC.onEnded(() => { if(!state.inFinale) MUSIC.play('menu', {loop:true}); });
       }
+    } else if(roundWinJingleOn){
+      // Entraînement fini sur le jingle de victoire : c'est sa fin qui relance
+      // la musique du menu (sinon elle repartait par-dessus le jingle).
     } else {
       MUSIC.stop(); // coupe la musique en cours (menu), quelle que soit la façon dont la manche s'est terminée
       // Petit silence avant de reprendre la musique du menu, pour laisser la fin de
