@@ -1975,7 +1975,7 @@
             <div class="toggle-btn" data-val="off">Cachée</div>
           </div>
         </div>
-        <p class="footer-note pset-note">Sous le mot, en finale. Le message du mot rouge reste toujours.</p>
+        <p class="footer-note pset-note">Sous le mot, en qualifs et en finale. Les messages de pause et du mot rouge restent toujours.</p>
         <div class="set-row pset-row">
           <span class="set-label">Pause</span>
           <div class="toggle-row" id="pause-hide-toggle">
@@ -3966,6 +3966,7 @@
       const url = urlFor(key);
       if(!url) return;
       currentKey = key;
+      wantPlay = true;
       currentOpts = opts;
       if(GAPLESS_KEYS.has(key)) playGapless(key, url, opts);
       else playElement(key, url, opts);
@@ -4074,8 +4075,10 @@
       gainNode = null;
       currentKey = null;
       endedCbs = [];
+      wantPlay = false;
     }
     function pause(){
+      wantPlay = false;
       if(mode === 'buffer'){
         if(!bufferSource) return;
         const ctx = getAudioCtx();
@@ -4084,12 +4087,81 @@
         bufferSource = null;
       } else if(audio){ audio.pause(); }
     }
-    function resume(){
+    // Musique voulue en lecture (false après pause/stop) : une relance en
+    // attente d'un appui (voir onNextTap) ne repart que si c'est encore le cas.
+    let wantPlay = false;
+    // Sur iPhone, une balise <audio> neuve (recréée au retour d'arrière-plan,
+    // voir rebind) ne peut pas démarrer hors d'un appui : en finale, le chrono
+    // repart tout seul au réveil, et la musique restait coupée jusqu'au palier
+    // suivant (Fabien, 2026-09-29). Refusée, elle repart au premier appui
+    // (indice, bouton...), à la bonne position.
+    let tapRetry = null;
+    function onNextTap(fn){
+      if(tapRetry){ document.removeEventListener('touchend', tapRetry, true); document.removeEventListener('click', tapRetry, true); }
+      tapRetry = () => {
+        document.removeEventListener('touchend', tapRetry, true);
+        document.removeEventListener('click', tapRetry, true);
+        tapRetry = null;
+        fn();
+      };
+      document.addEventListener('touchend', tapRetry, true);
+      document.addEventListener('click', tapRetry, true);
+    }
+    // Reprise calée sur le chrono (posFn : position voulue en secondes, lue au
+    // moment même, ou null). La balise recréée ignore aussi la position
+    // demandée tant qu'elle n'a rien chargé : elle repartait du début. On la
+    // lance donc en silence, on la recale dès qu'elle le permet, puis on rend
+    // le son.
+    function playAt(posFn){
+      const el = audio;
       ensureAudioCtxRunning();
+      const evs = ['loadedmetadata', 'canplay', 'playing', 'seeked'];
+      let done = false, guard = 0;
+      const finish = () => {
+        if(done) return;
+        done = true;
+        clearTimeout(guard);
+        evs.forEach(e => el.removeEventListener(e, check));
+        el.muted = false;
+        if(audio === el) applyVolume();
+      };
+      const check = () => {
+        if(done) return;
+        const at = posFn();
+        if(audio !== el || at == null){ finish(); return; }
+        if(el.readyState < 1) return;
+        if(Math.abs(el.currentTime - at) > 0.25){ try { el.currentTime = at; } catch(e){} } // « seeked » revérifie
+        else finish();
+      };
+      const at = posFn();
+      if(at == null) return;
+      if(el.readyState >= 1){
+        try { el.currentTime = at; } catch(e){}
+        done = true;
+        el.muted = false;
+        applyVolume();
+      } else {
+        if(gainNode) gainNode.gain.value = 0; else el.muted = true;
+        evs.forEach(e => el.addEventListener(e, check));
+        guard = setTimeout(finish, 3000); // jamais muette pour de bon
+      }
+      el.play().catch(() => {
+        finish();
+        onNextTap(() => { if(audio === el && wantPlay && el.paused) playAt(posFn); });
+      });
+    }
+    function resume(pos){
+      ensureAudioCtxRunning();
+      wantPlay = true;
+      if(mode === 'element' && audio && typeof pos === 'function'){ playAt(pos); return; }
       if(mode === 'buffer'){
         const buffer = currentBufferUrl && decodedBuffers[currentBufferUrl];
         if(buffer) startBufferSource(buffer, bufferPauseOffset);
-      } else if(audio){ applyVolume(); audio.play().catch(()=>{}); }
+      } else if(audio){
+        const el = audio;
+        applyVolume();
+        el.play().catch(() => onNextTap(() => { if(audio === el && wantPlay && el.paused) el.play().catch(()=>{}); }));
+      }
     }
     // Permet de savoir quand la piste en cours se termine NATURELLEMENT (fin de
     // fichier, ex: timeout des qualifs dont le son de fin est inclus dans la
@@ -5260,6 +5332,7 @@
   wireSoundToggle('finale-help-toggle', () => UIPREFS.getShowFinaleHelp(), v => {
     UIPREFS.setShowFinaleHelp(v);
     updateFinaleHint();
+    updateStartHint();
   });
   // Mode arbitre : réorganise les boutons de l'écran de jeu (voir le CSS
   // "#screen-play.arbitre-mode"). Un seul choix à trois cases dans les
@@ -6559,8 +6632,7 @@
     if(turn.style === 'clues'){
       updateFinaleHint();
     } else {
-      playHint.classList.remove('hint-finale', 'danger');
-      putHintLine(playHint, "Touche cette zone pour lancer le chrono", true);
+      updateStartHint();
     }
     playHint.style.opacity = '0'; // révélé après PLAY_REVEAL_DELAY, avec le reste
     updateForbiddenReminderVisibility();
@@ -6713,7 +6785,7 @@
         // Sinon (entraînement) : on ne change pas de piste, la musique de menu
         // continue, toujours à volume réduit.
       } else {
-        MUSIC.resume();
+        MUSIC.resume(chronoMusicAt); // (chrono déjà relancé juste au-dessus)
       }
     }
   });
@@ -6813,6 +6885,16 @@
     el.classList.add('hint-finale');
     el.classList.toggle('danger', inDanger);
     putHintLine(el, text, true);
+  }
+  // Consigne de départ des qualifs, de l'entraînement (avant le 1er appui) :
+  // cachée avec le réglage « Consigne » comme celle de la finale (Fabien,
+  // 2026-09-29). Le message de pause, lui, reste toujours.
+  function updateStartHint(){
+    const turn = state.currentTurn;
+    if(!turn || turn.style === 'clues' || state.turnMusicStarted) return;
+    const el = document.getElementById('play-hint');
+    el.classList.remove('hint-finale', 'danger');
+    putHintLine(el, UIPREFS.getShowFinaleHelp() ? "Touche cette zone pour lancer le chrono" : '', true);
   }
   // Écrit la consigne sous le mot. Flèches de part et d'autre : tout le haut
   // de l'écran est la zone d'appui (voir .word-pill::after), elles montrent
@@ -7114,7 +7196,19 @@
     roundFrozen = false;
     if(!state.running || !screens.play.classList.contains('active')) return;
     startTimer();
-    MUSIC.resume();
+    MUSIC.resume(chronoMusicAt);
+  }
+  // Position (s) où doit être la musique du chrono pour coller au temps
+  // affiché, lue à l'instant même : elle part avec le chrono (qualifs 30 s,
+  // paliers de finale), donc temps écoulé = durée de la manche - temps
+  // restant. null : pas de musique calée sur le chrono (entraînement, tuto),
+  // ou chrono arrêté (pause, fenêtre ouverte, manche finie).
+  function chronoMusicAt(){
+    const turn = state.currentTurn;
+    if(!turn || turn.chrono || !state.turnMusicStarted || !state.timerActive) return null;
+    if(turn.kind !== 'qualif' && turn.kind !== 'final') return null;
+    if(TUTO && TUTO.active) return null;
+    return Math.max(0, turn.time - currentTimerMs() / 1000);
   }
   // Rejoue la traversée des chevrons comme un changement de mot normal, mais sans
   // révéler de nouveau mot : le cadre se referme (dématérialisation) pendant qu'il
@@ -9090,8 +9184,8 @@
         { id:'f-haut', spot:['#play-timer-num', '#play-dots'], t:'{temps}, {cible} mots sur {total}',
           x:"Pour décrocher le palier, trouve {cible} mots parmi ces {total} voyants." },
         { id:'f-encore', spot:['#word-pill', '#chevrons-left', '#chevrons-right'], act:'clues', t:'Et de deux… et de trois',
-          x:"Pas trouvé ? Nouvel indice, nouveau tap. Les chevrons montrent ce qu'il te reste.",
-          n:{ x:"**{devineur}** n'a pas trouvé ? Nouvel indice, nouveau tap. Les chevrons montrent ce qu'il te reste." },
+          x:"Pas trouvé ? Nouvel indice : touche encore la zone. Les chevrons montrent ce qu'il te reste.",
+          n:{ x:"**{devineur}** n'a pas trouvé ? Nouvel indice : touche encore la zone. Les chevrons montrent ce qu'il te reste." },
           go:'Touche encore {reste} fois' },
         { id:'f-rouge', spot:['#word-pill', '#play-hint'], t:'Zone rouge',
           x:"Plus d'indice : le mot passe au rouge. Si ton partenaire se trompe encore, touche la zone : le mot est perdu.",
