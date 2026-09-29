@@ -2230,8 +2230,8 @@
     <div>
       <div class="handoff-final-reminder" id="handoff-final-reminder" style="display:none;">
         <div class="rem-title">Petit rappel</div>
-        <p>Tape la zone du mot pour donner jusqu'à 3 indices — les chevrons montrent ceux qui restent.</p>
-        <p>Après le 3<sup>e</sup> indice, le mot passe en rouge : si ton partenaire se trompe encore, tape la zone du mot, il est perdu.</p>
+        <p>Touche la zone du mot pour donner jusqu'à 3 indices — les chevrons montrent ceux qui restent.</p>
+        <p>Après le 3<sup>e</sup> indice, le mot passe en rouge : si ton partenaire se trompe encore, touche la zone du mot, il est perdu.</p>
       </div>
     </div>
     <button class="btn btn-gold" id="btn-ready">C'est parti</button>
@@ -2257,7 +2257,7 @@
       </div>
       <div class="chevrons right" id="chevrons-right"></div>
     </div>
-    <p class="footer-note" id="play-hint">Tape sur le mot pour lancer le chrono</p>
+    <p class="footer-note" id="play-hint">Touche cette zone pour lancer le chrono</p>
     <div class="play-controls" id="play-controls">
     <div class="controls-row">
       <button class="btn btn-wrong" id="btn-not-found">✗ Pas trouvé</button>
@@ -3871,8 +3871,23 @@
       else result.push(w);
     }
     for(let i=0; result.length < n; i++) result.push(i < skipped.length ? skipped[i] : pool[i % pool.length]);
-    result.forEach(w => PLAYED_WORDS.add(w));
+    // Pas encore « joués » : un mot ne sort de la réserve qu'une fois affiché
+    // (voir markWordShown). Ceux restés dans le paquet sans jamais apparaître
+    // (manche finie avant) pourront être tirés une autre fois.
     return result;
+  }
+  // Un mot vient d'apparaître à l'écran : il sort de la réserve et compte dans
+  // le détail de la manche (Fabien, 2026-09-29 : un mot jamais vu n'est ni
+  // gâché ni compté « pas trouvé »). Rien ne sort de la réserve en mode test ni
+  // pendant le tuto (mots d'essai).
+  function markWordShown(w, inRound){
+    if(!w) return;
+    if(inRound){
+      if(!state.wordsShown) state.wordsShown = [];
+      if(!state.wordsShown.includes(w)) state.wordsShown.push(w);
+    }
+    if(TEST_WORD_MODE.isOn() || w === TEST_WORD || (TUTO && TUTO.active)) return;
+    PLAYED_WORDS.add(w);
   }
 
 
@@ -4972,7 +4987,11 @@
 
   // Espace insécable avant « € » : sinon le symbole peut passer seul à la ligne
   // (« Jouer pour 5 000 / € » sur un bouton étroit).
-  function euro(n){ return n.toLocaleString('fr-FR') + " €"; }
+  // Séparateur des milliers : espace insécable normale. Celle que donne
+  // toLocaleString (fine, U+202F) ne fait que 1,4 px en Manrope : on lisait
+  // « 2500 € » (Fabien, 2026-09-29).
+  function milliers(n){ return n.toLocaleString('fr-FR').replace(/\u202f/g, '\u00a0'); }
+  function euro(n){ return milliers(n) + ' €'; }
 
   // ---------- STATE ----------
   const state = {
@@ -5144,7 +5163,10 @@
     container.classList.add('discreet');
     const found = state.wordsFound || [];
     const failed = state.wordsFailed || [];
-    const leftover = state.pool || [];
+    // Mots restés dans le paquet : seulement ceux déjà apparus (un mot jamais
+    // affiché n'est pas compté, voir markWordShown).
+    const shownWords = state.wordsShown || [];
+    const leftover = (state.pool || []).filter(w => shownWords.includes(w));
     // Si l'objectif a été atteint, les mots restants du paquet n'ont simplement pas été
     // utilisés (pas une erreur) — on ne les mélange pas avec les vrais échecs.
     const missed = success ? failed : failed.concat(leftover);
@@ -5367,7 +5389,7 @@
   function renderWordPoolStatus(){
     const fresh = TOTAL_WORD_COUNT - PLAYED_WORDS.count();
     document.getElementById('word-pool-status').textContent =
-      `${fresh.toLocaleString('fr-FR')} frais sur ${TOTAL_WORD_COUNT.toLocaleString('fr-FR')}`;
+      `${milliers(fresh)} frais sur ${milliers(TOTAL_WORD_COUNT)}`;
   }
   document.getElementById('btn-reset-word-pool').addEventListener('click', () => {
     PLAYED_WORDS.reset();
@@ -5554,6 +5576,7 @@
     }
     document.getElementById('team-assignment-card').style.display = (state.subMode === 'team') ? '' : 'none';
     renderPlayerFields();
+    MENU_PREFS.save();
   });
 
   wireToggleGroup('submode-group', val => {
@@ -5561,11 +5584,13 @@
     state.subModeForcedSolo = false; // choix manuel : on ne corrige plus automatiquement
     document.getElementById('team-assignment-card').style.display = (val === 'team') ? '' : 'none';
     renderPlayerFields();
+    MENU_PREFS.save();
   });
 
   wireToggleGroup('teamassign-group', val => {
     state.teamAssignment = val;
     renderPlayerFields();
+    MENU_PREFS.save();
   });
 
   function renderPlayerFields(){
@@ -5761,6 +5786,7 @@
       b.addEventListener('click', () => {
         if(isTeam) state.roundsTeam = v; else state.roundsSolo = v;
         renderRoundsRow();
+        MENU_PREFS.save();
       });
       group.appendChild(b);
     });
@@ -5771,7 +5797,36 @@
       : `Chacun fait deviner ${cur} fois · ${total} duos · environ ${total} min`;
     document.getElementById('rounds-note').textContent = note;
   }
-  renderPlayerFields();
+
+  // ---- Réglages du menu gardés d'une ouverture à l'autre ----
+  // Nombre de joueurs, équipes ou chacun pour soi, équipes prédéfinies ou
+  // aléatoires, nombre de manches : on retrouve le menu comme on l'a laissé.
+  // Le mode, lui, repart toujours sur « Partie complète » (Fabien, 2026-09-29 :
+  // l'entraînement ne doit pas devenir le mode par défaut). Enregistré à chaque
+  // choix et au lancement ; pas par les raccourcis de test.
+  const MENU_PREFS = {
+    KEY: 'mdp_menu_prefs',
+    save(){
+      try { localStorage.setItem(this.KEY, JSON.stringify({ playerCount: state.playerCount, subMode: state.subMode,
+        subModeForcedSolo: state.subModeForcedSolo, teamAssignment: state.teamAssignment,
+        roundsTeam: state.roundsTeam, roundsSolo: state.roundsSolo })); } catch(e){}
+    },
+    apply(){
+      let p = null;
+      try { p = JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch(e){}
+      if(!p || ![2, 3, 4, 5, 6].includes(p.playerCount)) return false;
+      const teamOk = p.playerCount % 2 === 0 && p.playerCount >= 4;
+      state.playerCount = p.playerCount;
+      state.subMode = (p.subMode === 'team' && teamOk) ? 'team' : 'solo';
+      state.teamAssignment = p.teamAssignment === 'random' ? 'random' : 'predefined';
+      if(ROUND_CHOICES.team.includes(p.roundsTeam)) state.roundsTeam = p.roundsTeam;
+      state.roundsSolo = ROUND_CHOICES.solo.includes(p.roundsSolo) ? p.roundsSolo : null;
+      syncMenuToState(); // coches, ligne « Équipes », noms et manches
+      state.subModeForcedSolo = !!p.subModeForcedSolo && state.subMode === 'solo' && !teamOk;
+      return true;
+    },
+  };
+  if(!MENU_PREFS.apply()) renderPlayerFields();
 
   // ================= PARTIE ENREGISTRÉE (reprise) =================
   // Si iOS ferme l'appli (appel, batterie...), la partie n'est pas perdue : elle
@@ -5799,7 +5854,7 @@
     'turnQueue', 'currentTurnIndex', 'soloFirstGiver', 'buzz', 'finaleGiverName', 'finaleGuesserName',
     'finaleColorIdx', 'inFinale', 'currentLevel', 'bank', 'safeBank', 'jokerAvailable', 'jokerUsed',
     'finalHistory', 'endedByStop', 'peekedPool', 'peekedLevel', 'wordsFound', 'wordsFailed', 'pool',
-    'roundsTeam', 'roundsSolo'];
+    'roundsTeam', 'roundsSolo', 'wordsShown'];
   // where : { at:'handoff'|'afterTurn'|'buzz'|'finalist'|'decision', ...détails }
   function saveGameProgress(where){
     if(state.mode !== 'full' || state.isDebug) return;
@@ -6192,6 +6247,7 @@
       return;
     }
     PLAYERNAMES.remember([...document.querySelectorAll('#player-fields input')].map(i => i.value));
+    MENU_PREFS.save();
 
     if(state.subMode === 'team'){
       buildTeams();
@@ -6428,6 +6484,7 @@
     state.foundCount = 0;
     state.wordsFound = [];
     state.wordsFailed = [];
+    state.wordsShown = [];
     state.target = turn.target;
     state.timeLeft = turn.chrono ? 0 : turn.time;
     state.timerMs = null; // chrono neuf : repart de timeLeft (voir startTimer)
@@ -7364,6 +7421,7 @@
     if(state.pool.length === 0){ stopTimer(); endTurn(); return; }
     state.clueCount = 1;
     const nextWord = state.pool[0].toUpperCase();
+    markWordShown(state.pool[0], true);
     const isFinaleStyle = state.currentTurn && state.currentTurn.style === 'clues';
     if(animate === false){
       setWordText(nextWord);
@@ -7700,6 +7758,7 @@
     const b = state.buzz;
     b.turnPos = b.startPos;
     b.word = drawTieredWords(1, BUZZ_TIERS)[0];
+    markWordShown(b.word);
     buzzLocked = true; // relâché une fois le nouveau mot affiché
     renderBuzzPoints();
     renderBuzzTurn();
@@ -8637,6 +8696,7 @@
     state.peekedPool = preview;
     state.peekedLevel = nextLevel;
     saveGameProgress({ at:'decision' }); // les mots vus au joker restent ceux du palier, même après une reprise
+    preview.slice(0, 5).forEach(w => markWordShown(w)); // vus au joker : sortis de la réserve
     const shown = preview.slice(0, 5).map(w => w.toUpperCase());
     // Quitter la partie (retour au menu) change state.gen : tout s'arrête là,
     // sinon on reviendrait tout seul sur l'écran de décision.
@@ -8978,9 +9038,9 @@
           n:{ note:"Le téléphone reste dans les mains de **{donneur}** : **{devineur}** ne regarde jamais l'écran !" },
           cta:"C'est parti" },
         { id:'depart', spot:['#word-pill'], act:'start', t:'Le mot secret',
-          x:"Il n'y a que toi qui le vois : fais-le trouver à ton partenaire. Tape dessus pour lancer le chrono.",
-          n:{ x:"**{donneur}**, il n'y a que toi qui le vois : fais-le trouver à **{devineur}**. Tape dessus pour lancer le chrono." },
-          go:'Tape le mot' },
+          x:"Il n'y a que toi qui le vois : fais-le trouver à ton partenaire. Touche-le pour lancer le chrono.",
+          n:{ x:"**{donneur}**, il n'y a que toi qui le vois : fais-le trouver à **{devineur}**. Touche-le pour lancer le chrono." },
+          go:'Touche le mot' },
         { id:'haut', spot:['#play-timer-num', '#play-dots'], t:'30 secondes, 5 mots',
           x:"Chaque voyant est un mot de la manche. Trouvé, il passe au vert.",
           tr:{ t:'Le chrono et les voyants', x:"En entraînement, le chrono compte sans limite. Chaque voyant est un mot : trouvé, il passe au vert." } },
@@ -8988,28 +9048,28 @@
           x:"Un seul mot par indice. Ton partenaire répond un mot, ou « passe ». Puis indice suivant.",
           n:{ x:"Un seul mot par indice. **{devineur}** répond un mot, ou « passe ». Puis indice suivant." } },
         { id:'trouve', spot:['#btn-correct'], act:'correct', t:'Trouvé !',
-          x:"Ton partenaire a dit « {mot} » ? Tape **Trouvé**.",
-          n:{ x:"**{devineur}** a dit « {mot} » ? Tape **Trouvé**." },
-          go:'Tape Trouvé',
+          x:"Ton partenaire a dit « {mot} » ? Touche **Trouvé**.",
+          n:{ x:"**{devineur}** a dit « {mot} » ? Touche **Trouvé**." },
+          go:'Touche Trouvé',
           after:{ spot:['#play-dots', '#word-pill'], t:'Un voyant vert',
             x:"Un point de gagné, et le mot suivant arrive tout seul.",
             n:{ x:"Un point pour **{donneur}** et **{devineur}**, et le mot suivant arrive tout seul." } } },
         { id:'passer', spot:['#btn-not-found'], act:'pass', t:'Passer',
-          x:"Ça coince sur « {mot} » ? Tape **Passer** : le mot file en fin de liste.",
-          n:{ x:"**{devineur}** sèche sur « {mot} » ? Tape **Passer** : le mot file en fin de liste." },
-          go:'Tape Passer',
+          x:"Ça coince sur « {mot} » ? Touche **Passer** : le mot file en fin de liste.",
+          n:{ x:"**{devineur}** sèche sur « {mot} » ? Touche **Passer** : le mot file en fin de liste." },
+          go:'Touche Passer',
           after:{ spot:['#word-pill'], t:'Il reviendra', x:"Aucun point perdu : « {passe} » repassera plus tard dans la manche." } },
         { id:'interdit', spot:['#btn-interdit'], act:'forbidden', t:'Interdit',
-          x:"Un indice interdit t'a échappé ? Pas de triche : tape **Interdit**, le mot est perdu.",
-          n:{ x:"**{donneur}**, un indice interdit t'a échappé ? Pas de triche : tape **Interdit**, le mot est perdu." },
-          go:'Tape Interdit',
+          x:"Un indice interdit t'a échappé ? Pas de triche : touche **Interdit**, le mot est perdu.",
+          n:{ x:"**{donneur}**, un indice interdit t'a échappé ? Pas de triche : touche **Interdit**, le mot est perdu." },
+          go:'Touche Interdit',
           after:{ spot:['#play-dots', '#word-pill'], t:'Un voyant de moins', x:"« {perdu} » ne compte plus : son voyant a disparu." } },
         { id:'regles', center:true, rules:true, t:'Les 4 interdits',
           x:"Pour faire deviner SOLEIL, par exemple :", cta:'Compris' },
         { id:'pause', spot:['#word-pill'], act:'pause', t:"Besoin d'une pause ?",
-          x:"Tape le mot : tout s'arrête. Retape-le pour repartir.",
-          x2:"En pause, le mot se cache. Retape-le pour repartir.",
-          go:'Tape le mot' },
+          x:"Touche le mot : tout s'arrête. Touche-le encore pour repartir.",
+          x2:"En pause, le mot se cache. Touche-le encore pour repartir.",
+          go:'Touche le mot' },
         { id:'terminer', spot:['#btn-training-end'], only:'training', t:'Quand tu veux',
           x:"En entraînement, pas de fin imposée : **Terminer la manche** arrête quand tu veux." },
         { id:'go', center:true, last:true, t:'À vous de jouer !',
@@ -9024,26 +9084,26 @@
           n:{ x:"**{donneur}** et **{devineur}**, même plateau mais nouvelle règle : ici, **chaque indice se compte**. Trois par mot, pas un de plus." },
           cta:'Voyons ça' },
         { id:'f-indice', spot:['#word-pill', '#chevrons-left', '#chevrons-right'], act:'start', t:'1er indice',
-          x:"Dis ton indice et tape la zone du mot : le chrono part, un chevron s'éteint.",
-          n:{ x:"**{donneur}**, dis ton indice et tape la zone du mot : le chrono part, un chevron s'éteint." },
-          go:'Tape le mot' },
+          x:"Dis ton indice et touche la zone du mot : le chrono part, un chevron s'éteint.",
+          n:{ x:"**{donneur}**, dis ton indice et touche la zone du mot : le chrono part, un chevron s'éteint." },
+          go:'Touche le mot' },
         { id:'f-haut', spot:['#play-timer-num', '#play-dots'], t:'{temps}, {cible} mots sur {total}',
           x:"Pour décrocher le palier, trouve {cible} mots parmi ces {total} voyants." },
         { id:'f-encore', spot:['#word-pill', '#chevrons-left', '#chevrons-right'], act:'clues', t:'Et de deux… et de trois',
           x:"Pas trouvé ? Nouvel indice, nouveau tap. Les chevrons montrent ce qu'il te reste.",
           n:{ x:"**{devineur}** n'a pas trouvé ? Nouvel indice, nouveau tap. Les chevrons montrent ce qu'il te reste." },
-          go:'Tape encore {reste} fois' },
+          go:'Touche encore {reste} fois' },
         { id:'f-rouge', spot:['#word-pill', '#play-hint'], t:'Zone rouge',
-          x:"Plus d'indice : le mot passe au rouge. Si ton partenaire se trompe encore, tape la zone : le mot est perdu.",
-          n:{ x:"Plus d'indice : le mot passe au rouge. Si **{devineur}** se trompe encore, tape la zone : le mot est perdu." } },
+          x:"Plus d'indice : le mot passe au rouge. Si ton partenaire se trompe encore, touche la zone : le mot est perdu.",
+          n:{ x:"Plus d'indice : le mot passe au rouge. Si **{devineur}** se trompe encore, touche la zone : le mot est perdu." } },
         { id:'f-trouve', spot:['#btn-correct'], act:'correct', t:'Ouf, trouvé !',
-          x:"Disons que ton partenaire a trouvé au dernier moment : tape **Trouvé**.",
-          n:{ x:"Disons que **{devineur}** a trouvé au dernier moment : tape **Trouvé**." },
-          go:'Tape Trouvé',
+          x:"Disons que ton partenaire a trouvé au dernier moment : touche **Trouvé**.",
+          n:{ x:"Disons que **{devineur}** a trouvé au dernier moment : touche **Trouvé**." },
+          go:'Touche Trouvé',
           after:{ spot:['#play-dots', '#word-pill', '#chevrons-left', '#chevrons-right'], t:'Un voyant vert', x:"Un de fait ! Pour le mot suivant, les 3 chevrons se rallument." } },
         { id:'f-passer', spot:['#btn-not-found'], act:'pass', t:'Passer = perdu',
-          x:"En finale, un mot passé **ne revient jamais**. Essaie quand même : tape **Passer**.",
-          go:'Tape Passer',
+          x:"En finale, un mot passé **ne revient jamais**. Essaie quand même : touche **Passer**.",
+          go:'Touche Passer',
           after:{ spot:['#play-dots', '#word-pill', '#chevrons-left', '#chevrons-right'], t:'Un voyant de moins', x:"Chaque mot perdu fait tomber un voyant : il en faut {cible} verts pour gagner." } },
         { id:'f-go', center:true, last:true, t:'Palier 1 : {gain}',
           x:"Fin de la répétition. {cible} mots sur {total} en {temps} : à vous de jouer !",
