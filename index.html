@@ -1561,8 +1561,30 @@
   .quit-confirm-card{ max-width:320px; width:100%; text-align:center; }
   .quit-confirm-card p{ color:var(--text); font-size:14px; margin:0 0 16px; line-height:1.5; }
 
-  #btn-schedule{
+  /* Pause de la manche (seul moyen de la mettre et de l'enlever, Fabien,
+     2026-09-29) : discret en bas à droite ; en pause il devient ▶ et pulse en
+     blanc. */
+  #btn-pause{
     display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); right:14px; z-index:3;
+    width:32px; height:32px; border-radius:50%; padding:0;
+    background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
+    color:var(--text-dim); line-height:1;
+    align-items:center; justify-content:center; cursor:pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  #btn-pause.visible{ display:flex; }
+  #btn-pause .ic-play{ display:none; }
+  #btn-pause.paused .ic-pause{ display:none; }
+  #btn-pause.paused .ic-play{ display:block; }
+  #btn-pause.paused{ color:#fff; border-color:rgba(255,255,255,0.85); animation:pausePulse 1.25s ease-in-out infinite; }
+  @keyframes pausePulse{
+    0%, 100%{ box-shadow: 0 3px 8px rgba(0,0,0,0.45), 0 0 0 0 rgba(255,255,255,0.0); }
+    50%{ box-shadow: 0 3px 8px rgba(0,0,0,0.45), 0 0 14px 3px rgba(255,255,255,0.55); }
+  }
+  @media (prefers-reduced-motion:reduce){ #btn-pause.paused{ animation:none; box-shadow:0 0 10px 2px rgba(255,255,255,0.45); } }
+
+  #btn-schedule{
+    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); right:54px; z-index:3;
     width:32px; height:32px; border-radius:50%; padding:0;
     background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
     color:var(--text-dim); font-size:15px; line-height:1;
@@ -1886,6 +1908,10 @@
   <button id="btn-quit-game" title="Retour au menu principal">✕</button>
   <button id="btn-play-settings" title="Paramètres">⚙️</button>
   <div id="test-mode-banner" hidden><span>🧪 MODE TEST — seul le mot « TEST » est tiré</span></div>
+  <button id="btn-pause" type="button" title="Pause" aria-label="Mettre en pause">
+    <svg class="ic-pause" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="5" height="16" rx="1.2"/><rect x="14" y="4" width="5" height="16" rx="1.2"/></svg>
+    <svg class="ic-play" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>
+  </button>
   <button id="btn-schedule" title="Qui joue avec qui">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
       <circle cx="4" cy="6" r="1.3" fill="currentColor" stroke="none"/>
@@ -3967,6 +3993,7 @@
       if(!url) return;
       currentKey = key;
       wantPlay = true;
+      rebindAt = null;
       currentOpts = opts;
       if(GAPLESS_KEYS.has(key)) playGapless(key, url, opts);
       else playElement(key, url, opts);
@@ -3985,7 +4012,10 @@
         }, { once:true });
       }
       connectElement();
-      audio.play().catch(()=>{}); // le navigateur peut refuser avant une interaction utilisateur, sans gravité
+      // Refusée (lancée hors appui : fin d'un jingle, retour d'arrière-plan…) :
+      // elle part au premier toucher.
+      const el = audio;
+      el.play().catch(() => onNextTap(() => { if(audio === el && wantPlay && el.paused) el.play().catch(()=>{}); }));
     }
     function connectElement(){
       const ctx = getAudioCtx();
@@ -4017,6 +4047,7 @@
       const old = audio;
       const wasPlaying = !old.paused;
       const t = old.currentTime;
+      rebindAt = t; // position à retrouver à la reprise (voir resume)
       old.removeEventListener('ended', fireEnded);
       old.pause();
       audio = new Audio(old.src);
@@ -4076,6 +4107,7 @@
       currentKey = null;
       endedCbs = [];
       wantPlay = false;
+      rebindAt = null;
     }
     function pause(){
       wantPlay = false;
@@ -4090,6 +4122,9 @@
     // Musique voulue en lecture (false après pause/stop) : une relance en
     // attente d'un appui (voir onNextTap) ne repart que si c'est encore le cas.
     let wantPlay = false;
+    // Position de la balise remplacée par rebind : sur iPhone la nouvelle
+    // l'ignore tant qu'elle n'a rien chargé ; resume la rattrape (playAt).
+    let rebindAt = null;
     // Sur iPhone, une balise <audio> neuve (recréée au retour d'arrière-plan,
     // voir rebind) ne peut pas démarrer hors d'un appui : en finale, le chrono
     // repart tout seul au réveil, et la musique restait coupée jusqu'au palier
@@ -4145,22 +4180,33 @@
         evs.forEach(e => el.addEventListener(e, check));
         guard = setTimeout(finish, 3000); // jamais muette pour de bon
       }
-      el.play().catch(() => {
-        finish();
-        onNextTap(() => { if(audio === el && wantPlay && el.paused) playAt(posFn); });
-      });
+      const retry = () => { if(audio === el && wantPlay && el.paused) playAt(posFn); };
+      el.play().catch(() => { finish(); onNextTap(retry); });
+      // Lancée hors appui (retour d'arrière-plan) : l'iPhone peut aussi la
+      // laisser en attente sans répondre ; on retente au premier toucher si
+      // elle ne joue toujours pas.
+      if(!tapping()) onNextTap(retry);
     }
+    // Sommes-nous dans un appui de l'utilisateur ? (inconnu : on suppose que non)
+    function tapping(){ return !!(navigator.userActivation && navigator.userActivation.isActive); }
     function resume(pos){
       ensureAudioCtxRunning();
       wantPlay = true;
-      if(mode === 'element' && audio && typeof pos === 'function'){ playAt(pos); return; }
+      // Reprise calée seulement pour une musique de chrono (qualifs, finale) ;
+      // sinon (entraînement : musique du menu) reprise simple, là où elle était.
+      if(mode === 'element' && audio && typeof pos === 'function' && pos() != null){ rebindAt = null; playAt(pos); return; }
+      // Balise recréée au retour d'arrière-plan (musique du menu...) : elle
+      // reprend là où elle était, pas au début du morceau.
+      if(mode === 'element' && audio && rebindAt != null){ const at = rebindAt; rebindAt = null; playAt(() => at); return; }
       if(mode === 'buffer'){
         const buffer = currentBufferUrl && decodedBuffers[currentBufferUrl];
         if(buffer) startBufferSource(buffer, bufferPauseOffset);
       } else if(audio){
         const el = audio;
         applyVolume();
-        el.play().catch(() => onNextTap(() => { if(audio === el && wantPlay && el.paused) el.play().catch(()=>{}); }));
+        const retry = () => { if(audio === el && wantPlay && el.paused) el.play().catch(()=>{}); };
+        el.play().catch(() => onNextTap(retry));
+        if(!tapping()) onNextTap(retry);
       }
     }
     // Permet de savoir quand la piste en cours se termine NATURELLEMENT (fin de
@@ -5156,6 +5202,7 @@
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
       state.currentTurn && state.currentTurn.kind === 'qualif';
     document.getElementById('btn-schedule').classList.toggle('visible', !!showSchedule);
+    syncPauseBtn();
     // Volume de la musique d'ambiance (menu + ambiante finale) : fixe en
     // permanence à un quart du volume max, géré directement dans MUSIC.applyVolume().
     updateBackgroundMusic(name);
@@ -6567,6 +6614,7 @@
     state.dotsLost = 0;
     state.running = false;
     state.turnMusicStarted = false;
+    state.roundClosing = false;
 
     // Écran d'attente du premier mot des qualifs (mot affiché, chrono pas
     // encore lancé) : bascule sur la piste dédiée au lieu de laisser tourner
@@ -6719,9 +6767,14 @@
     if(TUTO && TUTO.active) TUTO.onUnlocked();
   }
 
-  // Pause "officielle" des qualifs / de l'entraînement (le mot se voile, on
-  // tape dessus pour reprendre). Aussi déclenchée d'office quand l'appli part
-  // en arrière-plan en pleine manche.
+  // Pause de la manche (qualifs, entraînement, finale) : UNIQUEMENT par le
+  // bouton ⏸ en bas à droite (Fabien, 2026-09-29 : en finale la zone du mot
+  // sert aux indices, une pause au toucher du mot partirait sans le vouloir ;
+  // même geste partout). Le mot se voile (réglage « Pause »), chrono et
+  // musique s'arrêtent, le bouton devient ▶ et pulse en blanc. Aussi
+  // déclenchée d'office quand l'appli part en arrière-plan en pleine manche :
+  // au retour on reste en pause, et l'appui sur ▶ relance chrono et musique
+  // ensemble (sur iPhone, la musique a besoin d'un appui pour repartir).
   function pauseRound(){
     // Un gel en cours (fenêtre ouverte) a déjà arrêté chrono et musique : la
     // pause en prend simplement le relais.
@@ -6731,19 +6784,51 @@
     MUSIC.pause();
     document.getElementById('word-pill').classList.add('waiting');
     if(UIPREFS.getHideWordOnPause()) document.getElementById('word-pill').classList.add('paused-hidden');
-    putHintLine(document.getElementById('play-hint'), "En pause — touche cette zone pour reprendre", true);
+    const hint = document.getElementById('play-hint');
+    hint.classList.remove('danger');
+    delete hint.dataset.hintKey; // la consigne de la finale se réécrit à la reprise
+    putHintLine(hint, "En pause — touche ▶ pour reprendre", false);
     setPlayControlsEnabled(false);
+    syncPauseBtn();
   }
+  function resumeRound(){
+    if(state.running || !state.turnMusicStarted) return;
+    state.running = true;
+    const pill = document.getElementById('word-pill');
+    pill.classList.remove('paused-hidden', 'waiting');
+    const hint = document.getElementById('play-hint');
+    if(state.currentTurn.style === 'clues') updateFinaleHint(); else hint.textContent = "";
+    if(!inputLocked) setPlayControlsEnabled(true);
+    startTimer();
+    MUSIC.resume(chronoMusicAt); // appui sur ▶ : la musique repart même sur iPhone, calée sur le chrono
+    syncPauseBtn();
+  }
+  // Bouton ⏸ / ▶ : visible sur l'écran de jeu une fois le chrono lancé, tant
+  // que la manche n'est pas en train de se refermer.
+  function syncPauseBtn(){
+    const btn = document.getElementById('btn-pause');
+    const show = screens.play.classList.contains('active') && !!state.turnMusicStarted && !state.roundClosing;
+    btn.classList.toggle('visible', show);
+    const paused = show && !state.running;
+    btn.classList.toggle('paused', paused);
+    btn.title = paused ? 'Reprendre' : 'Pause';
+    btn.setAttribute('aria-label', paused ? 'Reprendre la manche' : 'Mettre en pause');
+  }
+  document.getElementById('btn-pause').addEventListener('click', () => {
+    if(state.roundClosing || !state.turnMusicStarted) return;
+    if(state.running) pauseRound(); else resumeRound();
+    if(TUTO && TUTO.active) TUTO.onPauseToggle();
+  });
 
   document.getElementById('word-pill').addEventListener('click', () => {
     if(TUTO && TUTO.active && TUTO.onWordTap()) return;
+    // En pause, la zone du mot ne fait rien (on reprend avec ▶).
+    if(state.turnMusicStarted && !state.running) return;
     if(state.currentTurn.kind === 'final' && state.turnMusicStarted){
       // Palier déjà lancé : taper le mot donne l'indice suivant (les chevrons
-      // juste à côté s'éteignent un à un pour le confirmer) — il n'y a plus
-      // de pause en finale, ce geste ne sert plus qu'à ça. Au-delà de
-      // MAX_CLUES, l'appui abandonne le mot pour de bon (même règle que
-      // l'ex-bouton bleu qui devenait "Pas trouvé" après le 3ème indice,
-      // désormais portée par le mot lui-même).
+      // juste à côté s'éteignent un à un pour le confirmer) — la pause passe
+      // par le bouton ⏸, ce geste ne sert qu'à ça. Au-delà de MAX_CLUES,
+      // l'appui abandonne le mot pour de bon.
       if(inputLocked) return;
       if(state.clueCount <= MAX_CLUES){
         SFX.indice();
@@ -6754,40 +6839,32 @@
       }
       return;
     }
-    if(state.running){
-      pauseRound();
-    } else {
-      // démarrage ou reprise
-      const turn = state.currentTurn;
-      const isFreshStart = !state.turnMusicStarted;
-      state.running = true;
-      document.getElementById('word-pill').classList.remove('waiting');
-      document.getElementById('word-pill').classList.remove('paused-hidden');
-      document.getElementById('play-hint').textContent = "";
-      setPlayControlsEnabled(true);
-      startTimer();
-      if(isFreshStart){
-        state.turnMusicStarted = true;
-        // Bascule vers la musique du timer, uniquement pour les qualifs et la
-        // finale (pas l'entraînement/tie-break, qui restent sur la musique de
-        // menu — toujours à un quart du volume, voir MUSIC.applyVolume()).
-        if(turn.kind === 'qualif'){
-          MUSIC.play('qualif', {loop:false});
-        } else if(turn.kind === 'final'){
-          // Ce tout premier tap sur le mot du palier démarre le chrono ET
-          // vaut, de fait, pour l'annonce du 1er indice.
-          document.getElementById('screen-play').classList.remove('finale-pending-start');
-          SFX.indice();
-          state.clueCount += 1;
-          renderChevrons();
-          MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
-        }
-        // Sinon (entraînement) : on ne change pas de piste, la musique de menu
-        // continue, toujours à volume réduit.
-      } else {
-        MUSIC.resume(chronoMusicAt); // (chrono déjà relancé juste au-dessus)
-      }
+    // Le toucher du mot ne sert plus qu'à lancer le chrono (1er appui) ; en
+    // qualifs il ne met plus en pause.
+    if(state.running) return;
+    const turn = state.currentTurn;
+    state.running = true;
+    state.turnMusicStarted = true;
+    document.getElementById('word-pill').classList.remove('waiting');
+    document.getElementById('word-pill').classList.remove('paused-hidden');
+    document.getElementById('play-hint').textContent = "";
+    setPlayControlsEnabled(true);
+    startTimer();
+    // Bascule vers la musique du timer, uniquement pour les qualifs et la
+    // finale (pas l'entraînement, qui reste sur la musique de menu —
+    // toujours à un quart du volume, voir MUSIC.applyVolume()).
+    if(turn.kind === 'qualif'){
+      MUSIC.play('qualif', {loop:false});
+    } else if(turn.kind === 'final'){
+      // Ce tout premier tap sur le mot du palier démarre le chrono ET
+      // vaut, de fait, pour l'annonce du 1er indice.
+      document.getElementById('screen-play').classList.remove('finale-pending-start');
+      SFX.indice();
+      state.clueCount += 1;
+      renderChevrons();
+      MUSIC.play(turn.level <= 3 ? 'finaleEarly' : 'finaleLate', {loop:false});
     }
+    syncPauseBtn();
   });
 
   // Chevron d'indice de la finale dessiné LED par LED dans l'atelier des
@@ -7421,6 +7498,7 @@
   }
 
   function playClosingChevronTransition(onDone){
+    state.roundClosing = true; syncPauseBtn(); // plus de pause pendant la fermeture
     const gen = state.gen, done = onDone;
     onDone = () => { if(gen === state.gen) done(); }; // partie quittée entretemps : on ne rouvre rien
     const isFinaleStyle = state.currentTurn && state.currentTurn.style === 'clues';
@@ -9051,13 +9129,9 @@
   document.addEventListener('visibilitychange', () => {
     if(document.hidden){
       // Manche en cours : le chrono ne doit pas tourner pendant que personne
-      // ne voit l'écran. Qualifs/entraînement : vraie pause (tap sur le mot
-      // pour reprendre). Finale (pas de pause) : simple gel, qui repart tout
-      // seul au retour, musique et chrono toujours calés ensemble.
-      if(state.timerActive && screens.play.classList.contains('active')){
-        if(state.currentTurn.kind === 'final') freezeRound();
-        else pauseRound();
-      }
+      // ne voit l'écran : vraie pause, finale comprise (au retour, ▶ pulse ;
+      // son appui relance chrono et musique ensemble).
+      if(state.timerActive && screens.play.classList.contains('active')) pauseRound();
       musicWasPlayingBeforeHidden = MUSIC.isPlaying();
       MUSIC.pause();
       CUSTOM_SOUNDS.stopPreview();
@@ -9160,10 +9234,10 @@
           after:{ spot:['#play-dots', '#word-pill'], t:'Un voyant de moins', x:"« {perdu} » ne compte plus : son voyant a disparu." } },
         { id:'regles', center:true, rules:true, t:'Les 4 interdits',
           x:"Pour faire deviner SOLEIL, par exemple :", cta:'Compris' },
-        { id:'pause', spot:['#word-pill'], act:'pause', t:"Besoin d'une pause ?",
-          x:"Touche le mot : tout s'arrête. Touche-le encore pour repartir.",
-          x2:"En pause, le mot se cache. Touche-le encore pour repartir.",
-          go:'Touche le mot' },
+        { id:'pause', spot:['#btn-pause'], act:'pause', t:"Besoin d'une pause ?",
+          x:"Touche **⏸** en bas à droite : tout s'arrête. C'est le seul moyen de faire une pause.",
+          x2:"En pause, tout est figé et le bouton **▶** clignote. Touche-le pour repartir.",
+          go:'Touche ⏸', go2:'Touche ▶' },
         { id:'terminer', spot:['#btn-training-end'], only:'training', t:'Quand tu veux',
           x:"En entraînement, pas de fin imposée : **Terminer la manche** arrête quand tu veux." },
         { id:'go', center:true, last:true, t:'À vous de jouer !',
@@ -9393,7 +9467,8 @@
       }
       if(!sub && st.demo) h += demoHtml();
       if(!sub && st.rules) h += rulesHtml();
-      if(acting(st)) h += `<div class="tc-go"><span class="tc-arrow">↑</span><span>${md(fill(field(st, 'go')))}</span></div>`;
+      const goKey = (st.act === 'pause' && pauseStage === 1) ? 'go2' : 'go';
+      if(acting(st)) h += `<div class="tc-go"><span class="tc-arrow">↑</span><span>${md(fill(field(st, goKey)))}</span></div>`;
       const next = (!st.center || sub) && !acting(st) && !waiting;
       h += `<div class="tc-foot${st.center && !sub ? ' center' : ''}">${ledsHtml()}${next ? '<button type="button" class="tc-next">Suivant</button>' : ''}</div>`;
       if(st.center && !sub) h += `<button type="button" class="btn btn-gold tc-cta">${md(fill(field(st, 'cta')))}</button>`;
@@ -9473,6 +9548,7 @@
       }
       setPlayControlsEnabled(true);
       startTimer();
+      syncPauseBtn();
     }
     function resumeQuietly(){
       if(!started || state.running) return;
@@ -9481,6 +9557,7 @@
       if(chapter !== 'final') document.getElementById('play-hint').textContent = '';
       setPlayControlsEnabled(true);
       MUSIC.resume();
+      syncPauseBtn();
     }
     // Tap sur le mot pendant le tuto. true = géré ici (le jeu ne fait rien de plus).
     function onWordTap(){
@@ -9493,12 +9570,18 @@
         setTimeout(() => { if(!active || finishing) return; waiting = false; next(); }, 1100);
         return true;
       }
-      if(st.act === 'pause'){ setTimeout(checkPause, 30); return false; }       // vraie pause / reprise
+      if(st.act === 'pause') return true;                                      // la pause passe par ⏸ (voir onPauseToggle)
       if(st.act === 'clues'){
         if(state.clueCount > MAX_CLUES) return true;                             // pas d'abandon pendant le tuto
         setTimeout(checkClues, 30); return false;                                // vrai indice
       }
       return true;
+    }
+    // Appui sur ⏸ / ▶ pendant l'étape « pause ».
+    function onPauseToggle(){
+      const st = list[idx];
+      if(!active || finishing || !st || st.act !== 'pause' || phase !== 'step' || waiting) return;
+      setTimeout(checkPause, 30);
     }
     function checkPause(){
       if(!active || finishing) return;
@@ -9644,7 +9727,7 @@
 
     return {
       get active(){ return active; },
-      maybeBegin, practicePool, onRevealed, onWordTap, onUnlocked, onTick, abort,
+      maybeBegin, practicePool, onRevealed, onWordTap, onUnlocked, onTick, abort, onPauseToggle,
     };
   })();
 
