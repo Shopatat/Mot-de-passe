@@ -6690,6 +6690,11 @@
     document.getElementById('first-giver-overlay').classList.remove('visible');
     startGame();
   });
+  // Toucher à côté de la fenêtre l'annule : on reste sur le menu (ou sur
+  // l'écran de fin, pour « Rejouer ») sans lancer la partie.
+  document.getElementById('first-giver-overlay').addEventListener('click', e => {
+    if(e.target === e.currentTarget) e.currentTarget.classList.remove('visible');
+  });
 
   // 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive
   // ---- Bouton bêta-testeur : "Copier mes réglages" ----
