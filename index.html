@@ -291,11 +291,18 @@
   .set-label{ font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); }
   .set-row .toggle-row{ flex-wrap:nowrap; gap:6px; }
   .set-row .toggle-btn{ min-width:0; padding:8px 4px; font-size:12.5px; }
-  /* Nombre de manches conseillé : petit point doré sous le chiffre. */
-  #rounds-group .toggle-btn{ position:relative; }
-  #rounds-group .toggle-btn.is-default::after{
-    content:''; position:absolute; left:50%; bottom:3px; width:4px; height:4px; margin-left:-2px;
-    border-radius:50%; background:var(--gold); box-shadow:0 0 5px rgba(242,201,76,.8); pointer-events:none;
+  /* Nombre de manches conseillé : liseré en chrome doré au lieu de gris,
+     or brillant quand il est sélectionné (Fabien, 2026-09-30, idée E). */
+  #rounds-group .toggle-btn.is-default{
+    background:
+      linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
+      linear-gradient(180deg, #7a6224, #4a3b14 48%, #2e250c 52%, #6b5620) border-box;
+  }
+  #rounds-group .toggle-btn.is-default.selected{
+    background:
+      linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
+      linear-gradient(180deg, #fff3c4, #f2c94c 46%, #a57d1c 54%, #f6dc8a) border-box;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 0 10px rgba(242,201,76,0.35);
   }
   .set-card .footer-note{ margin:-2px 0 0; text-align:left; padding-left:66px; }
   /* Noms des joueurs : titres de colonnes écrits une fois (équipes), pastille
@@ -6000,7 +6007,7 @@
   // (et devine) ; par défaut tout le monde fait deviner à tout le monde, soit
   // joueurs - 1 fois (2 fois à 2 joueurs). La ligne dessous donne le total et
   // une durée indicative (~1 min par manche, téléphone passé compris).
-  // Le chiffre conseillé porte un point doré (.is-default) ; changer le
+  // Le chiffre conseillé a un liseré doré (.is-default) ; changer le
   // nombre de joueurs y ramène (Fabien, 2026-09-29).
   const ROUND_CHOICES = { team:[2, 3, 4, 5, 6], solo:[1, 2, 3, 4, 5] };
   const ROUNDS_TEAM_DEFAULT = 4;
