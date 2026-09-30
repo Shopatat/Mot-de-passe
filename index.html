@@ -66,8 +66,14 @@
     --sweep-glow: 255,150,70;  /* halo orange autour du balayage */
   }
   *{box-sizing:border-box;}
+  /* Hauteur en dvh, pas en % : sur iPhone, appli installée, iOS annonce
+     parfois pour html (et donc pour 100 %) 59 pt de moins que l'écran, la
+     hauteur de l'encoche, alors que l'écran visible, 100vh et 100dvh font
+     bien sa hauteur. Avec overflow:hidden, body coupait alors la page :
+     bande noire en bas (mesuré sur l'iPhone 15 Pro Max de Fabien,
+     2026-09-30 : html 873, 100svh 873, tout le reste 932). */
   html,body{
-    margin:0; padding:0; height:100%;
+    margin:0; padding:0; height:100%; height:100vh; height:100dvh;
     overflow:hidden;
     background: var(--bg); color: var(--text);
     font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -5306,7 +5312,7 @@
         `appli installée : ${navigator.standalone === true ? 'oui' : 'non'}`,
         `écran : ${screen.width} × ${screen.height}`,
         `innerHeight : ${innerHeight}` + (vv ? ` · visible : ${Math.round(vv.height)} (décalé de ${Math.round(vv.offsetTop)})` : ''),
-        `html : ${document.documentElement.clientHeight} · page (#app) : ${Math.round(app.top)} → ${Math.round(app.bottom)}`,
+        `html : ${document.documentElement.clientHeight} · body : ${Math.round(document.body.getBoundingClientRect().height)} · page (#app) : ${Math.round(app.top)} → ${Math.round(app.bottom)}`,
         `100vh ${probe('height:100vh')} · 100dvh ${probe('height:100dvh')} · 100svh ${probe('height:100svh')} · 100lvh ${probe('height:100lvh')}`,
         `fixé (inset 0) : ${probe('top:0; bottom:0')}`,
         `encoche ${probe('height:env(safe-area-inset-top)')} · barre du bas ${probe('height:env(safe-area-inset-bottom)')}`,
