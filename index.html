@@ -159,28 +159,31 @@
   .led-sign{ width:100%; height:auto; display:block; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6)); }
   /* Menu façon générique de l'émission (atelier « Menu aux chevrons »,
      https://claude.ai/artifact/NrKCLY3rD7eSqwLzAtEAMN, piste 3 choisie par
-     Fabien le 2026-09-30). Au menu (et au chargement, qui est posé dessus) :
-     plus de halos bleus, le fond devient le sol du générique, noir brun
-     quadrillé de LED éteintes. En haut, le même sol vu en perspective : trois
-     couloirs de chevrons LED à 120° qui convergent vers un disque qui tourne,
-     séparés par des faisceaux de 4 lignes rouges où court la lumière ; le
-     panneau du titre est posé au bout (voir MENU_SCENE). */
-  .bg-halo, .floor-glow{ transition: opacity .4s ease; }
-  body:has(#screen-setup.active) .bg-halo, body:has(#screen-setup.active) .floor-glow{ opacity:0; }
-  body:has(#screen-setup.active){
-    background-color:#070403;
-    background-image: radial-gradient(circle at center, rgba(128,34,20,.34) 0 1.05px, transparent 1.45px);
-    background-size:6px 6px;
-  }
+     Fabien le 2026-09-30). En haut du menu, le sol du générique vu en
+     perspective : trois couloirs de chevrons LED à 120° qui convergent vers
+     un disque qui tourne, séparés par des faisceaux de 4 lignes rouges où
+     court la lumière ; le panneau du titre est posé au bout (voir
+     MENU_SCENE). Réglé ensuite dans l'atelier « Fond du générique »
+     (https://claude.ai/artifact/UQSBn8Fv8Y61EpY97nm2h9) : les halos bleus
+     restent en fond, la scène est remontée de 70 px et son bas se fond dans
+     les halos sur 60 px, les cartes du menu sont un peu transparentes. */
+  #screen-setup{ --card: rgba(10,9,8,.68); }
   .menu-hero{
     position:relative; width:calc(100% + 32px); margin:calc(-20px - env(safe-area-inset-top)) -16px 0;
     height:calc(245px + env(safe-area-inset-top));
   }
-  .ms-stage{ position:absolute; inset:0; overflow:hidden; perspective:900px; perspective-origin:50% calc(100% - 249px); pointer-events:none; }
+  /* Scène remontée de 70 px (curseur « Scène » de l'atelier) : le point de fuite, le
+     sol et le titre montent ensemble. Fondu court : le bas de la scène
+     s'efface sur 60 px dans le fond. */
+  .ms-stage{
+    position:absolute; inset:0; overflow:hidden; perspective:900px; perspective-origin:50% calc(100% - 319px); pointer-events:none;
+    -webkit-mask-image:linear-gradient(#000 calc(100% - 60px), transparent);
+    mask-image:linear-gradient(#000 calc(100% - 60px), transparent);
+  }
   /* Sol dessiné vu de dessus (860 x 1600, disque au point 430,1300), couché
-     par le CSS : le disque tombe 69 px au-dessus du bas du bandeau. */
+     par le CSS : le disque tombe 139 px au-dessus du bas du bandeau. */
   .ms-floor{
-    position:absolute; left:50%; bottom:-231px; width:860px; height:1600px; margin-left:-430px;
+    position:absolute; left:50%; bottom:-161px; width:860px; height:1600px; margin-left:-430px;
     transform-origin:430px 1300px; transform:rotateX(72deg) scale(.8);
     background-image: radial-gradient(circle at center, rgba(120,32,18,.3) 0 3.2px, transparent 3.8px);
     background-size:10px 10px;
@@ -198,9 +201,9 @@
   .ms-fog{ position:absolute; inset:0;
     background:
       radial-gradient(ellipse 60% 30% at 50% 78%, rgba(255,60,30,.16), transparent 70%),
-      linear-gradient(#070403 0%, rgba(7,4,3,.7) 20%, rgba(7,4,3,.2) 40%, rgba(7,4,3,0) 55%, rgba(7,4,3,0) 88%, #070403 100%);
+      linear-gradient(#070403 0px, rgba(7,4,3,.7) 60px, rgba(7,4,3,.2) 120px, rgba(7,4,3,0) 168px);
   }
-  .menu-hero #title-tiles{ position:absolute; left:calc(50% - 125px); bottom:61px; width:250px; margin:0; z-index:1; }
+  .menu-hero #title-tiles{ position:absolute; left:calc(50% - 125px); bottom:131px; width:250px; margin:0; z-index:1; }
   @media (prefers-reduced-motion: reduce){
     .ms-floor .fc, .ms-spin{ animation:none; }
     .ms-floor .fc{ opacity:.7; }
