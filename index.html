@@ -73,12 +73,9 @@
     font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     overscroll-behavior:none; -webkit-tap-highlight-color: transparent;
   }
-  /* --ios-gap : voir fixIosStandaloneGap (bande noire en bas de l'appli
-     installée sur iPhone). 0 partout ailleurs. */
-  html{ height:calc(100% + var(--ios-gap, 0px)); }
   #app{
     position:relative;
-    height:100vh; height:calc(100dvh + var(--ios-gap, 0px));
+    height:100vh; height:100dvh;
     display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
     padding: calc(20px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
     overflow-x:hidden; overflow-y:auto;
@@ -2324,6 +2321,7 @@
       <button class="btn btn-ghost" id="btn-debug-buzz" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct au tie-break buzz</button>
       <button class="btn btn-ghost" id="btn-debug-wordmode" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;"></button>
       <button class="btn btn-ghost" id="btn-debug-copy-settings" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">📋 TEST — Copier mes réglages audio</button>
+      <button class="btn btn-ghost" id="btn-debug-viewport" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">📐 TEST — Mesures de l'écran</button>
     </div>
   </section>
 
@@ -2572,29 +2570,21 @@
 
 <script>
 (function(){
-  // ---------- Bande noire en bas sur iPhone (appli installée) ----------
-  // Capture de Fabien, iPhone 15 Pro Max, 2026-09-30 : une bande noire unie
-  // de ~59 pt (la hauteur de l'encoche) en bas de l'écran, où rien n'est
-  // dessiné. Défaut d'iOS avec l'appli ajoutée à l'écran d'accueil et la
-  // barre d'état « black-translucent » : la page se croit plus courte que
-  // l'écran de la hauteur de l'encoche. On mesure l'écart entre l'écran et
-  // la page, et le CSS l'ajoute à la hauteur de la page (--ios-gap).
-  // Les éléments en position:fixed, eux, couvrent déjà tout l'écran : on
-  // n'y touche pas (décalés, les boutons ronds du coin sortaient de
-  // l'écran). Le tuto ajoute l'écart à innerHeight, qui est trop court.
-  // Ailleurs (Safari, Android), l'écart vaut 0.
-  const iosGap = () => parseFloat(document.documentElement.style.getPropertyValue('--ios-gap')) || 0;
-  (function fixIosStandaloneGap(){
-    if(navigator.standalone !== true) return;
-    const apply = () => {
-      const full = innerWidth < innerHeight ? screen.height : screen.width;
-      const gap = full - innerHeight;
-      document.documentElement.style.setProperty('--ios-gap', (gap > 20 && gap < 100 ? gap : 0) + 'px');
-    };
-    apply();
-    addEventListener('resize', apply);
-    addEventListener('orientationchange', () => setTimeout(apply, 300));
-  })();
+  // ---------- Journal des hauteurs d'écran (diagnostic, 2026-09-30) ----------
+  // Bande noire de la hauteur de l'encoche en bas de l'appli installée sur
+  // iPhone : on note ce que le navigateur annonce au lancement et à chaque
+  // changement, pour le bouton de test « Mesures de l'écran ».
+  const VIEWPORT_LOG = [];
+  const logViewport = why => {
+    const vv = window.visualViewport;
+    VIEWPORT_LOG.push(`${(performance.now() / 1000).toFixed(1)}s ${why} : inner ${innerWidth}×${innerHeight}` +
+      (vv ? `, visible ${Math.round(vv.height)}` : '') + `, html ${document.documentElement.clientHeight}`);
+    if(VIEWPORT_LOG.length > 12) VIEWPORT_LOG.splice(1, 1);
+  };
+  logViewport('départ');
+  [500, 1500, 4000].forEach(ms => setTimeout(() => logViewport('+' + ms + ' ms'), ms));
+  ['resize', 'orientationchange', 'pageshow'].forEach(ev => addEventListener(ev, () => logViewport(ev)));
+  document.addEventListener('visibilitychange', () => logViewport(document.hidden ? 'caché' : 'revenu'));
 
   // ---------- WORD BANK ----------
   // d: 1 = facile, 2 = moyen, 3 = difficile
@@ -5295,6 +5285,71 @@
   })();
 
   // Interrupteur "mots figés" de la zone de test + bandeau d'avertissement.
+  // Bouton de test « Mesures de l'écran » : un cadre rouge montre la zone
+  // qu'occupent les éléments fixés à l'écran, un cadre vert celle de la page ;
+  // les chiffres disent ce qu'annonce le navigateur. Deux essais de
+  // correction à toucher, pour voir tout de suite si la bande noire part.
+  (function initViewportProbe(){
+    const btn = document.getElementById('btn-debug-viewport');
+    if(!btn) return;
+    let box = null;
+    const probe = css => {
+      const d = document.createElement('div');
+      d.style.cssText = 'position:fixed; left:0; top:0; width:1px; visibility:hidden; pointer-events:none;' + css;
+      document.body.appendChild(d);
+      const h = d.getBoundingClientRect().height; d.remove(); return Math.round(h);
+    };
+    function measures(){
+      const app = document.getElementById('app').getBoundingClientRect();
+      const vv = window.visualViewport;
+      return [
+        `appli installée : ${navigator.standalone === true ? 'oui' : 'non'}`,
+        `écran : ${screen.width} × ${screen.height}`,
+        `innerHeight : ${innerHeight}` + (vv ? ` · visible : ${Math.round(vv.height)} (décalé de ${Math.round(vv.offsetTop)})` : ''),
+        `html : ${document.documentElement.clientHeight} · page (#app) : ${Math.round(app.top)} → ${Math.round(app.bottom)}`,
+        `100vh ${probe('height:100vh')} · 100dvh ${probe('height:100dvh')} · 100svh ${probe('height:100svh')} · 100lvh ${probe('height:100lvh')}`,
+        `fixé (inset 0) : ${probe('top:0; bottom:0')}`,
+        `encoche ${probe('height:env(safe-area-inset-top)')} · barre du bas ${probe('height:env(safe-area-inset-bottom)')}`,
+        '— journal —', ...VIEWPORT_LOG,
+      ].join('\n');
+    }
+    function close(){ if(box){ box.remove(); box = null; } }
+    function open(){
+      close();
+      box = document.createElement('div');
+      box.style.cssText = 'position:fixed; inset:0; z-index:99999; pointer-events:none; border:3px dashed #ff3b30;';
+      const app = document.getElementById('app').getBoundingClientRect();
+      box.innerHTML = `<div style="position:absolute; left:6px; right:6px; top:${Math.round(app.top) + 6}px; height:${Math.round(app.height) - 12}px; border:3px dashed #34c759;"></div>
+        <div style="position:absolute; left:12px; right:12px; top:calc(env(safe-area-inset-top) + 40px); pointer-events:auto; background:rgba(0,0,0,.88); border:1px solid #555; border-radius:12px; padding:10px; font:12px/1.45 ui-monospace, Menlo, monospace; color:#e8e8e8;">
+          <div style="margin-bottom:6px; color:#ff8a80;">Rouge = éléments fixés · Vert = page</div>
+          <pre id="vp-text" style="margin:0; white-space:pre-wrap;"></pre>
+          <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+            <button id="vp-a" style="flex:1; padding:8px; border-radius:8px;">Essai A</button>
+            <button id="vp-b" style="flex:1; padding:8px; border-radius:8px;">Essai B</button>
+            <button id="vp-close" style="flex:1; padding:8px; border-radius:8px;">Fermer</button>
+          </div>
+        </div>`;
+      document.body.appendChild(box);
+      const refresh = () => { const t = box && box.querySelector('#vp-text'); if(t) t.textContent = measures(); };
+      refresh();
+      // Essai A : page à la hauteur de l'écran, en dur.
+      box.querySelector('#vp-a').onclick = () => {
+        const h = (innerWidth < innerHeight ? screen.height : screen.width) + 'px';
+        document.documentElement.style.height = h; document.body.style.height = h;
+        document.getElementById('app').style.height = h;
+        logViewport('essai A'); setTimeout(refresh, 300);
+      };
+      // Essai B : on réécrit la balise viewport pour forcer iOS à recalculer.
+      box.querySelector('#vp-b').onclick = () => {
+        const m = document.querySelector('meta[name="viewport"]'), c = m.getAttribute('content');
+        m.setAttribute('content', c + ', height=device-height');
+        setTimeout(() => { m.setAttribute('content', c); logViewport('essai B'); refresh(); }, 250);
+      };
+      box.querySelector('#vp-close').onclick = close;
+    }
+    btn.addEventListener('click', open);
+  })();
+
   (function initTestWordMode(){
     const btn = document.getElementById('btn-debug-wordmode');
     const banner = document.getElementById('test-mode-banner');
@@ -9715,7 +9770,7 @@
     // Les 4 bandes invisibles autour de la zone montrée : elles gardent tout le
     // reste de l'écran hors d'atteinte, la zone elle-même reçoit le doigt.
     function setHole(b){
-      const W = window.innerWidth, H = window.innerHeight + iosGap();
+      const W = window.innerWidth, H = window.innerHeight;
       const [T, B, L, R] = blockers;
       if(!b){
         T.style.cssText = `left:0;top:0;width:${W}px;height:${H}px`;
@@ -9733,7 +9788,7 @@
     function placeSpot(){
       const st = list[idx];
       const sels = phase === 'after' ? st.after.spot : st.spot;
-      const W = window.innerWidth, H = window.innerHeight + iosGap();
+      const W = window.innerWidth, H = window.innerHeight;
       const r = (st.center && phase !== 'after') ? null : rectOf(sels);
       let box;
       if(!r){
@@ -9755,7 +9810,7 @@
       if(g) Object.assign(waveEl.style, { left:Math.round(g.left) + 'px', top:Math.round(g.top) + 'px', width:Math.round(g.right - g.left) + 'px', height:Math.round(g.bottom - g.top) + 'px', borderRadius:Math.min(radiusOf(sels[0]), (g.bottom - g.top) / 2) + 'px' });
     }
     function placeCard(){
-      const W = window.innerWidth, H = window.innerHeight + iosGap();
+      const W = window.innerWidth, H = window.innerHeight;
       const cw = Math.min(360, W - 32);
       cardEl.style.width = cw + 'px';
       const ch = cardEl.offsetHeight;
