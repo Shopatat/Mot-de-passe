@@ -414,6 +414,15 @@
   .pname-chips .pname-chip.pname-chip-edit::before{ content:none; }
   .pname-chips.editing .pname-chip-edit{ border-color: rgba(255,255,255,0.35); color: var(--text); }
   .pname-chip:active{ transform: scale(0.95); }
+  /* Mode tri : « + Nouveau » en tête de ligne, qui devient un petit champ. */
+  .pname-chips.editing .pname-chip.pname-chip-add{ border-color: rgba(79,191,122,0.6); color: var(--text); }
+  .pname-chips .pname-chip.pname-chip-add::before{ content:"+ "; color: var(--correct); font-weight:800; }
+  .pname-chip-input{
+    flex:0 0 auto; width:120px; padding:6px 12px; border-radius:999px; outline:none;
+    background: var(--bg-alt); border:1px solid rgba(79,191,122,0.8); color: var(--text);
+    font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size:16px; font-weight:700;
+    line-height:1.15;
+  }
   .pname-chips-hint{ margin:-4px 0 10px; font-size:11px; color: var(--text-dim); text-align:center; }
 
   .settings-sticky-header{
@@ -2613,6 +2622,25 @@
   [500, 1500, 4000].forEach(ms => setTimeout(() => logViewport('+' + ms + ' ms'), ms));
   ['resize', 'orientationchange', 'pageshow'].forEach(ev => addEventListener(ev, () => logViewport(ev)));
   document.addEventListener('visibilitychange', () => logViewport(document.hidden ? 'caché' : 'revenu'));
+
+  // Appli installée sur iPhone : page à la hauteur de l'écran, en points.
+  // Mesures de Fabien (2026-09-30, 21:40) : après une réinstallation, tout
+  // l'affichage (innerHeight, 100dvh, éléments fixés) retombait parfois à
+  // 873 au lieu de 932, bande noire en bas ; l'« Essai A » du panneau de
+  // mesure (ces mêmes hauteurs en dur) a tout remis à 932 aussitôt. On le
+  // fait donc d'office, et à chaque changement de taille ou d'orientation.
+  if(navigator.standalone === true){
+    const fitScreen = () => {
+      const h = (matchMedia('(orientation: landscape)').matches ? screen.width : screen.height) + 'px';
+      document.documentElement.style.height = h;
+      document.body.style.height = h;
+      const app = document.getElementById('app');
+      if(app) app.style.height = h;
+    };
+    fitScreen();
+    addEventListener('resize', fitScreen);
+    addEventListener('orientationchange', () => setTimeout(fitScreen, 300));
+  }
 
   // ---------- WORD BANK ----------
   // d: 1 = facile, 2 = moyen, 3 = difficile
@@ -5098,6 +5126,15 @@
         data.forgotten = (data.forgotten || []).filter(k => !keys.has(k));
         save();
       },
+      // Ajoute un prénom en tête des étiquettes (mode tri, « + Nouveau »).
+      add(name){
+        const clean = String(name || '').trim().replace(/\s+/g, ' ');
+        if(!clean || /^joueur \d+$/i.test(clean)) return;
+        const key = clean.toLowerCase();
+        data.known = [clean].concat((data.known || []).filter(n => n.toLowerCase() !== key)).slice(0, 12);
+        data.forgotten = (data.forgotten || []).filter(k => k !== key);
+        save();
+      },
       // Retire un prénom des étiquettes (faute de frappe, joueur de passage).
       forget(name){
         const key = String(name || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -6209,15 +6246,55 @@
     chipsHint.hidden = true;
     let hintTimer = 0;
     // ✎ au bout de la ligne : mode tri, où chaque étiquette porte un × et se
-    // supprime d'un toucher ; « OK » revient au mode normal.
+    // supprime d'un toucher, et où « + Nouveau » (en tête) ouvre un petit
+    // champ pour ajouter un prénom à la liste ; « OK » revient au mode normal.
+    // La ligne reste ouverte en mode tri même vidée, pour pouvoir en rajouter.
     let chipsEditing = false;
+    function addChipField(addChip){
+      const field = el('input', 'pname-chip-input');
+      field.type = 'text';
+      field.maxLength = 14;
+      field.placeholder = 'Prénom';
+      field.autocapitalize = 'words';
+      field.enterKeyHint = 'done';
+      field.setAttribute('aria-label', 'Nouveau prénom');
+      // Les frappes ne doivent pas redessiner la ligne (écouteur 'input' du conteneur).
+      field.addEventListener('input', e => e.stopPropagation());
+      const finish = keep => {
+        if(field.dataset.done) return;
+        field.dataset.done = '1';
+        if(keep && field.value.trim()) PLAYERNAMES.add(field.value);
+        renderChips();
+      };
+      field.addEventListener('keydown', e => {
+        if(e.key === 'Enter'){ e.preventDefault(); finish(true); }
+        else if(e.key === 'Escape'){ finish(false); }
+      });
+      field.addEventListener('blur', () => finish(true));
+      addChip.replaceWith(field);
+      field.focus();
+    }
     function renderChips(){
+      // Un prénom en cours de saisie n'est pas perdu si on touche OK ou une
+      // autre étiquette avant d'avoir validé.
+      const pending = chipsRow.querySelector('.pname-chip-input');
+      if(pending && !pending.dataset.done){
+        pending.dataset.done = '1';
+        if(pending.value.trim()) PLAYERNAMES.add(pending.value);
+      }
       const used = new Set(inputs.filter(Boolean).map(inp => inp.value.trim().toLowerCase()).filter(Boolean));
       const names = PLAYERNAMES.known().filter(n => !used.has(n.toLowerCase()));
-      if(names.length === 0) chipsEditing = false;
       chipsRow.innerHTML = '';
-      chipsRow.hidden = names.length === 0;
+      chipsRow.hidden = names.length === 0 && !chipsEditing;
       chipsRow.classList.toggle('editing', chipsEditing);
+      if(chipsEditing){
+        const add = el('button', 'pname-chip pname-chip-add');
+        add.type = 'button';
+        add.textContent = 'Nouveau';
+        add.setAttribute('aria-label', 'Ajouter un prénom à la liste');
+        add.addEventListener('click', () => addChipField(add));
+        chipsRow.appendChild(add);
+      }
       names.forEach(name => {
         const chip = el('button', 'pname-chip');
         chip.type = 'button';
@@ -6245,7 +6322,7 @@
         });
         chipsRow.appendChild(chip);
       });
-      if(names.length){
+      if(names.length || chipsEditing){
         const edit = el('button', 'pname-chip pname-chip-edit');
         edit.type = 'button';
         edit.textContent = chipsEditing ? 'OK' : '✎';
