@@ -73,9 +73,12 @@
     font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     overscroll-behavior:none; -webkit-tap-highlight-color: transparent;
   }
+  /* --ios-gap : voir fixIosStandaloneGap (bande noire en bas de l'appli
+     installée sur iPhone). 0 partout ailleurs. */
+  html{ height:calc(100% + var(--ios-gap, 0px)); }
   #app{
     position:relative;
-    height:100vh; height:100dvh;
+    height:100vh; height:calc(100dvh + var(--ios-gap, 0px));
     display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
     padding: calc(20px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
     overflow-x:hidden; overflow-y:auto;
@@ -97,7 +100,7 @@
     50%{ transform: translate(var(--dx,30px), var(--dy,24px)); }
   }
   .floor-glow{
-    position:fixed; left:0; right:0; bottom:0; height:26%; z-index:0; pointer-events:none;
+    position:fixed; left:0; right:0; bottom:calc(0px - var(--ios-gap, 0px)); height:26%; z-index:0; pointer-events:none;
     background: linear-gradient(180deg, transparent, rgba(30,60,160,0.14) 55%, rgba(255,59,48,0.10));
   }
   /* Barre métallique du haut désactivée pour tester le rendu sans.
@@ -219,7 +222,7 @@
      alors à sa place dans le menu. Le menu est déjà en place derrière,
      simplement invisible (body.booting). */
   #boot{
-    position:fixed; inset:0; z-index:5000;
+    position:fixed; inset:0; bottom:calc(0px - var(--ios-gap, 0px)); z-index:5000;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     padding: calc(20px + env(safe-area-inset-top)) 16px calc(142px + env(safe-area-inset-bottom));
   }
@@ -1621,7 +1624,7 @@
   .toggle-btn.disabled{ opacity:0.3; pointer-events:none; }
 
   #btn-quit-game{
-    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:14px; z-index:3;
+    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom) - var(--ios-gap, 0px)); left:14px; z-index:3;
     width:32px; height:32px; border-radius:50%;
     background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
     color:var(--text-dim); font-size:15px; line-height:1;
@@ -1631,7 +1634,7 @@
   #btn-quit-game.visible{ display:flex; }
 
   #btn-play-settings{
-    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); left:54px; z-index:3;
+    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom) - var(--ios-gap, 0px)); left:54px; z-index:3;
     width:32px; height:32px; border-radius:50%;
     background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
     color:var(--text-dim); font-size:15px; line-height:1;
@@ -1641,7 +1644,7 @@
   #btn-play-settings.visible{ display:flex; }
 
   .quit-overlay{
-    display:none; position:fixed; inset:0; z-index:10;
+    display:none; position:fixed; inset:0; bottom:calc(0px - var(--ios-gap, 0px)); z-index:10;
     background:rgba(0,0,0,0.62);
     align-items:center; justify-content:center; padding:24px;
   }
@@ -1653,7 +1656,7 @@
      2026-09-29) : discret en bas à droite ; en pause il devient ▶ et pulse en
      blanc. */
   #btn-pause{
-    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); right:14px; z-index:3;
+    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom) - var(--ios-gap, 0px)); right:14px; z-index:3;
     width:32px; height:32px; border-radius:50%; padding:0;
     background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
     color:var(--text-dim); line-height:1;
@@ -1672,7 +1675,7 @@
   @media (prefers-reduced-motion:reduce){ #btn-pause.paused{ animation:none; box-shadow:0 0 10px 2px rgba(255,255,255,0.45); } }
 
   #btn-schedule{
-    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); right:54px; z-index:3;
+    display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom) - var(--ios-gap, 0px)); right:54px; z-index:3;
     width:32px; height:32px; border-radius:50%; padding:0;
     background:rgba(10,9,8,0.65); border:1px solid var(--card-edge);
     color:var(--text-dim); font-size:15px; line-height:1;
@@ -1838,7 +1841,7 @@
      Un calque par-dessus l'écran de jeu : la zone montrée reste claire (le
      reste s'assombrit par une ombre géante), un anneau doré qui respire, une
      onde quand il faut toucher, et la bulle, habillée comme le cadre du mot. */
-  #tuto{ position:fixed; inset:0; z-index:40; pointer-events:none; opacity:0; transition:opacity .45s ease; --tuto-dim:.62; }
+  #tuto{ position:fixed; inset:0; bottom:calc(0px - var(--ios-gap, 0px)); z-index:40; pointer-events:none; opacity:0; transition:opacity .45s ease; --tuto-dim:.62; }
   #tuto.on{ opacity:1; }
   #tuto:not(.on) *{ pointer-events:none !important; }
   #tuto .tuto-blk{ position:fixed; pointer-events:auto; }
@@ -1911,7 +1914,7 @@
   }
   #tuto .tc-next:active{ transform:scale(.96); }
   #tuto button.btn.tc-cta{ width:100%; margin-top:12px; }
-  #tuto .tuto-skipbar{ position:fixed; left:0; right:0; bottom:calc(16px + env(safe-area-inset-bottom)); text-align:center; pointer-events:none; }
+  #tuto .tuto-skipbar{ position:fixed; left:0; right:0; bottom:calc(16px + env(safe-area-inset-bottom) - var(--ios-gap, 0px)); text-align:center; pointer-events:none; }
   #tuto.last .tuto-skipbar{ display:none; }
   #tuto .tuto-skip{
     pointer-events:auto; display:inline-block; cursor:pointer;
@@ -2569,6 +2572,27 @@
 
 <script>
 (function(){
+  // ---------- Bande noire en bas sur iPhone (appli installée) ----------
+  // Capture de Fabien, iPhone 15 Pro Max, 2026-09-30 : une bande noire unie
+  // de ~59 pt (la hauteur de l'encoche) en bas de l'écran, où rien n'est
+  // dessiné. Défaut d'iOS avec l'appli ajoutée à l'écran d'accueil et la
+  // barre d'état « black-translucent » : la page se croit plus courte que
+  // l'écran de la hauteur de l'encoche. On mesure l'écart entre l'écran et
+  // la page, et le CSS l'ajoute à la hauteur de la page et aux éléments
+  // posés en bas (--ios-gap). Ailleurs (Safari, Android), l'écart vaut 0.
+  const iosGap = () => parseFloat(document.documentElement.style.getPropertyValue('--ios-gap')) || 0;
+  (function fixIosStandaloneGap(){
+    if(navigator.standalone !== true) return;
+    const apply = () => {
+      const full = innerWidth < innerHeight ? screen.height : screen.width;
+      const gap = full - innerHeight;
+      document.documentElement.style.setProperty('--ios-gap', (gap > 20 && gap < 100 ? gap : 0) + 'px');
+    };
+    apply();
+    addEventListener('resize', apply);
+    addEventListener('orientationchange', () => setTimeout(apply, 300));
+  })();
+
   // ---------- WORD BANK ----------
   // d: 1 = facile, 2 = moyen, 3 = difficile
   const WORD_BANK = {
@@ -9688,7 +9712,7 @@
     // Les 4 bandes invisibles autour de la zone montrée : elles gardent tout le
     // reste de l'écran hors d'atteinte, la zone elle-même reçoit le doigt.
     function setHole(b){
-      const W = window.innerWidth, H = window.innerHeight;
+      const W = window.innerWidth, H = window.innerHeight + iosGap();
       const [T, B, L, R] = blockers;
       if(!b){
         T.style.cssText = `left:0;top:0;width:${W}px;height:${H}px`;
@@ -9706,7 +9730,7 @@
     function placeSpot(){
       const st = list[idx];
       const sels = phase === 'after' ? st.after.spot : st.spot;
-      const W = window.innerWidth, H = window.innerHeight;
+      const W = window.innerWidth, H = window.innerHeight + iosGap();
       const r = (st.center && phase !== 'after') ? null : rectOf(sels);
       let box;
       if(!r){
@@ -9728,7 +9752,7 @@
       if(g) Object.assign(waveEl.style, { left:Math.round(g.left) + 'px', top:Math.round(g.top) + 'px', width:Math.round(g.right - g.left) + 'px', height:Math.round(g.bottom - g.top) + 'px', borderRadius:Math.min(radiusOf(sels[0]), (g.bottom - g.top) / 2) + 'px' });
     }
     function placeCard(){
-      const W = window.innerWidth, H = window.innerHeight;
+      const W = window.innerWidth, H = window.innerHeight + iosGap();
       const cw = Math.min(360, W - 32);
       cardEl.style.width = cw + 'px';
       const ch = cardEl.offsetHeight;
