@@ -157,6 +157,55 @@
   .tile-row.led-panel{ padding:0; margin:6px 0 2px; }
   .tile-row.led-panel::before, .tile-row.led-panel::after{ content:none; }
   .led-sign{ width:100%; height:auto; display:block; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6)); }
+  /* Menu façon générique de l'émission (atelier « Menu aux chevrons »,
+     https://claude.ai/artifact/NrKCLY3rD7eSqwLzAtEAMN, piste 3 choisie par
+     Fabien le 2026-09-30). Au menu (et au chargement, qui est posé dessus) :
+     plus de halos bleus, le fond devient le sol du générique, noir brun
+     quadrillé de LED éteintes. En haut, le même sol vu en perspective : trois
+     couloirs de chevrons LED à 120° qui convergent vers un disque qui tourne,
+     séparés par des faisceaux de 4 lignes rouges où court la lumière ; le
+     panneau du titre est posé au bout (voir MENU_SCENE). */
+  .bg-halo, .floor-glow{ transition: opacity .4s ease; }
+  body:has(#screen-setup.active) .bg-halo, body:has(#screen-setup.active) .floor-glow{ opacity:0; }
+  body:has(#screen-setup.active){
+    background-color:#070403;
+    background-image: radial-gradient(circle at center, rgba(128,34,20,.34) 0 1.05px, transparent 1.45px);
+    background-size:6px 6px;
+  }
+  .menu-hero{
+    position:relative; width:calc(100% + 32px); margin:calc(-20px - env(safe-area-inset-top)) -16px 0;
+    height:calc(245px + env(safe-area-inset-top));
+  }
+  .ms-stage{ position:absolute; inset:0; overflow:hidden; perspective:900px; perspective-origin:50% calc(100% - 249px); pointer-events:none; }
+  /* Sol dessiné vu de dessus (860 x 1600, disque au point 430,1300), couché
+     par le CSS : le disque tombe 69 px au-dessus du bas du bandeau. */
+  .ms-floor{
+    position:absolute; left:50%; bottom:-231px; width:860px; height:1600px; margin-left:-430px;
+    transform-origin:430px 1300px; transform:rotateX(72deg) scale(.8);
+    background-image: radial-gradient(circle at center, rgba(120,32,18,.3) 0 3.2px, transparent 3.8px);
+    background-size:10px 10px;
+    --T:2s; --frest:.26; --t:calc(var(--T) * 2.2); --dt:calc(var(--T) * 2.2 / 22);
+  }
+  .ms-floor svg{ position:absolute; left:0; top:0; }
+  /* Chenillard : la lumière descend le couloir du fond vers le titre. */
+  .ms-floor .fc{ opacity:var(--frest); animation:msFloorChase var(--t) linear infinite; animation-delay:calc(var(--i) * var(--dt)); }
+  @keyframes msFloorChase{ 0%{ opacity:var(--frest); } 3%{ opacity:1; } 16%{ opacity:var(--frest); } 100%{ opacity:var(--frest); } }
+  .ms-comet{ animation:msRun var(--ct, 28s) linear infinite; }
+  @keyframes msRun{ from{ stroke-dashoffset:0px; } to{ stroke-dashoffset:-100px; } }
+  .ms-spin{ transform-origin:0 0; animation:msSpin var(--sp, 40s) linear infinite; }
+  .ms-spin.back{ animation-direction:reverse; }
+  @keyframes msSpin{ to{ transform:rotate(360deg); } }
+  .ms-fog{ position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 60% 30% at 50% 78%, rgba(255,60,30,.16), transparent 70%),
+      linear-gradient(#070403 0%, rgba(7,4,3,.7) 20%, rgba(7,4,3,.2) 40%, rgba(7,4,3,0) 55%, rgba(7,4,3,0) 88%, #070403 100%);
+  }
+  .menu-hero #title-tiles{ position:absolute; left:calc(50% - 125px); bottom:61px; width:250px; margin:0; z-index:1; }
+  @media (prefers-reduced-motion: reduce){
+    .ms-floor .fc, .ms-spin{ animation:none; }
+    .ms-floor .fc{ opacity:.7; }
+    .ms-comet{ display:none; }
+  }
   /* Écran de chargement à l'ouverture de l'appli, réglé par Fabien dans
      l'atelier du chargement (https://claude.ai/artifact/VzwKGJu1DcjaaVSoZpave8,
      doc chargement/atelier, 2026-09-26) : titre LED au milieu de l'écran,
@@ -2134,7 +2183,11 @@
 
   <!-- SETUP -->
   <section class="screen active" id="screen-setup">
-    <div class="tile-row" id="title-tiles"></div>
+    <!-- Haut du menu façon générique : sol de LED en perspective + titre posé au bout (voir MENU_SCENE) -->
+    <div class="menu-hero" id="menu-hero">
+      <div class="ms-stage" aria-hidden="true"><div class="ms-floor" id="menu-floor"></div><div class="ms-fog"></div></div>
+      <div class="tile-row" id="title-tiles"></div>
+    </div>
     <!-- Partie interrompue (appli fermée par iOS...) : proposée à la reprise, voir SAVED_GAME -->
     <div class="resume-card" id="resume-card" hidden>
       <div class="resume-kicker" id="resume-kicker">Partie en cours</div>
@@ -5104,10 +5157,112 @@
         <rect x="18" y="18" width="344" height="114" rx="34" fill="url(#chrome-${uid})"/>
         <rect x="27" y="27" width="326" height="96" rx="27" fill="url(#ring-${uid})"/>
         <rect x="38" y="38" width="304" height="74" rx="18" fill="#080505"/>
-        <g filter="url(#glow-${uid})" fill="${TITLE_LED_COLOR}">${g.lit}</g>
+        <g class="led-dots" filter="url(#glow-${uid})" fill="${TITLE_LED_COLOR}">${g.lit}</g>
       </svg>`;
   }
   renderTiles('title-tiles');
+
+  // ---- Haut du menu façon générique (atelier « Menu aux chevrons », piste 3) ----
+  // Le sol est dessiné vu de dessus (le CSS le couche en perspective, voir
+  // .ms-floor) : trois couloirs de chevrons à 120° tramés sur la grille de LED
+  // (10 px) convergent vers le disque (CX, CY), séparés par trois faisceaux
+  // de 4 lignes qui longent un couloir puis tournent de 60° pour longer le
+  // suivant. Le disque a ses anneaux qui tournent (« MOT DE PASSE 20 000 € »,
+  // points blancs, « € »). Le titre du menu est rogné sur son cadre chromé
+  // pour être posé au bout du couloir. scramble() brouille ses lettres, qui se
+  // fixent une à une de gauche à droite, comme dans le générique.
+  const MENU_SCENE = (() => {
+    const FW = 860, FH = 1600, CX = 430, CY = 1300;
+    let out = '';
+    {
+      const g = 10, hw = 75, sp = 70, th = 28, u0 = 176, NMAX = 18;
+      const lanes = [ { d:[0, 1], f:.28 }, { d:[.866, -.5], f:.55 }, { d:[-.866, -.5], f:.55 } ];
+      for(const L of lanes){
+        const [dx, dy] = L.d, groups = {};
+        let field = '';
+        for(let gy = 5; gy < FH; gy += g) for(let gx = 5; gx < FW; gx += g){
+          // u : distance au disque le long du couloir, v : écart à son axe.
+          const rx = gx - CX, ry = gy - CY, u = -(rx * dx + ry * dy), v = -rx * dy + ry * dx;
+          if(u < u0 || Math.abs(v) > hw) continue;
+          const s = u - Math.abs(v), n = Math.floor(s / sp), dot = `<circle cx="${gx}" cy="${gy}" r="3.7"/>`;
+          if(s - n * sp < th) (groups[n] = groups[n] || []).push(dot); else field += dot;
+        }
+        out += `<g fill="#6a1a0e" opacity="${L.f}">${field}</g>`;
+        out += Object.keys(groups).map(n => `<g class="fc" style="--i:${NMAX - n}" fill="#f5361a">${groups[n].join('')}</g>`).join('');
+      }
+      const D = 330, Fx = CX - D * .866, Fy = CY - D * .5;
+      let paths = '';
+      for(let k = 0; k < 4; k++){
+        const m = 95 + 9 * k, rho = D * .866 - m, x = CX - m;
+        paths += `M ${x.toFixed(1)} ${(Fy - 1300).toFixed(1)} V ${Fy.toFixed(1)} A ${rho.toFixed(1)} ${rho.toFixed(1)} 0 0 1 ${(Fx + rho * .5).toFixed(1)} ${(Fy + rho * .866).toFixed(1)} l ${(-.866 * 1300).toFixed(1)} ${(.5 * 1300).toFixed(1)} `;
+      }
+      out += [0, 120, 240].map((a, k) => `<g transform="rotate(${a} ${CX} ${CY})">` +
+        `<path d="${paths}" fill="none" stroke="#d52a18" stroke-width="3.2"/>` +
+        `<path d="${paths}" fill="none" stroke="#ffd2bd" stroke-width="3.6" stroke-linecap="round" pathLength="100" stroke-dasharray="1.2 11.3" class="ms-comet" style="animation-delay:${-k * 8}s"/></g>`).join('');
+      const ring = (txt, r, size) => [...txt].map((ch, i) => ch === ' ' ? '' :
+        `<text transform="rotate(${(360 * i / txt.length).toFixed(2)}) translate(0 ${-r})" text-anchor="middle" font-size="${size}">${ch}</text>`).join('');
+      out += `<g transform="translate(${CX} ${CY})" font-family="Manrope, sans-serif" font-weight="800" fill="#efe9e0">
+        <circle r="168" fill="#0b0605" stroke="#e0301a" stroke-width="3"/>
+        <g class="ms-spin" style="--sp:44s">${ring('MOT DE PASSE  20 000 €  '.repeat(2), 132, 25)}</g>
+        <circle r="116" fill="none" stroke="#e0301a" stroke-width="2.5"/>
+        <g class="ms-spin back" style="--sp:28s"><circle r="108" fill="none" stroke="#fff4ec" stroke-width="5" stroke-linecap="round" stroke-dasharray="0.1 10.2"/></g>
+        <circle r="98" fill="#070403" stroke="#e0301a" stroke-width="2.5"/>
+        <g class="ms-spin back" style="--sp:36s">${ring('€ '.repeat(12), 78, 24)}</g>
+        <circle r="60" fill="#0b0605" stroke="#e0301a" stroke-width="2.5"/>
+        <circle r="46" fill="none" stroke="#e0301a" stroke-width="2.5"/><circle r="32" fill="none" stroke="#e0301a" stroke-width="2.5"/>
+        <circle r="18" fill="none" stroke="#e0301a" stroke-width="2.5"/>
+      </g>`;
+    }
+    document.getElementById('menu-floor').innerHTML = `<svg width="${FW}" height="${FH}" viewBox="0 0 ${FW} ${FH}">${out}</svg>`;
+    const sign = document.querySelector('#title-tiles .led-sign');
+    sign.setAttribute('viewBox', '14 14 352 122');
+
+    // Brouillage : le titre découpé en lettres (colonnes vides = séparations),
+    // plus quelques lettres de passage au même trait (elles ne restent que 70 ms).
+    const ROWS = TITLE_LED.slice(1, 13);
+    const SEG = [];
+    const used = c => ROWS.some(r => r[c] === '#');
+    for(let c = 0; c < ROWS[0].length; ){
+      if(!used(c)){ c++; continue; }
+      const s = c; while(c < ROWS[0].length && used(c)) c++;
+      SEG.push({ x:s, w:c - s, g:ROWS.map(r => r.substr(s, c - s)) });
+    }
+    const EXTRA = [
+      ['#####.','######','##..##','##..##','##..##','######','#####.','##.##.','##..##','##..##','##..##','##..##'],
+      ['##..##','##..##','##..##','##..##','##..##','######','######','##..##','##..##','##..##','##..##','##..##'],
+      ['##..##','##..##','##..##','##..##','##..##','##..##','##..##','##..##','##..##','##..##','######','.####.'],
+      ['##....','##....','##....','##....','##....','##....','##....','##....','##....','##....','######','######'],
+      ['.####.','######','##..##','##....','##....','##....','##....','##....','##....','##..##','######','.####.'],
+      ['######','######','..##..','..##..','..##..','..##..','..##..','..##..','..##..','..##..','######','######'],
+      ['######','######','....##','....##','...##.','..##..','..##..','.##...','##....','##....','######','######'],
+      ['.####.','######','##..##','##....','##....','##.###','##.###','##..##','##..##','##..##','######','.####.'],
+      ['##..##','##..##','##..##','##..##','##..##','##..##','##..##','##..##','.####.','.####.','..##..','..##..'],
+    ];
+    const POOL = [...SEG.map(s => s.g), ...EXTRA];
+    const p = TITLE_LED_PITCH, x0 = TITLE_LED_GEOM.x0, y0 = TITLE_LED_GEOM.y0;
+    const dotsFor = glyphs => {
+      let s = '';
+      SEG.forEach((seg, j) => glyphs[j].forEach((row, r) => [...row].forEach((ch, c) => {
+        if(ch === '#') s += `<circle cx="${(x0 + (seg.x + c + 0.5) * p).toFixed(2)}" cy="${(y0 + (r + 1.5) * p).toFixed(2)}" r="${(p * 0.43).toFixed(2)}"/>`;
+      })));
+      return s;
+    };
+    const dotsEl = document.querySelector('#title-tiles .led-dots');
+    let timer = null;
+    function scramble(){
+      clearInterval(timer);
+      if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){ dotsEl.innerHTML = TITLE_LED_GEOM.lit; return; }
+      const t0 = performance.now(), fixAt = j => 300 + j * 120, end = fixAt(SEG.length - 1) + 80;
+      const tick = () => {
+        const t = performance.now() - t0;
+        if(t > end){ clearInterval(timer); dotsEl.innerHTML = TITLE_LED_GEOM.lit; return; }
+        dotsEl.innerHTML = dotsFor(SEG.map((s, j) => t >= fixAt(j) ? s.g
+          : POOL[Math.random() * POOL.length | 0].map(r => (r + '.......').slice(0, s.w))));
+      };
+      tick(); timer = setInterval(tick, 70);
+    }
+    return { scramble };
+  })();
 
   // Interrupteur "mots figés" de la zone de test + bandeau d'avertissement.
   (function initTestWordMode(){
@@ -5314,6 +5469,9 @@
     if(name === 'setup'){ WAKE.release(); state.gen += 1; renderResumeCard(); } else WAKE.acquire();
     Object.values(screens).forEach(s => s.classList.remove('active'));
     screens[name].classList.add('active');
+    // Retour au menu : le titre se brouille comme dans le générique (au
+    // lancement, c'est le tap sur JOUER qui le déclenche, voir initBoot).
+    if(name === 'setup' && !document.body.classList.contains('booting')) MENU_SCENE.scramble();
     document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
     document.getElementById('btn-play-settings').classList.toggle('visible', name !== 'setup' && name !== 'final');
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
@@ -9240,17 +9398,26 @@
       lbl.style.opacity = '0';
       await playWordBirth({ pill:btn, reverse:true });
       btn.classList.remove('shown');
-      // Le titre du chargement et celui du menu sont le même panneau à la
-      // même largeur : on montre le menu et on fait partir son titre de la
-      // place qu'occupait celui du chargement.
-      const from = document.getElementById('boot-title').getBoundingClientRect().top;
+      // Le titre du chargement et celui du menu sont le même panneau : on
+      // montre le menu et on fait partir son titre (plus petit, rogné sur son
+      // cadre, posé au bout du couloir) de la place et de la taille de celui
+      // du chargement, pendant que ses lettres se brouillent et que le sol
+      // du générique apparaît derrière.
+      const from = document.getElementById('boot-title').getBoundingClientRect();
       document.body.classList.remove('booting');
       boot.hidden = true;
+      MENU_SCENE.scramble();
       if(reduced) return;
+      const hero = document.getElementById('menu-hero');
       const menuTitle = document.getElementById('title-tiles');
-      const dy = from - menuTitle.getBoundingClientRect().top;
-      menuTitle.animate([{ transform:`translateY(${dy}px)` }, { transform:'none' }], { duration:650, easing:'cubic-bezier(.22,.8,.25,1)' });
-      [...screens.setup.children].filter(c => c !== menuTitle && c.offsetParent !== null).forEach((c, i) =>
+      const to = menuTitle.getBoundingClientRect();
+      // Le chargement montre tout le SVG (380 de large), le menu seulement 352.
+      const k = (from.width / 380) / (to.width / 352);
+      const dx = (from.left + from.width / 2) - (to.left + to.width / 2);
+      const dy = (from.top + from.height / 2) - (to.top + to.height / 2);
+      menuTitle.animate([{ transform:`translate(${dx}px, ${dy}px) scale(${k})` }, { transform:'none' }], { duration:650, easing:'cubic-bezier(.22,.8,.25,1)' });
+      hero.querySelector('.ms-stage').animate([{ opacity:0 }, { opacity:1 }], { duration:700, delay:250, easing:'ease-out', fill:'backwards' });
+      [...screens.setup.children].filter(c => c !== hero && c.offsetParent !== null).forEach((c, i) =>
         c.animate([{ opacity:0, transform:'translateY(8px)' }, { opacity:1, transform:'none' }],
           { duration:320, delay:380 + i * 60, easing:'ease-out', fill:'backwards' }));
     });
