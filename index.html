@@ -2156,6 +2156,13 @@
             <input type="range" id="game-volume-slider" min="0" max="100" value="100" aria-label="Volume général">
           </div>
         </div>
+        <div class="set-row pset-row">
+          <span class="set-label">Menu</span>
+          <div class="toggle-row" id="menu-music-toggle">
+            <div class="toggle-btn" data-val="off">Musique 1</div>
+            <div class="toggle-btn" data-val="on">Musique 2</div>
+          </div>
+        </div>
         <div id="custom-sound-list"></div>
         <p class="footer-note pset-note pset-note-full">Touche le nom d'un son pour le remplacer par un fichier de ton téléphone.</p>
       </div>
@@ -4119,14 +4126,25 @@
   // le fichier par défaut de sa piste (voir urlFor ci-dessous).
   const MUSIC_FILES = {
     menu:          'sounds/music-menu.mp3',
+    menuAlt:       'sounds/music-menu-alt.mp3', // 2e musique du menu, au choix dans Paramètres > Son
     qualifWait:    'sounds/music-qualif-wait.wav',
     qualif:        'sounds/music-qualif.mp3',
     finaleAmbient: 'sounds/music-finale-ambient.mp3',
     finaleEarly:   'sounds/music-finale-early.mp3',
     finaleLate:    'sounds/music-finale-late.mp3',
   };
+  function menuMusicChoice(){
+    try { return localStorage.getItem('mdp_menu_music') === '2' ? 2 : 1; } catch(e){ return 1; }
+  }
+  // Réglage (volume, son importé) d'une piste ; le menu suit la musique choisie.
+  function musicSlotFor(key){
+    return MUSIC_KEY_TO_SLOT[(key === 'menu' && menuMusicChoice() === 2) ? 'menuAlt' : key];
+  }
+  function setMenuMusicChoice(n){
+    try { if(n === 2) localStorage.setItem('mdp_menu_music', '2'); else localStorage.removeItem('mdp_menu_music'); } catch(e){}
+  }
   const MUSIC = (function(){
-    let audio = null;         // <audio> en cours (mode 'element')
+    let audio = null;        // <audio> en cours (mode 'element')
     let bufferSource = null;  // AudioBufferSourceNode en cours (mode 'buffer', boucle sans accroc)
     let mode = null;          // 'element' | 'buffer'
     let currentKey = null;
@@ -4169,7 +4187,7 @@
     function computeVolume(){
       const s = SFX.getSettings();
       if(!s.gameOn) return 0;
-      const slotKey = MUSIC_KEY_TO_SLOT[currentKey] || currentKey;
+      const slotKey = musicSlotFor(currentKey) || currentKey;
       const ambientReduction = AMBIENT_KEYS.has(currentKey) ? 0.25 : 1;
       return s.gameVol * ambientReduction * SLOT_VOLUMES.get(slotKey);
     }
@@ -4186,9 +4204,12 @@
     let currentBufferUrl = null; // fichier du buffer en cours (clé de decodedBuffers)
     // Fichier à jouer pour une piste : la musique importée dans les réglages
     // (Personnalisation sonore) si il y en a une, sinon celle du jeu.
+    // Musique du menu : la 1 (d'origine) ou la 2, choisie dans Paramètres > Son.
     function urlFor(key){
-      const custom = (typeof CUSTOM_SOUNDS !== 'undefined') && CUSTOM_SOUNDS.get(MUSIC_KEY_TO_SLOT[key]);
-      return custom ? custom.url : MUSIC_FILES[key];
+      const custom = (typeof CUSTOM_SOUNDS !== 'undefined') && CUSTOM_SOUNDS.get(musicSlotFor(key));
+      if(custom) return custom.url;
+      if(key === 'menu' && menuMusicChoice() === 2) return MUSIC_FILES.menuAlt;
+      return MUSIC_FILES[key];
     }
     function play(key, opts){
       opts = opts || {};
@@ -4502,7 +4523,7 @@
     // Musique importée ou retirée dans les réglages alors que sa piste joue
     // (ex. la musique du menu) : on relance tout de suite avec le bon fichier.
     function refreshSlot(slotKey){
-      if(!currentKey || MUSIC_KEY_TO_SLOT[currentKey] !== slotKey || !isPlaying()) return;
+      if(!currentKey || musicSlotFor(currentKey) !== slotKey || !isPlaying()) return;
       const key = currentKey, opts = currentOpts;
       stop();
       play(key, opts);
@@ -4715,6 +4736,7 @@
     { key:'finaleTimeout', label:'Palier perdu avant l\u2019heure (finale)', kind:'sfx', cat:'game' },
     { key:'jackpot',     label:'Victoire finale (5 paliers)',kind:'sfx',   cat:'game' },
     { key:'music-menu',           label:'Musique — Menu principal',            kind:'music', cat:'game' }, // en boucle propre (fondu au raccord) : la piste dure ~2min mais le menu peut rester ouvert bien plus longtemps
+    { key:'music-menu-alt',       label:'Musique — Menu principal (musique 2)', kind:'music', cat:'game' }, // au choix dans Paramètres > Son > Menu
     { key:'music-qualif-wait',    label:'Musique — Attente du 1er mot (qualifs)', kind:'music', cat:'game' }, // boucle courte, tourne tant que le mot n'a pas été tapé pour lancer le chrono
     { key:'music-qualif',         label:'Musique — Qualifications',            kind:'music', cat:'game' }, // pas une boucle : la piste dure exactement les 30s de la manche, synchro avec le chrono
     { key:'music-finale-ambient', label:'Musique — Attente en finale',         kind:'music', cat:'game' },
@@ -4726,12 +4748,12 @@
     correct:'Bonne réponse', indice:'Indice (finale)', forbidden:'Interdit', pass:'Passer',
     roundStart:'Lancement', roundWin:'Manche gagnée', qualifsEnd:'Fin des qualifs',
     wordReveal:'1er mot d’un palier', palier:'Palier franchi', finaleTimeout:'Palier perdu', jackpot:'Victoire finale',
-    'music-menu':'Menu', 'music-qualif-wait':'Attente (qualifs)', 'music-qualif':'Qualifications',
+    'music-menu':'Menu 1', 'music-menu-alt':'Menu 2', 'music-qualif-wait':'Attente (qualifs)', 'music-qualif':'Qualifications',
     'music-finale-ambient':'Attente (finale)', 'music-finale-early':'Finale 1 à 3', 'music-finale-late':'Finale 4 et 5',
   };
   // Piste MUSIC (voir MUSIC_FILES) -> slot de réglage volume ci-dessus.
   const MUSIC_KEY_TO_SLOT = {
-    menu: 'music-menu', qualifWait: 'music-qualif-wait', qualif: 'music-qualif',
+    menu: 'music-menu', menuAlt: 'music-menu-alt', qualifWait: 'music-qualif-wait', qualif: 'music-qualif',
     finaleAmbient: 'music-finale-ambient', finaleEarly: 'music-finale-early', finaleLate: 'music-finale-late',
   };
   // Volume individuel par piste (son ou musique), réglable dans le menu de
@@ -5038,7 +5060,7 @@
         volumePct.textContent = Math.round(v*100) + '%';
         // Musique en cours de lecture : on répercute le changement tout de
         // suite, sans attendre la prochaine piste.
-        if(slot.kind === 'music' && MUSIC_KEY_TO_SLOT[MUSIC.current()] === slot.key) MUSIC.applyVolume();
+        if(slot.kind === 'music' && musicSlotFor(MUSIC.current()) === slot.key) MUSIC.applyVolume();
         // Préécoute en cours sur ce même slot (via le bouton "Écouter") : idem.
         if(CUSTOM_SOUNDS.getCurrentPreviewKey() === slot.key) CUSTOM_SOUNDS.updatePreviewVolume();
       });
@@ -5059,7 +5081,7 @@
     renderCustomSoundList();
     // La musique du menu a pu démarrer avant la lecture des fichiers importés.
     const cur = MUSIC.current();
-    if(cur) MUSIC.refreshSlot(MUSIC_KEY_TO_SLOT[cur]);
+    if(cur) MUSIC.refreshSlot(musicSlotFor(cur));
   });
 
   // ---------- PRÉFÉRENCES UI ----------
@@ -5820,6 +5842,11 @@
     renderMuteBtn();
   });
   renderMuteBtn();
+  // Musique du menu : changée tout de suite si elle joue (on l'entend en choisissant).
+  wireSoundToggle('menu-music-toggle', () => menuMusicChoice() === 2, v => {
+    setMenuMusicChoice(v ? 2 : 1);
+    if(MUSIC.current() === 'menu') MUSIC.refreshSlot(musicSlotFor('menu'));
+  });
   wireSoundToggle('pause-hide-toggle', () => UIPREFS.getHideWordOnPause(), v => UIPREFS.setHideWordOnPause(v));
   wireSoundToggle('forbidden-reminder-toggle', () => UIPREFS.getShowForbiddenInPlay(), v => {
     UIPREFS.setShowForbiddenInPlay(v);
@@ -5862,6 +5889,9 @@
       UIPREFS.reset();
       SFX.reset();
       SLOT_VOLUMES.reset();
+      setMenuMusicChoice(1);
+      syncToggle('menu-music-toggle', false);
+      if(MUSIC.current() === 'menu') MUSIC.refreshSlot(musicSlotFor('menu'));
       const snd = SFX.getSettings();
       renderMuteBtn();
       document.getElementById('game-volume-slider').value = Math.round(snd.gameVol * 100);
