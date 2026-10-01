@@ -659,9 +659,21 @@
     box-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   @media (prefers-reduced-motion: reduce){ .fb-pill::before{ animation:none; } }
-  .forbidden-title{ display:block; width:92%; margin:14px auto; padding:12px 22px; }
-  .forbidden-title svg{ display:block; width:100%; height:auto; overflow:visible; filter: drop-shadow(0 0 2.5px rgba(255,60,40,0.6)); }
-  .fb-led-on{ fill: rgb(249,185,185); }
+  /* Titre en petit, sans pilule, LED rouges (atelier du panneau Interdits,
+     https://claude.ai/artifact/Jkniniuia44JNrWpZ8k8T7, choix du 2026-10-01). */
+  .forbidden-title{ display:block; width:50%; margin:13px auto 11px; }
+  .forbidden-title svg{ display:block; width:100%; height:auto; overflow:visible; filter: drop-shadow(0 0 2.5px rgba(255,40,20,0.75)); }
+  .fb-led-on{ fill: #ff5040; }
+  /* Allumage : titre, interdits puis conséquence s'allument l'un après
+     l'autre quand le panneau arrive à l'écran (une fois par passage au menu,
+     voir FORBIDDEN_LIGHTS). « armed » les éteint en attendant. */
+  .forbidden-inner.armed .fb-seq{ opacity:0; }
+  .forbidden-inner.lit .fb-seq{ animation: fbSeqIn .55s ease-out both; animation-delay: calc(var(--i) * 150ms + 200ms); }
+  @keyframes fbSeqIn{ 0%{ opacity:0; filter:brightness(2.2); } 35%{ opacity:1; } 100%{ opacity:1; filter:none; } }
+  @media (prefers-reduced-motion: reduce){
+    .forbidden-inner.armed .fb-seq{ opacity:1; }
+    .forbidden-inner.lit .fb-seq{ animation:none; }
+  }
   .forbidden-list{
     list-style:none; margin:0; padding:0;
     display:flex; flex-direction:column; gap:9px;
@@ -670,10 +682,15 @@
     font-size:12.5px; font-weight:800; letter-spacing:0.2px; text-transform:uppercase;
     color:#eaf6ff; text-shadow: 0 0 6px rgba(150,220,255,0.35);
   }
+  /* « Sinon : mot annulé » : même liseré argent, mais plus de pilule — la
+     forme du cadre du mot (coins = 37,5 % de la hauteur : 14 px pour 38 px),
+     ajusté au texte, texte blanc chaud (atelier du bandeau,
+     https://claude.ai/artifact/A65FfyRqAMM7Rok5UPjDUW, 2026-10-01). */
   .forbidden-consequence{
-    display:block; width:82%; margin:14px auto 0; padding:8px 14px; text-align:center;
-    font-size:11.5px; font-weight:800; letter-spacing:0.4px; text-transform:uppercase;
-    color:#eaf6ff; text-shadow: 0 0 6px rgba(150,220,255,0.35);
+    display:flex; align-items:center; justify-content:center; width:fit-content;
+    height:38px; border-radius:14px; margin:14px auto 0; padding:0 24px;
+    font-size:12px; font-weight:800; letter-spacing:0.7px; text-transform:uppercase; white-space:nowrap;
+    color:#f4efe6; text-shadow: 0 0 6px rgba(255,240,225,0.35);
   }
 
   /* Version réduite du rappel des interdits, affichée sur l'écran de jeu
@@ -2384,14 +2401,14 @@
 
     <div class="forbidden-banner">
       <div class="forbidden-inner">
-        <div class="fb-pill forbidden-title" id="forbidden-title" role="img" aria-label="Interdits"></div>
+        <div class="forbidden-title fb-seq" style="--i:0" id="forbidden-title" role="img" aria-label="Interdits"></div>
         <ul class="forbidden-list">
-          <li>Pas de mot composé</li>
-          <li>Pas de mot de la même famille</li>
-          <li>Pas de mot commençant par le même son</li>
-          <li>Pas de mime</li>
+          <li class="fb-seq" style="--i:1">Pas de mot composé</li>
+          <li class="fb-seq" style="--i:2">Pas de mot de la même famille</li>
+          <li class="fb-seq" style="--i:3">Pas de mot commençant par le même son</li>
+          <li class="fb-seq" style="--i:4">Pas de mime</li>
         </ul>
-        <p class="fb-pill forbidden-consequence">Sinon : mot annulé aussitôt</p>
+        <p class="fb-pill forbidden-consequence fb-seq" style="--i:5">Sinon : mot annulé</p>
       </div>
     </div>
 
@@ -5668,6 +5685,7 @@
     // Retour au menu : le titre se brouille comme dans le générique (au
     // lancement, c'est le tap sur JOUER qui le déclenche, voir initBoot).
     if(name === 'setup' && !document.body.classList.contains('booting')) MENU_SCENE.scramble();
+    if(name === 'setup') armForbiddenLights();
     document.getElementById('btn-quit-game').classList.toggle('visible', name !== 'setup' && name !== 'final');
     document.getElementById('btn-play-settings').classList.toggle('visible', name !== 'setup' && name !== 'final');
     const showSchedule = state.mode === 'full' && ['handoff','play','summary'].includes(name) &&
@@ -6078,6 +6096,31 @@
     document.getElementById('forbidden-title').innerHTML =
       `<svg viewBox="0 0 ${cols} ${rows}" aria-hidden="true"><g class="fb-led-on">${on}</g></svg>`;
   })();
+  armForbiddenLights();
+
+  // Allumage du panneau des interdits : éteint à chaque passage au menu
+  // (« armed »), il s'allume ligne par ligne (« lit ») quand il est à moitié
+  // à l'écran. Déclaration de fonction (hissée) : showScreen peut l'appeler
+  // avant que ce bloc ait été lu. Re-observer force un premier rappel même si
+  // le panneau est déjà visible.
+  function armForbiddenLights(){
+    const inner = document.querySelector('#screen-setup .forbidden-inner');
+    if(!inner || !('IntersectionObserver' in window)) return;
+    if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    inner.classList.remove('lit');
+    inner.classList.add('armed');
+    if(!inner._fbObs){
+      inner._fbObs = new IntersectionObserver(entries => {
+        entries.forEach(en => {
+          if(!en.isIntersecting || !inner.classList.contains('armed')) return;
+          inner.classList.remove('armed');
+          inner.classList.add('lit');
+        });
+      }, { threshold: 0.45 });
+    }
+    inner._fbObs.unobserve(inner);
+    inner._fbObs.observe(inner);
+  }
 
   // ---- Pavé des règles, dépliable ----
   (() => {
