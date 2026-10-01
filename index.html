@@ -153,10 +153,16 @@
     border:1px solid rgba(255,255,255,0.35);
     box-shadow:0 2px 8px rgba(0,0,0,0.5);
   }
-  /* Zone des boutons de test : cachée par défaut, révélée par un appui long
-     sur le panneau du titre (voir le handler plus bas). */
-  #debug-zone{ display:flex; flex-direction:column; gap:14px; }
-  #debug-zone[hidden]{ display:none; }
+  /* Carte « Testeurs » de Paramètres (voir TESTER_MODE). */
+  #tester-card[hidden], #tester-jump-row[hidden]{ display:none; }
+  button.toggle-btn{ font-family:inherit; } /* même police que les cases en <div> */
+  /* Ligne de version en bas de Paramètres : 7 touches rapides débloquent le
+     mode testeur. Pas de retour au toucher (ni surbrillance ni sélection). */
+  .pset-version{
+    margin:18px 0 4px; text-align:center; font-size:10.5px; color: var(--text-dim); opacity:0.45;
+    user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+    touch-action:manipulation; /* touches rapides : pas de zoom au double appui */
+  }
 
   .tile-row{
     display:flex; justify-content:center; align-items:center; gap:2px; flex-wrap:nowrap;
@@ -2174,6 +2180,36 @@
       </div>
 
       <button class="text-action subtle pset-reset" id="btn-reset-settings">Revenir aux réglages d'origine</button>
+
+      <!-- 🧪 Carte des testeurs : cachée tant que le mode testeur n'est pas
+           débloqué par 7 touches rapides sur la ligne de version en dessous
+           (aucune réaction avant la 7e, voir TESTER_MODE). -->
+      <div class="card pset-card" id="tester-card" hidden>
+        <div class="pset-title">Testeurs</div>
+        <div class="set-row pset-row" id="tester-jump-row">
+          <span class="set-label">Aller à</span>
+          <div class="toggle-row">
+            <button type="button" class="toggle-btn" id="btn-debug-finale">Finale</button>
+            <button type="button" class="toggle-btn" id="btn-debug-buzz">Tie-break buzz</button>
+          </div>
+        </div>
+        <div class="set-row pset-row">
+          <span class="set-label">Mots</span>
+          <div class="toggle-row" id="tester-wordmode">
+            <div class="toggle-btn" data-val="off">Normaux</div>
+            <div class="toggle-btn" data-val="on">Figés sur TEST</div>
+          </div>
+        </div>
+        <div class="set-row pset-row">
+          <span class="set-label">Outils</span>
+          <div class="toggle-row">
+            <button type="button" class="toggle-btn" id="btn-debug-copy-settings">Copier l'audio</button>
+            <button type="button" class="toggle-btn" id="btn-debug-viewport">Mesures écran</button>
+          </div>
+        </div>
+        <button class="text-action subtle pset-reset" id="btn-tester-off">Désactiver le mode testeur</button>
+      </div>
+      <p class="pset-version" id="app-version">Mot de passe · version 1.0</p>
     </div>
   </div>
 
@@ -2352,14 +2388,6 @@
       </div>
     </div>
 
-    <!-- 🧪 BOUTONS DE TEST — cachés par défaut, révélés par un appui long sur le titre -->
-    <div id="debug-zone" hidden>
-      <button class="btn btn-ghost" id="btn-debug-finale" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct en finale</button>
-      <button class="btn btn-ghost" id="btn-debug-buzz" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">🧪 TEST — Aller direct au tie-break buzz</button>
-      <button class="btn btn-ghost" id="btn-debug-wordmode" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;"></button>
-      <button class="btn btn-ghost" id="btn-debug-copy-settings" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">📋 TEST — Copier mes réglages audio</button>
-      <button class="btn btn-ghost" id="btn-debug-viewport" style="border-style:dashed; border-color:var(--gold-dim); color:var(--gold); margin-top:4px;">📐 TEST — Mesures de l'écran</button>
-    </div>
   </section>
 
   <!-- HANDOFF -->
@@ -5416,81 +5444,69 @@
   })();
 
   (function initTestWordMode(){
-    const btn = document.getElementById('btn-debug-wordmode');
+    const group = document.getElementById('tester-wordmode');
     const banner = document.getElementById('test-mode-banner');
     function render(){
       const on = TEST_WORD_MODE.isOn();
-      btn.textContent = on
-        ? '🧪 Mots figés sur « TEST » : ACTIVÉ (toucher pour couper)'
-        : '🧪 Mots figés sur « TEST » : désactivé';
+      selectToggle('tester-wordmode', on ? 'on' : 'off');
       banner.hidden = !on;
       // En mode test, la zone d'appui du mot est tracée (voir .word-pill::after).
       document.body.classList.toggle('test-word-mode', on);
     }
-    btn.addEventListener('click', () => { TEST_WORD_MODE.set(!TEST_WORD_MODE.isOn()); render(); });
+    group.addEventListener('click', e => {
+      const b = e.target.closest('.toggle-btn');
+      if(!b) return;
+      TEST_WORD_MODE.set(b.dataset.val === 'on'); render();
+    });
     render();
   })();
 
-  // ---- Boutons de test cachés : appui long de 1,2 s sur le panneau du titre ----
-  // Ils ne sont pas visibles à l'écran d'accueil par défaut. Un appui long les
-  // affiche, un second les re-cache. L'état (ouvert/replié) est mémorisé : si on
-  // les laisse ouverts, ils le sont toujours au prochain lancement de l'appli,
-  // pour enchaîner les tests sans refaire l'appui long à chaque fois.
-  (function initDebugLongPress(){
-    const titleEl = document.getElementById('title-tiles');
-    const zone = document.getElementById('debug-zone');
-    if(!titleEl || !zone) return;
-    try { zone.hidden = localStorage.getItem('mdp_debug_zone_open') !== '1'; } catch(e){}
-    const HOLD_MS = 1200;
-    const MOVE_TOLERANCE = 12; // px — au-delà, c'est un scroll, pas un appui
-    let timer = null, startX = 0, startY = 0;
-
-    function cancel(){
-      if(timer){ clearTimeout(timer); timer = null; }
+  // ---- Mode testeur : 7 touches rapides sur la ligne de version ----
+  // En bas de Paramètres, « Mot de passe · version 1.0 ». Aucune réaction aux
+  // six premières touches (ni son, ni vibration, ni surbrillance) : quelqu'un
+  // qui la touche par hasard ne devine pas qu'il y a quelque chose. À la 7e,
+  // son de confirmation et la carte « Testeurs » apparaît juste au-dessus.
+  // Plus de 1,5 s entre deux touches : le compte repart de zéro. L'état est
+  // mémorisé (même clé que l'ancienne zone de test du menu) ; on le coupe par
+  // « Désactiver le mode testeur » dans la carte, ou par 7 nouvelles touches.
+  const TESTER_MODE = (() => {
+    const KEY = 'mdp_debug_zone_open';
+    let on = false;
+    try { on = localStorage.getItem(KEY) === '1'; } catch(e){}
+    return {
+      isOn: () => on,
+      set(v){ on = !!v; try { localStorage.setItem(KEY, on ? '1' : '0'); } catch(e){} },
+    };
+  })();
+  (function initTesterMode(){
+    const card = document.getElementById('tester-card');
+    const version = document.getElementById('app-version');
+    const jumpRow = document.getElementById('tester-jump-row');
+    if(!card || !version) return;
+    function render(){
+      card.hidden = !TESTER_MODE.isOn();
+      // « Aller à » ne se propose que depuis le menu, pas en pleine partie.
+      jumpRow.hidden = !document.getElementById('screen-setup').classList.contains('active');
     }
-    function fire(){
-      timer = null;
-      zone.hidden = !zone.hidden;
-      try { localStorage.setItem('mdp_debug_zone_open', zone.hidden ? '0' : '1'); } catch(e){}
-      // Petit retour haptique quand c'est pris en compte (ignoré si non supporté,
-      // notamment sur iOS/Safari qui n'implémente pas l'API de vibration).
-      if(navigator.vibrate) { try{ navigator.vibrate(30); }catch(e){} }
-      // Retour sonore (le même que l'affichage du 1er mot d'un palier), pour
-      // confirmer le déclenchement même quand la vibration n'est pas dispo.
+    let taps = 0, lastTap = 0;
+    version.addEventListener('click', () => {
+      const now = Date.now();
+      taps = (now - lastTap > 1500) ? 1 : taps + 1;
+      lastTap = now;
+      if(taps < 7) return;
+      taps = 0;
+      TESTER_MODE.set(!TESTER_MODE.isOn());
+      render();
       try{ SFX.wordReveal(); }catch(e){}
-    }
-    function begin(x, y){
-      cancel();
-      startX = x; startY = y;
-      timer = setTimeout(fire, HOLD_MS);
-    }
-    function moved(x, y){
-      if(!timer) return;
-      if(Math.abs(x - startX) > MOVE_TOLERANCE || Math.abs(y - startY) > MOVE_TOLERANCE) cancel();
-    }
-
-    titleEl.addEventListener('touchstart', e => {
-      const t = e.touches[0];
-      begin(t.clientX, t.clientY);
-    }, { passive:true });
-    titleEl.addEventListener('touchmove', e => {
-      const t = e.touches[0];
-      moved(t.clientX, t.clientY);
-    }, { passive:true });
-    titleEl.addEventListener('touchend', cancel);
-    titleEl.addEventListener('touchcancel', cancel);
-
-    // Équivalent souris, pour tester depuis un navigateur de bureau.
-    titleEl.addEventListener('mousedown', e => begin(e.clientX, e.clientY));
-    titleEl.addEventListener('mousemove', e => moved(e.clientX, e.clientY));
-    titleEl.addEventListener('mouseup', cancel);
-    titleEl.addEventListener('mouseleave', cancel);
-
-    // Évite le menu contextuel iOS/Android (copier/partager) sur l'appui long.
-    titleEl.addEventListener('contextmenu', e => e.preventDefault());
-    titleEl.style.userSelect = 'none';
-    titleEl.style.webkitUserSelect = 'none';
-    titleEl.style.webkitTouchCallout = 'none';
+      if(navigator.vibrate) { try{ navigator.vibrate(30); }catch(e){} }
+      if(TESTER_MODE.isOn()) card.scrollIntoView({ behavior:'smooth', block:'center' });
+    });
+    document.getElementById('btn-tester-off').addEventListener('click', () => {
+      TESTER_MODE.set(false);
+      render();
+    });
+    TESTER_MODE.render = render; // rappelé à chaque ouverture de Paramètres
+    render();
   })();
 
   // ---- Fond animé : halos flous en mouvement lent, différents à chaque lancement ----
@@ -5945,6 +5961,7 @@
     document.getElementById('settings-overlay').classList.add('visible');
     document.getElementById('settings-overlay').querySelector('.settings-modal').scrollTop = 0;
     document.body.classList.add('page-open');
+    if(TESTER_MODE.render) TESTER_MODE.render();
     pruneBlacklistAgainstWordBank();
     renderBlacklistPanel();
     renderWordPoolStatus();
@@ -6757,17 +6774,18 @@
           box.id = 'debug-copy-fallback'; box.readOnly = true; box.rows = 10;
           box.style.cssText = 'width:100%; font-size:11px; background:#0a0c10; color:var(--text); border:1px solid var(--card-edge); border-radius:10px; padding:8px;';
           box.addEventListener('focus', () => box.select());
-          btn.after(box);
+          btn.closest('.set-row').after(box);
         }
         box.value = text;
       } else if(box){ box.remove(); }
-      btn.textContent = ok ? '✓ Réglages copiés' : 'Copie impossible : texte affiché ci-dessous';
+      btn.textContent = ok ? '✓ Copié' : 'Texte ci-dessous';
       clearTimeout(resetTimer);
       resetTimer = setTimeout(() => { btn.textContent = idleLabel; }, 3500);
     });
   })();
 
   document.getElementById('btn-debug-finale').addEventListener('click', () => {
+    closeSettingsOverlay();
     state.isDebug = true; // raccourci de test : ni enregistré pour reprise, ni compté au palmarès
     state.finalHistory = [];
     state.bank = 0; state.safeBank = 0;
@@ -6801,6 +6819,7 @@
 
   // 🧪 BOUTON DE TEST TEMPORAIRE — à supprimer avant mise en ligne définitive
   document.getElementById('btn-debug-buzz').addEventListener('click', () => {
+    closeSettingsOverlay();
     state.isDebug = true;
     state.inFinale = false;
     // Le mode équipe (3 équipes, pour couvrir le cas à 3+ qui a motivé cette
