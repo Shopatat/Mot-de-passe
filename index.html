@@ -5065,11 +5065,19 @@
   // ---------- PRÉFÉRENCES UI ----------
   // Petites préférences d'affichage persistées, séparées des réglages sons.
   const UIPREFS = (function(){
-    const DEFAULTS = { hideWordOnPause: true, showForbiddenInPlay: false, showFinaleHelp: true, arbitreMode: false, interditLeft: false };
+    const DEFAULTS = { hideWordOnPause: true, showForbiddenInPlay: true, showFinaleHelp: true, arbitreMode: false, interditLeft: false, forbiddenShownV2: true };
     const prefs = Object.assign({}, DEFAULTS);
     try {
       const saved = JSON.parse(localStorage.getItem('mdp_ui_prefs') || 'null');
       if(saved) Object.assign(prefs, saved);
+      // Les interdits sont affichés par défaut depuis le 2026-10-01 (les nouveaux
+      // joueurs les oubliaient). Les préférences enregistrées gardaient l'ancien
+      // « Cachés » : on les rallume une seule fois, le choix suivant est respecté.
+      if(saved && !saved.forbiddenShownV2){
+        prefs.showForbiddenInPlay = true;
+        prefs.forbiddenShownV2 = true;
+        localStorage.setItem('mdp_ui_prefs', JSON.stringify(prefs));
+      }
     } catch(e){}
     function save(){
       try { localStorage.setItem('mdp_ui_prefs', JSON.stringify(prefs)); } catch(e){}
