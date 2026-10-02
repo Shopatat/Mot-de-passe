@@ -1503,6 +1503,9 @@
   .ios-zoom-shell{ position:fixed; inset:0; z-index:5; background:var(--bg); overflow:hidden; pointer-events:none; }
   .screen.ios-zoom-copy{ position:fixed; margin:0; pointer-events:none; }
   .ios-zoom-copy, .ios-zoom-copy *{ animation:none !important; transition:none !important; }
+  .screen.ios-noenter{ animation:none; } /* écran arrivé par l'ouverture : pas de second fondu */
+  body.ios-zooming #btn-quit-game, body.ios-zooming #btn-play-settings,
+  body.ios-zooming #btn-schedule, body.ios-zooming #btn-pause{ visibility:hidden; }
 
   .summary-icon{ font-size:40px; text-align:center; }
   .summary-title{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:24px; text-align:center; letter-spacing:0.5px; }
@@ -5752,18 +5755,33 @@
       return d;
     }
     // Copie figée d'un écran, posée exactement à sa place.
+    // Même élément dans la copie (même chemin d'enfants depuis l'écran).
+    function twinOf(root, copy, el){
+      const path = [];
+      for(let n = el; n && n !== root; n = n.parentElement) path.unshift(Array.prototype.indexOf.call(n.parentElement.children, n));
+      let m = copy;
+      for(const i of path){ m = m && m.children[i]; }
+      return m || null;
+    }
     function copyOf(scr){
       const r = scr.getBoundingClientRect(), c = scr.cloneNode(true);
-      // Ce qu'une animation affiche (cadre du mot, chrono, voyants…) n'est pas
+      // Ce qu'une animation du jeu affiche (cadre du mot, voyants…) n'est pas
       // dans le code de la page : on recopie son état visible sur la copie.
-      const src = scr.querySelectorAll('*'), dst = c.querySelectorAll('*');
-      src.forEach((el, i) => {
-        if(!dst[i] || !el.getAnimations().length) return;
-        const cs = getComputedStyle(el);
-        dst[i].style.opacity = cs.opacity; dst[i].style.transform = cs.transform; dst[i].style.visibility = cs.visibility;
+      // Seulement pour ces quelques éléments (parcourir tout l'écran figeait
+      // l'image au moment du toucher sur iPhone).
+      document.getAnimations().forEach(a => {
+        const t = a.effect && a.effect.target;
+        if(!t || t === scr || !scr.contains(t)) return;
+        if((window.CSSAnimation && a instanceof CSSAnimation) || (window.CSSTransition && a instanceof CSSTransition)) return;
+        const twin = twinOf(scr, c, t);
+        if(!twin) return;
+        const cs = getComputedStyle(t);
+        twin.style.opacity = cs.opacity; twin.style.transform = cs.transform; twin.style.visibility = cs.visibility;
       });
       c.classList.add('ios-zoom-copy'); c.classList.remove('ho-anim');
-      Object.assign(c.style, { left:r.left + 'px', top:r.top + 'px', width:r.width + 'px' });
+      // Hauteur comprise : sans elle, un écran étiré sur toute la hauteur (le
+      // « qui fait deviner ») se tassait et sautait vers le haut.
+      Object.assign(c.style, { left:r.left + 'px', top:r.top + 'px', width:r.width + 'px', height:r.height + 'px' });
       return c;
     }
 
@@ -5810,13 +5828,14 @@
     // ----- Écrans de #app (appelé par showScreen avant et après le changement) -----
     function before(prev, name){
       finish();
+      Object.values(screens).forEach(s => s.classList.remove('ios-noenter'));
       const quit = quitting; quitting = false;
       if(prev === 'setup' && name !== 'setup'){
         const p = pending; pending = null;
         const r = p && !reduced() && (performance.now() - p.at < 60000) && shown(p.el);
         if(!r) return null;
         home = { el:p.el, scroll:app.scrollTop };
-        return { kind:'open', src:p.el, r, copy:copyOf(screens.setup) };
+        return { kind:'open', src:p.el, scroll:app.scrollTop };
       }
       // Retour du premier écran, ou « Quitter » en pleine partie : l'écran
       // rentre dans le bouton qui a lancé la partie (« Lancer la partie » par
@@ -5826,30 +5845,56 @@
       }
       return null;
     }
+    // Fin de l'ouverture : le vrai écran remplace le menu, sans rejouer son
+    // fondu d'arrivée ni l'entrée des prénoms (déjà vus dans la copie).
+    function swapTo(dest){
+      screens.setup.classList.remove('active');
+      dest.classList.remove('ho-anim');
+      dest.classList.add('active', 'ios-noenter');
+      document.body.classList.remove('ios-zooming');
+    }
     function after(z){
       if(!z) return;
       const scr = document.querySelector('#app > .screen.active');
       if(z.kind === 'open'){
+        // Le vrai menu reste à l'écran sous l'animation (le recopier, sol de LED
+        // compris, figeait l'image sur iPhone) ; l'écran qui s'ouvre est une
+        // copie dans un calque qui grandit depuis le bouton, et le vrai prend la
+        // place à la fin, sans son propre fondu d'entrée.
+        const dest = scr, copy = copyOf(dest);
+        dest.classList.remove('active');
+        screens.setup.classList.add('active', 'ios-noenter'); // pas de fondu d'arrivée (décalage de 6 points)
+        app.scrollTop = z.scroll;
+        document.body.classList.add('ios-zooming');
+        const r = shown(z.src);
+        if(!r){ swapTo(dest); return; }
         const bg = getComputedStyle(document.body).backgroundColor;
-        const dim = dimLayer(0), sk = skin(z.src, z.r);
-        z.copy.style.zIndex = 0;
-        document.body.insertBefore(z.copy, dim);
-        z.copy.style.transformOrigin = `${innerWidth / 2 - parseFloat(z.copy.style.left)}px ${innerHeight / 2 - parseFloat(z.copy.style.top)}px`;
-        // #app passe devant la copie du menu, avec un fond plein tant qu'il
-        // n'est pas plein écran ; le fond s'efface à la fin (halos du décor).
-        app.style.zIndex = 1;
-        const b = app.getBoundingClientRect(), rad = radius(z.src);
+        const dim = dimLayer(4);
+        const shell = document.createElement('div');
+        shell.className = 'ios-zoom-shell';
+        shell.style.pointerEvents = 'auto'; // pas de second appui sur le menu pendant ce temps
+        shell.appendChild(copy);
+        document.body.appendChild(shell);
+        const sk = skin(z.src, r), rad = radius(z.src), b = shell.getBoundingClientRect();
+        const menu = screens.setup;
+        menu.style.willChange = 'transform';
+        const showBtn = hideDuring(z.src);
         const anims = [
-          app.animate([{ clipPath:inset(z.r, b, rad), backgroundColor:bg }, { backgroundColor:bg, offset:.85 }, { clipPath:FULL, backgroundColor:'rgba(0,0,0,0)' }], { duration:OPEN, easing:EASE }),
-          scr.animate([{ transform:onBtn(z.r, scr), opacity:0 }, { opacity:0, offset:.2 }, { transform:'none', opacity:1 }], { duration:OPEN, easing:EASE }),
-          sk.animate([box(z.r, rad), screenBox()], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          // Fond plein tant que le calque grandit, effacé à la toute fin
+          // (le menu et le voile ont disparu derrière) : les halos du décor reviennent.
+          shell.animate([{ clipPath:inset(r, b, rad), backgroundColor:bg }, { backgroundColor:bg, offset:.85 }, { clipPath:FULL, backgroundColor:'rgba(0,0,0,0)' }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          copy.animate([{ transform:onBtn(r, copy), opacity:0 }, { opacity:0, offset:.2 }, { transform:'none', opacity:1 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          sk.animate([box(r, rad), screenBox()], { duration:OPEN, easing:EASE, fill:'forwards' }),
           sk.animate([{ opacity:1 }, { opacity:0, offset:.3 }, { opacity:0 }], { duration:OPEN, fill:'forwards' }),
-          z.copy.animate([{ transform:'scale(1)', opacity:1 }, { transform:'scale(.93)', opacity:1, offset:.7 }, { transform:'scale(.93)', opacity:0 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          menu.animate([{ transform:'scale(1)', opacity:1 }, { transform:'scale(.93)', opacity:1, offset:.7 }, { transform:'scale(.93)', opacity:0 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
           dim.animate([{ opacity:0 }, { opacity:.55, offset:.7 }, { opacity:0 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
         ];
-        track(anims, [z.copy, dim, sk], () => { app.style.zIndex = ''; });
+        track(anims, [shell, dim, sk], () => { showBtn(); menu.style.willChange = ''; swapTo(dest); });
       } else {
-        // Le menu revient là où il était quand on l'a quitté.
+        // Le menu revient là où il était quand on l'a quitté, sans son fondu
+        // d'arrivée : il le décalait de 6 points vers le bas au moment où l'on
+        // mesure le bouton, qui sautait d'autant à la fin (vidéo de Fabien).
+        if(scr) scr.classList.add('ios-noenter');
         if(z.home && z.home.el.isConnected) app.scrollTop = z.home.scroll;
         // La copie de l'écran quitté couvre tout tout de suite ; l'animation
         // ne démarre qu'une fois le menu posé (défilement rétabli, bouton
@@ -5867,11 +5912,15 @@
           if(live !== me) return;
           // Le bouton qui a lancé la partie s'il est là (il peut avoir disparu,
           // comme « Reprendre »), sinon « Lancer la partie ».
+          // Mesures prises menu à taille réelle (pas encore rétréci), sinon la
+          // cible était décalée de quelques points et le bouton sautait à l'arrivée.
+          if(menuFrom){ menuFrom.cancel(); me.anims = me.anims.filter(a => a !== menuFrom); }
           const fb = document.getElementById('btn-start-game');
           const el = (z.home && shown(z.home.el)) ? z.home.el : fb;
           const r = shown(el);
           if(!r){ finish(); return; }
-          me.done = hideDuring(el);
+          me.done = hideDuring(el, () => { if(scr) scr.style.willChange = ''; });
+          if(scr) scr.style.willChange = 'transform';
           const sk = skin(el, r);
           me.nodes.push(sk);
           const b = shell.getBoundingClientRect(), rad = radius(el);
@@ -5884,7 +5933,6 @@
           );
           // Le menu remonte vers l'avant (et passe outre son propre fondu d'arrivée).
           if(scr) me.anims.push(scr.animate([{ transform:'scale(.93)', opacity:1 }, { transform:'scale(1)', opacity:1 }], { duration:CLOSE, easing:EASE }));
-          if(menuFrom){ menuFrom.cancel(); me.anims = me.anims.filter(a => a !== menuFrom); }
           watch(me);
         });
       }
@@ -5896,6 +5944,8 @@
       forget(){ pending = null; },
       // « Quitter » confirmé : le prochain retour au menu rentre dans le bouton.
       quit(){ quitting = true; },
+      // Termine tout de suite une animation en cours (avant tout changement d'écran).
+      stop(){ finish(); },
       before:safe(before), after:safe(after),
       openOverlay:safe(openOverlay),
       closeOverlay(overlay, content, hide){ try { closeOverlay(overlay, content, hide); } catch(e){ finish(); hide(); } },
@@ -5930,6 +5980,7 @@
     refresh(){ if(this.wanted && !this.sentinel) this.acquire(); }
   };
   function showScreen(name){
+    IOS_ZOOM.stop(); // une ouverture en cours remet d'abord le bon écran
     const zoom = IOS_ZOOM.before(activeScreen(), name);
     if(TUTO && TUTO.active && name !== 'play') TUTO.abort();
     // Écran maintenu allumé sur tous les écrans de jeu, relâché au menu.
