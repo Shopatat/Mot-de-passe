@@ -5689,6 +5689,7 @@
     let home = null;     // { el, scroll } : bouton qui a lancé la partie, où elle rentre
     let quitting = false; // « Quitter » en pleine partie : retour animé vers home
     let live = null;     // animation en cours
+    let fading = null;   // calque de l'ouverture en train de s'effacer
     const overlaySrc = new Map();
     const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     // Rectangle du bouton s'il est à l'écran (sinon pas d'animation).
@@ -5709,6 +5710,7 @@
       return `translate(${(r.left + r.width / 2) - (c.left + c.width / 2)}px, ${(r.top + r.height / 2) - (c.top + c.height / 2)}px) scale(${r.width / Math.max(1, c.width)})`;
     }
     function finish(){
+      if(fading){ fading.remove(); fading = null; }
       if(!live) return;
       const l = live; live = null;
       l.anims.forEach(a => { try { a.cancel(); } catch(e){} });
@@ -5847,11 +5849,22 @@
     }
     // Fin de l'ouverture : le vrai écran remplace le menu, sans rejouer son
     // fondu d'arrivée ni l'entrée des prénoms (déjà vus dans la copie).
-    function swapTo(dest){
+    // scroll : défilement qu'avait l'écran quand on l'a recopié, pour qu'il
+    // reprenne exactement la place de sa copie (sinon petit saut à l'arrivée).
+    function swapTo(dest, scroll){
       screens.setup.classList.remove('active');
       dest.classList.remove('ho-anim');
       dest.classList.add('active', 'ios-noenter');
+      if(scroll != null) app.scrollTop = scroll;
       document.body.classList.remove('ios-zooming');
+    }
+    // Le calque de l'ouverture s'efface en douceur sur le vrai écran, identique
+    // (seuls les halos du décor, cachés par son fond plein, réapparaissent).
+    function fadeOut(shell){
+      shell.style.pointerEvents = 'none';
+      fading = shell;
+      shell.animate([{ opacity:1 }, { opacity:0 }], { duration:160, easing:'ease-out', fill:'forwards' })
+        .finished.then(() => { shell.remove(); if(fading === shell) fading = null; }, () => {});
     }
     function after(z){
       if(!z) return;
@@ -5861,14 +5874,16 @@
         // compris, figeait l'image sur iPhone) ; l'écran qui s'ouvre est une
         // copie dans un calque qui grandit depuis le bouton, et le vrai prend la
         // place à la fin, sans son propre fondu d'entrée.
-        const dest = scr, copy = copyOf(dest);
+        // Sans fondu d'arrivée avant la copie : il décalait l'écran de 6 points
+        // et la copie ne tombait plus pile sur le vrai écran à l'échange.
+        scr.classList.add('ios-noenter');
+        const dest = scr, copy = copyOf(dest), destScroll = app.scrollTop;
         dest.classList.remove('active');
         screens.setup.classList.add('active', 'ios-noenter'); // pas de fondu d'arrivée (décalage de 6 points)
         app.scrollTop = z.scroll;
         document.body.classList.add('ios-zooming');
         const r = shown(z.src);
-        if(!r){ swapTo(dest); return; }
-        const bg = getComputedStyle(document.body).backgroundColor;
+        if(!r){ swapTo(dest, destScroll); return; }
         const dim = dimLayer(4);
         const shell = document.createElement('div');
         shell.className = 'ios-zoom-shell';
@@ -5880,16 +5895,16 @@
         menu.style.willChange = 'transform';
         const showBtn = hideDuring(z.src);
         const anims = [
-          // Fond plein tant que le calque grandit, effacé à la toute fin
-          // (le menu et le voile ont disparu derrière) : les halos du décor reviennent.
-          shell.animate([{ clipPath:inset(r, b, rad), backgroundColor:bg }, { backgroundColor:bg, offset:.85 }, { clipPath:FULL, backgroundColor:'rgba(0,0,0,0)' }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          // Fond plein jusqu'au bout : le menu ne transparaît jamais (il laissait
+          // un « fantôme » à travers l'écran, vidéo de Fabien).
+          shell.animate([{ clipPath:inset(r, b, rad) }, { clipPath:FULL }], { duration:OPEN, easing:EASE, fill:'forwards' }),
           copy.animate([{ transform:onBtn(r, copy), opacity:0 }, { opacity:0, offset:.2 }, { transform:'none', opacity:1 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
           sk.animate([box(r, rad), screenBox()], { duration:OPEN, easing:EASE, fill:'forwards' }),
           sk.animate([{ opacity:1 }, { opacity:0, offset:.3 }, { opacity:0 }], { duration:OPEN, fill:'forwards' }),
-          menu.animate([{ transform:'scale(1)', opacity:1 }, { transform:'scale(.93)', opacity:1, offset:.7 }, { transform:'scale(.93)', opacity:0 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
-          dim.animate([{ opacity:0 }, { opacity:.55, offset:.7 }, { opacity:0 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          menu.animate([{ transform:'scale(1)', opacity:1 }, { transform:'scale(.93)', opacity:1 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          dim.animate([{ opacity:0 }, { opacity:.55 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
         ];
-        track(anims, [shell, dim, sk], () => { showBtn(); menu.style.willChange = ''; swapTo(dest); });
+        track(anims, [dim, sk], () => { showBtn(); menu.style.willChange = ''; swapTo(dest, destScroll); fadeOut(shell); });
       } else {
         // Le menu revient là où il était quand on l'a quitté, sans son fondu
         // d'arrivée : il le décalait de 6 points vers le bas au moment où l'on
@@ -5937,7 +5952,7 @@
         });
       }
     }
-    const safe = fn => (...a) => { try { return fn(...a); } catch(e){ finish(); return null; } };
+    const safe = fn => (...a) => { try { return fn(...a); } catch(e){ console.warn("IOS_ZOOM", e); finish(); return null; } };
     return {
       // Bouton du menu qui lance la suite (l'animation part de lui).
       from(el){ pending = { el, at:performance.now() }; },
