@@ -5719,6 +5719,22 @@
       const c = el.getBoundingClientRect();
       return `translate(${(r.left + r.width / 2) - (c.left + c.width / 2)}px, ${(r.top + r.height / 2) - (c.top + c.height / 2)}px) scale(${r.width / Math.max(1, c.width)})`;
     }
+    // Fermeture : la page entière (fenêtre b) rapetisse pour tenir dans le
+    // bouton r, au lieu d'être seulement ramenée à sa largeur (le texte restait
+    // presque en grand, coupé par le cadre, puis s'éteignait d'un coup : vidéo
+    // de Fabien). Le centre de b suit celui du cadre tout du long.
+    function intoBtn(r, b, el){
+      const c = el.getBoundingClientRect();
+      const s = Math.min(r.width / Math.max(1, b.width), r.height / Math.max(1, b.height));
+      const cx = c.left + c.width / 2, cy = c.top + c.height / 2;
+      const tx = (r.left + r.width / 2) - cx - s * ((b.left + b.width / 2) - cx);
+      const ty = (r.top + r.height / 2) - cy - s * ((b.top + b.height / 2) - cy);
+      return `translate(${tx}px, ${ty}px) scale(${s})`;
+    }
+    // Opacités de la fermeture (en avancée du mouvement) : la petite page
+    // s'efface pendant que le libellé du bouton apparaît à sa place.
+    const SHRINK_OUT = (from) => [{ transform:'none', opacity:1 }, { opacity:1, offset:.55 }, { opacity:0, offset:.92 }, { transform:from, opacity:0 }];
+    const SKIN_IN = [{ opacity:0 }, { opacity:0, offset:.7 }, { opacity:1, offset:.97 }, { opacity:1 }];
     function finish(){
       if(!live) return;
       const l = live; live = null;
@@ -5821,9 +5837,9 @@
       overlay.style.pointerEvents = 'none';
       const anims = [
         overlay.animate([{ clipPath:FULL }, { clipPath:inset(r, b, rad) }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-        content.animate([{ transform:'none', opacity:1 }, { opacity:1, offset:.85 }, { transform:onBtn(r, content), opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+        content.animate(SHRINK_OUT(intoBtn(r, b, content)), { duration:CLOSE, easing:EASE, fill:'forwards' }),
         sk.animate([screenBox(), box(r, rad)], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-        sk.animate([{ opacity:0 }, { opacity:0, offset:.6 }, { opacity:1 }], { duration:CLOSE, fill:'forwards' }),
+        sk.animate(SKIN_IN, { duration:CLOSE, easing:EASE, fill:'forwards' }),
         dim.animate([{ opacity:.55 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
       ];
       if(behind) anims.push(behind.animate([{ transform:'scale(.93)' }, { transform:'scale(1)' }], { duration:CLOSE, easing:EASE }));
@@ -5939,9 +5955,9 @@
           shell.animate([{ clipPath:FULL }, { clipPath:inset(r, b, rad) }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
           // Le contenu reste visible presque jusqu'au bout, comme une appli qu'on
           // ferme (il s'effaçait tôt : on ne voyait qu'un rectangle sombre).
-          z.copy.animate([{ transform:'none', opacity:1 }, { opacity:1, offset:.85 }, { transform:onBtn(r, z.copy), opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+          z.copy.animate(SHRINK_OUT(intoBtn(r, b, z.copy)), { duration:CLOSE, easing:EASE, fill:'forwards' }),
           sk.animate([screenBox(), box(r, rad)], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-          sk.animate([{ opacity:0 }, { opacity:0, offset:.6 }, { opacity:1 }], { duration:CLOSE, fill:'forwards' }),
+          sk.animate(SKIN_IN, { duration:CLOSE, easing:EASE, fill:'forwards' }),
           dim.animate([{ opacity:.55 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
         ];
         // Le menu remonte vers l'avant (et passe outre son propre fondu d'arrivée).
