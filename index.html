@@ -1507,7 +1507,11 @@
   .ios-zoom-shell{ position:fixed; inset:0; z-index:5; background:var(--bg); overflow:hidden; pointer-events:none; }
   .screen.ios-zoom-copy{ position:fixed; margin:0; pointer-events:none; }
   .ios-zoom-copy, .ios-zoom-copy *{ animation:none !important; transition:none !important; }
-  .screen.ios-noenter{ animation:none; } /* écran arrivé par l'ouverture : pas de second fondu */
+  .screen.ios-noenter{ animation:none; }
+  /* Pendant une ouverture / fermeture, le sol de LED du menu (des milliers de
+     points qui se redessinent sans cesse) est mis en pause : il volait des
+     images à l'animation sur iPhone. Une demi-seconde, sous le voile sombre. */
+  body.ios-zoom-run .ms-floor .fc, body.ios-zoom-run .ms-comet, body.ios-zoom-run .ms-spin{ animation-play-state:paused; } /* écran arrivé par l'ouverture : pas de second fondu */
   body.ios-zooming #btn-quit-game, body.ios-zooming #btn-play-settings,
   body.ios-zooming #btn-schedule, body.ios-zooming #btn-pause{ visibility:hidden; }
 
@@ -5687,7 +5691,10 @@
   // visible sous la copie, il bougeait avec le menu et l'arrivée semblait
   // ballotter (Fabien, 2026-10-02).
   const IOS_ZOOM = (() => {
-    const OPEN = 520, CLOSE = 440, EASE = 'cubic-bezier(.32,.72,0,1)', END_R = 44;
+    // Courbe façon ressort iOS : départ doux (1 %, 3 %, 7 % du trajet aux trois
+    // premières images), puis vive. L'ancienne (9 %, 19 %, 32 %) faisait de
+    // grands pas dès le départ, vus comme un saut au moindre ralentissement.
+    const OPEN = 520, CLOSE = 440, EASE = 'cubic-bezier(.3,0,.1,1)', END_R = 44;
     const app = document.getElementById('app');
     let pending = null;  // { el, at } : bouton du menu qui va ouvrir l'écran suivant
     let home = null;     // { el, scroll } : bouton qui a lancé la partie, où elle rentre
@@ -5715,6 +5722,7 @@
     function finish(){
       if(!live) return;
       const l = live; live = null;
+      document.body.classList.remove('ios-zoom-run');
       l.anims.forEach(a => { try { a.cancel(); } catch(e){} });
       l.nodes.forEach(n => n.remove());
       if(l.done) l.done();
@@ -5724,20 +5732,13 @@
     }
     function track(anims, nodes, done){
       const me = live = { anims, nodes, done };
+      document.body.classList.add('ios-zoom-run'); // sol de LED du menu en pause (voir le CSS)
       watch(me);
     }
     // Caché pendant l'animation, rendu à la fin (ou si elle est interrompue).
     function hideDuring(el, then){
       el.style.visibility = 'hidden';
       return () => { el.style.visibility = ''; if(then) then(); };
-    }
-    // Lance fn une fois le menu posé (deux images ; filet de 80 ms si
-    // l'appli ne dessine pas, par exemple en arrière-plan).
-    function settled(fn){
-      let ran = false;
-      const go = () => { if(!ran){ ran = true; fn(); } };
-      requestAnimationFrame(() => requestAnimationFrame(go));
-      setTimeout(go, 80);
     }
     // Copie du bouton (fond, liseré, texte) qui suit le découpage et s'efface.
     function skin(src, r){
@@ -5820,9 +5821,9 @@
       overlay.style.pointerEvents = 'none';
       const anims = [
         overlay.animate([{ clipPath:FULL }, { clipPath:inset(r, b, rad) }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-        content.animate([{ transform:'none', opacity:1 }, { opacity:0, offset:.7 }, { transform:onBtn(r, content), opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+        content.animate([{ transform:'none', opacity:1 }, { opacity:1, offset:.85 }, { transform:onBtn(r, content), opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
         sk.animate([screenBox(), box(r, rad)], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-        sk.animate([{ opacity:0 }, { opacity:0, offset:.55 }, { opacity:1 }], { duration:CLOSE, fill:'forwards' }),
+        sk.animate([{ opacity:0 }, { opacity:0, offset:.6 }, { opacity:1 }], { duration:CLOSE, fill:'forwards' }),
         dim.animate([{ opacity:.55 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
       ];
       if(behind) anims.push(behind.animate([{ transform:'scale(.93)' }, { transform:'scale(1)' }], { duration:CLOSE, easing:EASE }));
@@ -5910,8 +5911,8 @@
           dim.animate([{ opacity:0 }, { opacity:.55, offset:.85 }, { opacity:0, offset:.92 }, { opacity:0 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
         ];
         // Boutons du coin (✕ ⚙) rendus en même temps que le décor (~92 % du
-        // mouvement, vers 210 ms avec cette courbe), sous le fond qui s'efface.
-        const cornerT = setTimeout(() => document.body.classList.remove('ios-zooming'), 210);
+        // mouvement, vers 320 ms avec cette courbe), sous le fond qui s'efface.
+        const cornerT = setTimeout(() => document.body.classList.remove('ios-zooming'), 320);
         track(anims, [shell, dim, sk], () => { clearTimeout(cornerT); showBtn(); menu.style.willChange = ''; swapTo(dest, destScroll); });
       } else {
         // Le menu revient là où il était quand on l'a quitté, sans son fondu
@@ -5919,45 +5920,33 @@
         // mesure le bouton, qui sautait d'autant à la fin (vidéo de Fabien).
         if(scr) scr.classList.add('ios-noenter');
         if(z.home && z.home.el.isConnected) app.scrollTop = z.home.scroll;
-        // La copie de l'écran quitté couvre tout tout de suite ; l'animation
-        // ne démarre qu'une fois le menu posé (défilement rétabli, bouton
-        // « collé » recalé), pour viser l'endroit exact où le bouton s'arrête.
+        // Le bouton qui a lancé la partie s'il est là (il peut avoir disparu,
+        // comme « Reprendre »), sinon « Lancer la partie ». Mesuré tout de suite :
+        // le fondu du menu est coupé et sa marge du bas fixée, la place est juste
+        // (attendre le menu figeait l'écran ~80 ms avant de bouger).
+        const fb = document.getElementById('btn-start-game');
+        const el = (z.home && shown(z.home.el)) ? z.home.el : fb;
+        const r = shown(el);
+        if(!r) return;
         const shell = document.createElement('div');
         shell.className = 'ios-zoom-shell';
         shell.appendChild(z.copy);
         const dim = dimLayer(4);
-        dim.style.opacity = '.55';
         document.body.appendChild(shell);
-        // En attendant, le menu reste reculé sous la copie.
-        const menuFrom = scr && scr.animate([{ transform:'scale(.93)', opacity:1 }], { duration:1, fill:'forwards' });
-        const me = live = { anims:menuFrom ? [menuFrom] : [], nodes:[shell, dim], done:null };
-        settled(() => {
-          if(live !== me) return;
-          // Le bouton qui a lancé la partie s'il est là (il peut avoir disparu,
-          // comme « Reprendre »), sinon « Lancer la partie ».
-          // Mesures prises menu à taille réelle (pas encore rétréci), sinon la
-          // cible était décalée de quelques points et le bouton sautait à l'arrivée.
-          if(menuFrom){ menuFrom.cancel(); me.anims = me.anims.filter(a => a !== menuFrom); }
-          const fb = document.getElementById('btn-start-game');
-          const el = (z.home && shown(z.home.el)) ? z.home.el : fb;
-          const r = shown(el);
-          if(!r){ finish(); return; }
-          me.done = hideDuring(el, () => { if(scr) scr.style.willChange = ''; });
-          if(scr) scr.style.willChange = 'transform';
-          const sk = skin(el, r);
-          me.nodes.push(sk);
-          const b = shell.getBoundingClientRect(), rad = radius(el);
-          me.anims.push(
-            shell.animate([{ clipPath:FULL }, { clipPath:inset(r, b, rad) }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-            z.copy.animate([{ transform:'none', opacity:1 }, { opacity:0, offset:.7 }, { transform:onBtn(r, z.copy), opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-            sk.animate([screenBox(), box(r, rad)], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-            sk.animate([{ opacity:0 }, { opacity:0, offset:.55 }, { opacity:1 }], { duration:CLOSE, fill:'forwards' }),
-            dim.animate([{ opacity:.55 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-          );
-          // Le menu remonte vers l'avant (et passe outre son propre fondu d'arrivée).
-          if(scr) me.anims.push(scr.animate([{ transform:'scale(.93)', opacity:1 }, { transform:'scale(1)', opacity:1 }], { duration:CLOSE, easing:EASE }));
-          watch(me);
-        });
+        const sk = skin(el, r), b = shell.getBoundingClientRect(), rad = radius(el);
+        if(scr) scr.style.willChange = 'transform';
+        const anims = [
+          shell.animate([{ clipPath:FULL }, { clipPath:inset(r, b, rad) }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+          // Le contenu reste visible presque jusqu'au bout, comme une appli qu'on
+          // ferme (il s'effaçait tôt : on ne voyait qu'un rectangle sombre).
+          z.copy.animate([{ transform:'none', opacity:1 }, { opacity:1, offset:.85 }, { transform:onBtn(r, z.copy), opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+          sk.animate([screenBox(), box(r, rad)], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+          sk.animate([{ opacity:0 }, { opacity:0, offset:.6 }, { opacity:1 }], { duration:CLOSE, fill:'forwards' }),
+          dim.animate([{ opacity:.55 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+        ];
+        // Le menu remonte vers l'avant (et passe outre son propre fondu d'arrivée).
+        if(scr) anims.push(scr.animate([{ transform:'scale(.93)', opacity:1 }, { transform:'scale(1)', opacity:1 }], { duration:CLOSE, easing:EASE }));
+        track(anims, [shell, dim, sk], hideDuring(el, () => { if(scr) scr.style.willChange = ''; }));
       }
     }
     const safe = fn => (...a) => { try { return fn(...a); } catch(e){ console.warn("IOS_ZOOM", e); finish(); return null; } };
