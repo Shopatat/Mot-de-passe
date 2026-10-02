@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mot-de-passe-v3';
+const CACHE_NAME = 'mot-de-passe-v4'; // v4 : polices ajoutées, ancienne musique de qualif retirée du cache
 const ASSETS = [
   './',
   './index.html',
@@ -19,7 +19,15 @@ const ASSETS = [
   './sounds/sfx-reserve-br3.wav',
   './sounds/sfx-round-start.wav',
   './sounds/sfx-round-win.wav',
-  './sounds/sfx-word-reveal.wav'
+  './sounds/sfx-word-reveal.wav',
+  // Polices du jeu : gardées dès l'installation, pour jouer hors-ligne avec la
+  // bonne écriture (sinon elles n'étaient en cache qu'à la 2e ouverture).
+  './fonts/anton-latin.woff2',
+  './fonts/anton-latin-ext.woff2',
+  './fonts/archivo-800-125-latin.woff2',
+  './fonts/archivo-800-125-latin-ext.woff2',
+  './fonts/manrope-latin.woff2',
+  './fonts/manrope-latin-ext.woff2'
 ];
 
 self.addEventListener('install', (event) => {

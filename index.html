@@ -6484,7 +6484,7 @@
     const n = state.playerCount;
     const total = isTeam ? (n / 2) * cur : n * cur;
     const note = isTeam
-      ? `${n / 2} équipes × ${cur} = ${total} manches · environ ${total} min`
+      ? `${cur} manches par équipe · environ ${total} min` // « manche » comme en jeu (Manche 1 sur 4)
       : `Chacun fait deviner ${cur} fois · ${total} duos · environ ${total} min`;
     document.getElementById('rounds-note').textContent = note;
   }
@@ -8296,7 +8296,8 @@
     const roundOver = state.pool.length === 0 || (turn.style === 'clues' && isObjectiveImpossible());
     if(roundOver){
       lockInput();
-      if(turn.kind === 'qualif' && state.timeLeft > 0) playQualifRoundWinJingle();
+      // Entraînement : même jingle que quand le dernier mot est trouvé.
+      if((turn.kind === 'qualif' && state.timeLeft > 0) || turn.kind === 'training') playQualifRoundWinJingle();
       else if(turn.kind === 'final') SFX.thenFinaleTimeout(forbiddenNode);
       stopTimer();
       renderDots();
