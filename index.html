@@ -260,7 +260,10 @@
      coup (sol de LED, anneaux, titre) ; l'écran se figeait puis le titre
      sautait de 75 pt (vidéos de Fabien, 2026-10-02). Le sol reste en pause
      jusqu'à ce que le menu soit posé (body.ios-zoom-run, voir initBoot). */
-  body.booting #screen-setup{ opacity:.001; }
+  /* Sans son fondu d'arrivée : il l'affichait en entier au démarrage, avant
+     le chargement (vidéo de Fabien). JOUER pose ios-noenter pour qu'il ne se
+     rejoue pas à la sortie du chargement. */
+  body.booting #screen-setup{ opacity:.001; animation:none; }
   body.booting .ms-floor .fc, body.booting .ms-comet, body.booting .ms-spin{ animation-play-state:paused; }
   .boot-inner{ width:100%; max-width:480px; display:flex; flex-direction:column; align-items:center; }
   .boot-inner .tile-row{ width:100%; }
@@ -10080,6 +10083,7 @@
         document.body.classList.add('ios-zoom-run');
         setTimeout(() => document.body.classList.remove('ios-zoom-run'), 1300);
       }
+      screens.setup.classList.add('ios-noenter'); // pas de fondu d'écran en plus du vol du titre
       document.body.classList.remove('booting');
       boot.hidden = true;
       MENU_SCENE.scramble();
