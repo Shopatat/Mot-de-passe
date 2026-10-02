@@ -5777,6 +5777,18 @@
       document.body.appendChild(sk);
       return sk;
     }
+    // Halos d'ambiance recopiés dans le calque, au même point de leur dérive :
+    // sous un fond uni, l'écran arrivait sur du noir et l'ambiance ne
+    // revenait qu'à la fin (Fabien, 2026-10-02).
+    function ambient(shell){
+      document.querySelectorAll('body > .bg-halo, body > .floor-glow').forEach(h => {
+        const c = h.cloneNode(false);
+        c.style.position = 'absolute';
+        shell.appendChild(c);
+        const a = h.getAnimations()[0], b = c.getAnimations()[0];
+        if(a && b) b.currentTime = a.currentTime;
+      });
+    }
     function dimLayer(z){
       const d = document.createElement('div');
       d.className = 'ios-zoom-dim'; d.style.zIndex = z;
@@ -5907,7 +5919,6 @@
         document.body.classList.add('ios-zooming');
         const r = shown(z.src);
         if(!r){ swapTo(dest, destScroll); return; }
-        const bg = getComputedStyle(document.body).backgroundColor;
         const dim = dimLayer(4);
         // Aucun appui sur le menu pendant ce temps, ni dans le calque ni autour
         // (le découpage ne bloque les appuis qu'à l'intérieur de sa forme).
@@ -5915,19 +5926,19 @@
         const shell = document.createElement('div');
         shell.className = 'ios-zoom-shell';
         shell.style.pointerEvents = 'auto';
-        shell.appendChild(copy);
         document.body.appendChild(shell);
+        ambient(shell);
+        shell.appendChild(copy);
         const sk = skin(z.src, r), rad = radius(z.src), b = shell.getBoundingClientRect();
         const menu = screens.setup;
         menu.style.willChange = 'transform';
         const showBtn = hideDuring(z.src);
         const anims = [
-          // Le menu (et le voile) disparaît d'abord, une fois l'écran presque
-          // plein ; ensuite seulement le fond plein du calque s'efface pendant la
-          // fin du mouvement, et le décor (halos) revient avec l'écran, pas après
-          // (les deux en même temps laissaient un « fantôme » du menu, et un fond
-          // gardé plein jusqu'au bout faisait arriver le décor en retard).
-          shell.animate([{ clipPath:inset(r, b, rad), backgroundColor:bg }, { backgroundColor:bg, offset:.92 }, { clipPath:FULL, backgroundColor:'rgba(0,0,0,0)' }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          // Fond plein jusqu'au bout (il cache le menu, pas de « fantôme ») : les
+          // halos recopiés dedans (ambient) donnent l'ambiance dès le départ, et
+          // les vrais, identiques, prennent le relais à l'échange. Le menu (et
+          // le voile) disparaît une fois l'écran presque plein, pour les coins.
+          shell.animate([{ clipPath:inset(r, b, rad) }, { clipPath:FULL }], { duration:OPEN, easing:EASE, fill:'forwards' }),
           copy.animate(GROW_IN(intoBtn(r, b, copy)), { duration:OPEN, easing:EASE, fill:'forwards' }),
           sk.animate([box(r, rad), screenBox()], { duration:OPEN, easing:EASE, fill:'forwards' }),
           sk.animate(SKIN_OUT, { duration:OPEN, easing:EASE, fill:'forwards' }),
@@ -5954,9 +5965,10 @@
         if(!r) return;
         const shell = document.createElement('div');
         shell.className = 'ios-zoom-shell';
-        shell.appendChild(z.copy);
         const dim = dimLayer(4);
         document.body.appendChild(shell);
+        ambient(shell); // l'écran qui rentre garde son ambiance
+        shell.appendChild(z.copy);
         const sk = skin(el, r), b = shell.getBoundingClientRect(), rad = radius(el);
         if(scr) scr.style.willChange = 'transform';
         const anims = [
