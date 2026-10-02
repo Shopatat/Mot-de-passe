@@ -5714,13 +5714,8 @@
     const FULL = `inset(0px 0px 0px 0px round ${END_R}px)`;
     const box = (r, rad) => ({ left:r.left + 'px', top:r.top + 'px', width:r.width + 'px', height:r.height + 'px', borderRadius:rad + 'px' });
     const screenBox = () => box({ left:0, top:0, width:innerWidth, height:innerHeight }, END_R);
-    // Contenu ramené sur le bouton : centré dessus, réduit à sa largeur.
-    function onBtn(r, el){
-      const c = el.getBoundingClientRect();
-      return `translate(${(r.left + r.width / 2) - (c.left + c.width / 2)}px, ${(r.top + r.height / 2) - (c.top + c.height / 2)}px) scale(${r.width / Math.max(1, c.width)})`;
-    }
-    // Fermeture : la page entière (fenêtre b) rapetisse pour tenir dans le
-    // bouton r, au lieu d'être seulement ramenée à sa largeur (le texte restait
+    // La page entière (fenêtre b) en miniature dans le bouton r, au lieu d'être
+    // seulement ramenée à sa largeur (le texte restait
     // presque en grand, coupé par le cadre, puis s'éteignait d'un coup : vidéo
     // de Fabien). Le centre de b suit celui du cadre tout du long.
     function intoBtn(r, b, el){
@@ -5735,6 +5730,10 @@
     // s'efface pendant que le libellé du bouton apparaît à sa place.
     const SHRINK_OUT = (from) => [{ transform:'none', opacity:1 }, { opacity:1, offset:.55 }, { opacity:0, offset:.92 }, { transform:from, opacity:0 }];
     const SKIN_IN = [{ opacity:0 }, { opacity:0, offset:.7 }, { opacity:1, offset:.97 }, { opacity:1 }];
+    // Ouverture, l'inverse : la page naît en miniature dans le bouton et grandit
+    // pendant que le libellé du bouton s'efface.
+    const GROW_IN = (from) => [{ transform:from, opacity:0 }, { opacity:0, offset:.08 }, { opacity:1, offset:.45 }, { transform:'none', opacity:1 }];
+    const SKIN_OUT = [{ opacity:1 }, { opacity:1, offset:.03 }, { opacity:0, offset:.3 }, { opacity:0 }];
     function finish(){
       if(!live) return;
       const l = live; live = null;
@@ -5817,9 +5816,9 @@
       dim.style.pointerEvents = 'auto'; // pas d'appui sur le menu pendant l'ouverture (hors du découpage)
       const anims = [
         overlay.animate([{ clipPath:inset(r, b, rad) }, { clipPath:FULL }], { duration:OPEN, easing:EASE }),
-        content.animate([{ transform:onBtn(r, content), opacity:0 }, { opacity:0, offset:.2 }, { transform:'none', opacity:1 }], { duration:OPEN, easing:EASE }),
+        content.animate(GROW_IN(intoBtn(r, b, content)), { duration:OPEN, easing:EASE }),
         sk.animate([box(r, rad), screenBox()], { duration:OPEN, easing:EASE, fill:'forwards' }),
-        sk.animate([{ opacity:1 }, { opacity:0, offset:.3 }, { opacity:0 }], { duration:OPEN, fill:'forwards' }),
+        sk.animate(SKIN_OUT, { duration:OPEN, easing:EASE, fill:'forwards' }),
         dim.animate([{ opacity:0 }, { opacity:.55 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
       ];
       if(behind) anims.push(behind.animate([{ transform:'scale(1)' }, { transform:'scale(.93)' }], { duration:OPEN, easing:EASE }));
@@ -5920,9 +5919,9 @@
           // (les deux en même temps laissaient un « fantôme » du menu, et un fond
           // gardé plein jusqu'au bout faisait arriver le décor en retard).
           shell.animate([{ clipPath:inset(r, b, rad), backgroundColor:bg }, { backgroundColor:bg, offset:.92 }, { clipPath:FULL, backgroundColor:'rgba(0,0,0,0)' }], { duration:OPEN, easing:EASE, fill:'forwards' }),
-          copy.animate([{ transform:onBtn(r, copy), opacity:0 }, { opacity:0, offset:.2 }, { transform:'none', opacity:1 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          copy.animate(GROW_IN(intoBtn(r, b, copy)), { duration:OPEN, easing:EASE, fill:'forwards' }),
           sk.animate([box(r, rad), screenBox()], { duration:OPEN, easing:EASE, fill:'forwards' }),
-          sk.animate([{ opacity:1 }, { opacity:0, offset:.3 }, { opacity:0 }], { duration:OPEN, fill:'forwards' }),
+          sk.animate(SKIN_OUT, { duration:OPEN, easing:EASE, fill:'forwards' }),
           menu.animate([{ transform:'scale(1)', opacity:1 }, { transform:'scale(.93)', opacity:1, offset:.85 }, { transform:'scale(.93)', opacity:0, offset:.92 }, { transform:'scale(.93)', opacity:0 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
           dim.animate([{ opacity:0 }, { opacity:.55, offset:.85 }, { opacity:0, offset:.92 }, { opacity:0 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
         ];
