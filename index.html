@@ -1846,6 +1846,7 @@
 
   /* ---- Menu : Palmarès + Paramètres côte à côte ---- */
   .menu-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .menu-cards .menu-rules{ grid-column:1 / -1; } /* « Les règles » sur toute la largeur, sous les deux autres */
 
   /* ---- Carte "Partie en cours" (reprise) ---- */
   .resume-card{
@@ -2162,7 +2163,7 @@
             <div class="toggle-btn" data-val="off">Cachée</div>
           </div>
         </div>
-        <p class="footer-note pset-note">Sous le mot, en qualifs et en finale. Les messages de pause et du mot rouge restent toujours.</p>
+        <p class="footer-note pset-note">Sous le mot, en qualifs et en finale, mot rouge compris. Le message de pause reste toujours.</p>
         <div class="set-row pset-row">
           <span class="set-label">Pause</span>
           <div class="toggle-row" id="pause-hide-toggle">
@@ -2283,6 +2284,36 @@
     </div>
   </div>
 
+  <!-- Règles : page à part, comme Paramètres et Palmarès -->
+  <div class="quit-overlay page-overlay" id="rules-overlay">
+    <div class="card settings-modal">
+      <div class="settings-sticky-header">
+        <span>📖 Les règles</span>
+        <button class="settings-close-x" id="btn-close-rules" title="Fermer">✕</button>
+      </div>
+      <div class="card rules-card">
+        <div class="rules-blocks" id="rules-list">
+          <section>
+            <h3>LE PRINCIPE</h3>
+            <p>Vous jouez en binôme : l'un donne les indices, l'autre devine. À chaque tour, le donneur propose <b>un seul mot-indice</b> en lien avec le mot secret — jamais une phrase, jamais un mime. Le devineur doit alors répondre par un seul mot ou par <b>« passe »</b> s'il ne trouve pas : c'est seulement après cette réponse que le donneur peut proposer un nouvel indice, ou choisir d'abandonner le mot pour passer au suivant. Impossible d'enchaîner deux indices sans réponse entre les deux. Un <b>interdit</b> (mot composé, même famille, même son de départ, mime) invalide aussitôt le mot en cours.</p>
+          </section>
+          <section>
+            <h3>QUALIFICATIONS</h3>
+            <p>Chaque manche dure <b>30 secondes</b> et il y a <b>jusqu'à 5 mots</b> à deviner pour autant de points. Passer un mot le met à la fin de la liste. Le <b>meilleur duo</b> (ou en mode chacun pour soi celui constitué du meilleur donneur et du meilleur devineur) se qualifie pour la finale.</p>
+          </section>
+          <section>
+            <h3>FINALE</h3>
+            <p>L'objectif ultime de la finale est de réussir ses <b>5 paliers</b> de <b>1min30</b> d'affilée. Pour franchir un palier, il faut deviner <b>5 mots</b>, mais la liste des mots proposés se resserre : 5 mots à trouver sur 9, puis sur 8, 7, 6, et enfin 5 mots sur 5 ! — <b>3 indices maximum</b> par mot, chaque mot passé est <b>perdu</b>.</p>
+          </section>
+          <section>
+            <h3>GAINS</h3>
+            <p>Après chaque palier réussi, deux choix : <b>s'arrêter</b> et garder ses gains, ou <b>continuer</b> en remettant tout en jeu pour viser plus haut. Le <b>palier 2</b> est le <b>palier de sécurité</b> : les gains sont acquis quoi qu'il arrive, et un <b>joker</b> devient disponible (permettant de voir à l'avance les 5 premiers mots d'une manche).</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Confirmation générique (remplacer / abandonner une partie enregistrée, remise à zéro du palmarès) -->
   <div class="quit-overlay" id="generic-confirm-overlay">
     <div class="card quit-confirm-card">
@@ -2381,35 +2412,7 @@
     <div class="menu-cards">
       <div class="settings-card" id="btn-open-palmares">Palmarès</div>
       <div class="settings-card" id="btn-open-settings">Paramètres</div>
-    </div>
-
-    <div class="word-recap" id="rules-recap">
-      <div class="word-recap-toggle" style="justify-content:center; position:relative;">
-        <span class="word-recap-toggle-label" style="color:#fff; font-size:16px; letter-spacing:1px;">Les règles</span>
-        <span class="word-recap-chevron" style="position:absolute; right:14px;">▼</span>
-      </div>
-      <div class="word-recap-body">
-        <div class="card">
-          <div class="rules-blocks" id="rules-list">
-            <section>
-              <h3>LE PRINCIPE</h3>
-              <p>Vous jouez en binôme : l'un donne les indices, l'autre devine. À chaque tour, le donneur propose <b>un seul mot-indice</b> en lien avec le mot secret — jamais une phrase, jamais un mime. Le devineur doit alors répondre par un seul mot ou par <b>« passe »</b> s'il ne trouve pas : c'est seulement après cette réponse que le donneur peut proposer un nouvel indice, ou choisir d'abandonner le mot pour passer au suivant. Impossible d'enchaîner deux indices sans réponse entre les deux. Un <b>interdit</b> (mot composé, même famille, même son de départ, mime) invalide aussitôt le mot en cours.</p>
-            </section>
-            <section>
-              <h3>QUALIFICATIONS</h3>
-              <p>Chaque manche dure <b>30 secondes</b> et il y a <b>jusqu'à 5 mots</b> à deviner pour autant de points. Passer un mot le met à la fin de la liste. Le <b>meilleur duo</b> (ou en mode chacun pour soi celui constitué du meilleur donneur et du meilleur devineur) se qualifie pour la finale.</p>
-            </section>
-            <section>
-              <h3>FINALE</h3>
-              <p>L'objectif ultime de la finale est de réussir ses <b>5 paliers</b> de <b>1min30</b> d'affilée. Pour franchir un palier, il faut deviner <b>5 mots</b>, mais la liste des mots proposés se resserre : 5 mots à trouver sur 9, puis sur 8, 7, 6, et enfin 5 mots sur 5 ! — <b>3 indices maximum</b> par mot, chaque mot passé est <b>perdu</b>.</p>
-            </section>
-            <section>
-              <h3>GAINS</h3>
-              <p>Après chaque palier réussi, deux choix : <b>s'arrêter</b> et garder ses gains, ou <b>continuer</b> en remettant tout en jeu pour viser plus haut. Le <b>palier 2</b> est le <b>palier de sécurité</b> : les gains sont acquis quoi qu'il arrive, et un <b>joker</b> devient disponible (permettant de voir à l'avance les 5 premiers mots d'une manche).</p>
-            </section>
-          </div>
-        </div>
-      </div>
+      <div class="settings-card menu-rules" id="btn-open-rules">Les règles</div>
     </div>
 
     <div class="forbidden-banner">
@@ -6334,24 +6337,23 @@
     inner._fbObs.observe(inner);
   }
 
-  // ---- Pavé des règles, dépliable ----
+  // ---- Les règles : page à part, comme Paramètres et Palmarès (Fabien, 2026-10-02) ----
   (() => {
-    const container = document.getElementById('rules-recap');
-    const toggle = container.querySelector('.word-recap-toggle');
-    const body = container.querySelector('.word-recap-body');
-    toggle.addEventListener('click', () => {
-      const isExpanded = container.classList.contains('expanded');
-      if(!isExpanded){
-        container.classList.add('expanded');
-        body.style.maxHeight = body.scrollHeight + 'px';
-      } else {
-        body.style.maxHeight = body.scrollHeight + 'px'; // fige la hauteur actuelle avant de la ramener à 0
-        requestAnimationFrame(() => {
-          body.style.maxHeight = '0px';
-          container.classList.remove('expanded');
-        });
-      }
+    const ov = document.getElementById('rules-overlay');
+    const modal = ov.querySelector('.settings-modal');
+    function close(){
+      ov.classList.remove('visible');
+      document.body.classList.remove('page-open');
+    }
+    const closeZoom = () => IOS_ZOOM.closeOverlay(ov, modal, close);
+    document.getElementById('btn-open-rules').addEventListener('click', e => {
+      ov.classList.add('visible');
+      modal.scrollTop = 0;
+      document.body.classList.add('page-open');
+      IOS_ZOOM.openOverlay(e.currentTarget, ov, modal);
     });
+    document.getElementById('btn-close-rules').addEventListener('click', closeZoom);
+    ov.addEventListener('click', e => { if(e.target === ov) closeZoom(); });
   })();
 
   function shuffle(arr){
@@ -7734,18 +7736,21 @@
   }
   // Chaque tap sur le mot donne un indice (MAX_CLUES = 3, donc clueCount va de
   // 1 à 4) ; au-delà, le mot est en "danger" — un tap de plus l'abandonne.
-  // Ligne sous le mot en finale. L'aide (réglable dans "Aide") donne la consigne
-  // à chaque étape ; une fois coupée, il ne reste que le message du mot rouge,
-  // le seul qu'on ne peut pas deviner (il tombe à n'importe quel mot).
+  // Ligne sous le mot en finale. La consigne (Paramètres > Consigne) guide à
+  // chaque étape, mot rouge compris ; une fois coupée, plus rien ne s'affiche,
+  // pas même le message du mot rouge (Fabien, 2026-10-02 : « quand on a
+  // compris, tout est compris ») — le mot, lui, passe toujours en rouge.
   function updateFinaleHint(){
     const turn = state.currentTurn;
     if(!turn || turn.style !== 'clues') return;
     const el = document.getElementById('play-hint');
     const inDanger = state.clueCount > MAX_CLUES;
     let text = '';
-    if(inDanger){
+    if(!UIPREFS.getShowFinaleHelp()){
+      text = '';
+    } else if(inDanger){
       text = 'Pas trouvé ? Touche cette zone pour passer';
-    } else if(UIPREFS.getShowFinaleHelp()){
+    } else {
       // Taper le mot = DONNER l'indice n°X (pas signaler que l'autre s'est trompé) :
       // les trois états disent donc la même chose, avec le numéro de l'indice.
       // Seul l'appui suivant, une fois les 3 donnés, veut dire "raté" (voir ci-dessus).
@@ -10046,7 +10051,7 @@
     // de la manche ont un vrai prénom (pas « Joueur 2 ») ; tr = variante de
     // l'entraînement (pas de prénoms, chrono sans limite). {donneur},
     // {devineur}, {mot} (mot affiché), {passe}, {perdu}, {temps}, {cible},
-    // {total}, {gain}, {reste} se remplacent tout seuls. act = geste attendu :
+    // {total}, {gain}, {reste}, {indice} se remplacent tout seuls. act = geste attendu :
     // start (taper le mot pour lancer), correct / pass / forbidden (les
     // boutons), pause (taper deux fois le mot), clues (indices de la finale).
     const STEPS = {
@@ -10099,8 +10104,8 @@
       ],
       final: [
         { id:'f-accueil', center:true, t:'La finale !',
-          x:"Même plateau, nouvelle règle : ici, **chaque indice se compte**. Trois par mot, pas un de plus.",
-          n:{ x:"**{donneur}** et **{devineur}**, même plateau mais nouvelle règle : ici, **chaque indice se compte**. Trois par mot, pas un de plus." },
+          x:"Même plateau, nouvelle règle : ici, **chaque indice compte**. Trois par mot, pas un de plus.",
+          n:{ x:"**{donneur}** et **{devineur}**, même plateau mais nouvelle règle : ici, **chaque indice compte**. Trois par mot, pas un de plus." },
           cta:'Voyons ça' },
         { id:'f-indice', spot:['#word-pill', '#chevrons-left', '#chevrons-right'], act:'start', t:'1er indice',
           x:"Dis ton indice et touche la zone du mot : le chrono part, un chevron s'éteint.",
@@ -10108,10 +10113,13 @@
           go:'Touche le mot' },
         { id:'f-haut', spot:['#play-timer-num', '#play-dots'], t:'{temps}, {cible} mots sur {total}',
           x:"Pour décrocher le palier, trouve {cible} mots parmi ces {total} voyants." },
-        { id:'f-encore', spot:['#word-pill', '#chevrons-left', '#chevrons-right'], act:'clues', t:'Et de deux… et de trois',
-          x:"Pas trouvé ? Nouvel indice : touche encore la zone. Les chevrons montrent ce qu'il te reste.",
-          n:{ x:"**{devineur}** n'a pas trouvé ? Nouvel indice : touche encore la zone. Les chevrons montrent ce qu'il te reste." },
-          go:'Touche encore {reste} fois' },
+        // Une touche par indice, après une mauvaise réponse : le bouton donne le
+        // numéro de l'indice (« Touche encore 2 fois » faisait croire à un double
+        // appui, Fabien 2026-10-02, version A).
+        { id:'f-encore', spot:['#word-pill', '#chevrons-left', '#chevrons-right'], act:'clues', t:'2e et 3e indice',
+          x:"Mauvaise réponse ? Donne un nouvel indice et touche encore la zone, une fois par indice. Les chevrons comptent ceux qui te restent.",
+          n:{ x:"Mauvaise réponse de **{devineur}** ? Donne un nouvel indice et touche encore la zone, une fois par indice. Les chevrons comptent ceux qui te restent." },
+          go:'Touche pour le {indice} indice' },
         { id:'f-rouge', spot:['#word-pill', '#play-hint'], t:'Zone rouge',
           x:"Plus d'indice : le mot passe au rouge. Si ton partenaire se trompe encore, touche la zone : le mot est perdu.",
           n:{ x:"Plus d'indice : le mot passe au rouge. Si **{devineur}** se trompe encore, touche la zone : le mot est perdu." } },
@@ -10156,6 +10164,7 @@
         temps, cible: t.target, total: t.poolSize,
         gain: t.kind === 'final' ? euro(PALIERS[(t.level || 1) - 1].gain) : '',
         reste: Math.max(1, MAX_CLUES + 1 - state.clueCount),
+        indice: Math.min(MAX_CLUES, Math.max(2, state.clueCount)) + 'e', // prochain indice à donner (2e, 3e)
       };
       let out = String(str).replace(/\{(\w+)\}/g, (m, k) => vars[k] != null ? vars[k] : m);
       // Une variable en tête de phrase (« ton partenaire a dit… ») prend sa majuscule.
