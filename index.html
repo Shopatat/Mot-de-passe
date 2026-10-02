@@ -255,7 +255,13 @@
     padding: calc(20px + env(safe-area-inset-top)) 16px calc(142px + env(safe-area-inset-bottom));
   }
   #boot[hidden]{ display:none; }
-  body.booting #screen-setup{ visibility:hidden; }
+  /* Menu dessiné pendant le chargement, mais à peine visible (0,1 %) : caché
+     (visibility:hidden), l'iPhone ne le dessinait qu'au tap sur JOUER, d'un
+     coup (sol de LED, anneaux, titre) ; l'écran se figeait puis le titre
+     sautait de 75 pt (vidéos de Fabien, 2026-10-02). Le sol reste en pause
+     jusqu'à ce que le menu soit posé (body.ios-zoom-run, voir initBoot). */
+  body.booting #screen-setup{ opacity:.001; }
+  body.booting .ms-floor .fc, body.booting .ms-comet, body.booting .ms-spin{ animation-play-state:paused; }
   .boot-inner{ width:100%; max-width:480px; display:flex; flex-direction:column; align-items:center; }
   .boot-inner .tile-row{ width:100%; }
   /* Au lancement de l'appli installée, iPhone ne donne la hauteur de l'encoche
@@ -10068,6 +10074,12 @@
       // du chargement, pendant que ses lettres se brouillent et que le sol
       // du générique apparaît derrière.
       const from = document.getElementById('boot-title').getBoundingClientRect();
+      // Sol de LED toujours en pause le temps que tout se pose : il volait des
+      // images au titre (comme aux transitions façon iPhone).
+      if(!reduced){
+        document.body.classList.add('ios-zoom-run');
+        setTimeout(() => document.body.classList.remove('ios-zoom-run'), 1300);
+      }
       document.body.classList.remove('booting');
       boot.hidden = true;
       MENU_SCENE.scramble();
@@ -10079,11 +10091,16 @@
       const k = (from.width / 380) / (to.width / 352);
       const dx = (from.left + from.width / 2) - (to.left + to.width / 2);
       const dy = (from.top + from.height / 2) - (to.top + to.height / 2);
-      menuTitle.animate([{ transform:`translate(${dx}px, ${dy}px) scale(${k})` }, { transform:'none' }], { duration:650, easing:'cubic-bezier(.22,.8,.25,1)' });
-      hero.querySelector('.ms-stage').animate([{ opacity:0 }, { opacity:1 }], { duration:700, delay:250, easing:'ease-out', fill:'backwards' });
+      // Départ en douceur (même courbe que les transitions façon iPhone) :
+      // l'ancienne, très vive au début, faisait déjà un grand pas à la
+      // première image, vu comme un saut sur iPhone.
+      menuTitle.style.willChange = 'transform';
+      menuTitle.animate([{ transform:`translate(${dx}px, ${dy}px) scale(${k})` }, { transform:'none' }], { duration:700, easing:'cubic-bezier(.3,0,.1,1)' })
+        .finished.then(() => { menuTitle.style.willChange = ''; }, () => { menuTitle.style.willChange = ''; });
+      hero.querySelector('.ms-stage').animate([{ opacity:0 }, { opacity:1 }], { duration:700, delay:150, easing:'ease-out', fill:'backwards' });
       [...screens.setup.children].filter(c => c !== hero && c.offsetParent !== null).forEach((c, i) =>
         c.animate([{ opacity:0, transform:'translateY(8px)' }, { opacity:1, transform:'none' }],
-          { duration:320, delay:380 + i * 60, easing:'ease-out', fill:'backwards' }));
+          { duration:320, delay:300 + i * 60, easing:'ease-out', fill:'backwards' }));
     });
   })();
 
