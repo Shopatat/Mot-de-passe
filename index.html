@@ -636,12 +636,14 @@
      conséquence dans une seconde pilule. Le mot en LED est dessiné point par point
      (voir FORBIDDEN_LED plus bas). */
   .forbidden-banner{
-    padding:5px; border-radius:26px; background:#f2ece2;
+    /* Cadre blanc en bordure (et non en fond) : l'intérieur, un peu
+       transparent comme les cartes du menu, laisse voir les halos du fond. */
+    border:5px solid #f2ece2; border-radius:26px;
     box-shadow: 0 0 14px rgba(255,255,255,0.45), 0 0 34px rgba(255,235,210,0.18);
   }
   .forbidden-inner{
     text-align:center; padding:4px 16px 16px; border-radius:21px;
-    background: linear-gradient(165deg, #332321 0%, #170c0b 45%, #0b0504 100%);
+    background: var(--card); /* même fond que les cartes du menu (un peu transparent) */
     box-shadow: inset 0 3px 10px rgba(0,0,0,0.6);
   }
   .fb-pill{
