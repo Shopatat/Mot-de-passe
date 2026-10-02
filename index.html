@@ -5672,15 +5672,19 @@
   // l'iPhone, pendant que l'écran de départ recule et s'assombrit. Au retour,
   // l'écran rétrécit et redevient le bouton, à sa place.
   // Pour « Lancer la partie » / « Commencer l'entraînement » / « Reprendre »
-  // (et le « Retour » du premier écran), Paramètres et Palmarès (et leur ✕).
+  // (et le « Retour » du premier écran, ou « Quitter » en pleine partie, qui
+  // font rentrer l'écran dans ce bouton), Paramètres et Palmarès (et leur ✕).
   // On ne déforme jamais #app (Paramètres et Palmarès sont dedans, en position
   // fixe) : on anime un découpage (clip-path), l'écran de départ et une copie
-  // figée de l'écran qu'on quitte.
+  // figée de l'écran qu'on quitte. Le vrai bouton est caché pendant ce temps :
+  // visible sous la copie, il bougeait avec le menu et l'arrivée semblait
+  // ballotter (Fabien, 2026-10-02).
   const IOS_ZOOM = (() => {
     const OPEN = 520, CLOSE = 440, EASE = 'cubic-bezier(.32,.72,0,1)', END_R = 44;
     const app = document.getElementById('app');
     let pending = null;  // { el, at } : bouton du menu qui va ouvrir l'écran suivant
-    let back = null;     // { el, scroll } : bouton où rentrer depuis le premier écran
+    let home = null;     // { el, scroll } : bouton qui a lancé la partie, où elle rentre
+    let quitting = false; // « Quitter » en pleine partie : retour animé vers home
     let live = null;     // animation en cours
     const overlaySrc = new Map();
     const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -5708,9 +5712,25 @@
       l.nodes.forEach(n => n.remove());
       if(l.done) l.done();
     }
+    function watch(me){
+      Promise.all(me.anims.map(a => a.finished)).then(() => { if(live === me) finish(); }, () => {});
+    }
     function track(anims, nodes, done){
       const me = live = { anims, nodes, done };
-      Promise.all(anims.map(a => a.finished)).then(() => { if(live === me) finish(); }, () => {});
+      watch(me);
+    }
+    // Caché pendant l'animation, rendu à la fin (ou si elle est interrompue).
+    function hideDuring(el, then){
+      el.style.visibility = 'hidden';
+      return () => { el.style.visibility = ''; if(then) then(); };
+    }
+    // Lance fn une fois le menu posé (deux images ; filet de 80 ms si
+    // l'appli ne dessine pas, par exemple en arrière-plan).
+    function settled(fn){
+      let ran = false;
+      const go = () => { if(!ran){ ran = true; fn(); } };
+      requestAnimationFrame(() => requestAnimationFrame(go));
+      setTimeout(go, 80);
     }
     // Copie du bouton (fond, liseré, texte) qui suit le découpage et s'efface.
     function skin(src, r){
@@ -5734,6 +5754,14 @@
     // Copie figée d'un écran, posée exactement à sa place.
     function copyOf(scr){
       const r = scr.getBoundingClientRect(), c = scr.cloneNode(true);
+      // Ce qu'une animation affiche (cadre du mot, chrono, voyants…) n'est pas
+      // dans le code de la page : on recopie son état visible sur la copie.
+      const src = scr.querySelectorAll('*'), dst = c.querySelectorAll('*');
+      src.forEach((el, i) => {
+        if(!dst[i] || !el.getAnimations().length) return;
+        const cs = getComputedStyle(el);
+        dst[i].style.opacity = cs.opacity; dst[i].style.transform = cs.transform; dst[i].style.visibility = cs.visibility;
+      });
       c.classList.add('ios-zoom-copy'); c.classList.remove('ho-anim');
       Object.assign(c.style, { left:r.left + 'px', top:r.top + 'px', width:r.width + 'px' });
       return c;
@@ -5756,7 +5784,7 @@
         dim.animate([{ opacity:0 }, { opacity:.55 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
       ];
       if(behind) anims.push(behind.animate([{ transform:'scale(1)' }, { transform:'scale(.93)' }], { duration:OPEN, easing:EASE }));
-      track(anims, [dim, sk]);
+      track(anims, [dim, sk], hideDuring(src));
     }
     // hide : ce qui ferme vraiment la page, appelé une fois l'écran rentré.
     function closeOverlay(overlay, content, hide){
@@ -5776,25 +5804,26 @@
         dim.animate([{ opacity:.55 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
       ];
       if(behind) anims.push(behind.animate([{ transform:'scale(.93)' }, { transform:'scale(1)' }], { duration:CLOSE, easing:EASE }));
-      track(anims, [dim, sk], () => { overlay.style.pointerEvents = ''; hide(); });
+      track(anims, [dim, sk], hideDuring(src, () => { overlay.style.pointerEvents = ''; hide(); }));
     }
 
     // ----- Écrans de #app (appelé par showScreen avant et après le changement) -----
     function before(prev, name){
       finish();
+      const quit = quitting; quitting = false;
       if(prev === 'setup' && name !== 'setup'){
-        const p = pending; pending = null; back = null;
+        const p = pending; pending = null;
         const r = p && !reduced() && (performance.now() - p.at < 60000) && shown(p.el);
         if(!r) return null;
-        if(name === 'handoff') back = { el:p.el, scroll:app.scrollTop };
+        home = { el:p.el, scroll:app.scrollTop };
         return { kind:'open', src:p.el, r, copy:copyOf(screens.setup) };
       }
-      if(name === 'setup' && prev === 'handoff' && back){
-        const bk = back; back = null;
-        if(reduced()) return null;
-        return { kind:'close', bk, copy:copyOf(screens.handoff) };
+      // Retour du premier écran, ou « Quitter » en pleine partie : l'écran
+      // rentre dans le bouton qui a lancé la partie (« Lancer la partie » par
+      // défaut, par exemple après « Rejouer » ou une reprise).
+      if(name === 'setup' && prev !== 'setup' && (prev === 'handoff' || quit) && !reduced()){
+        return { kind:'close', home, copy:copyOf(screens[prev]) };
       }
-      if(prev === 'handoff') back = null;
       return null;
     }
     function after(z){
@@ -5821,26 +5850,43 @@
         track(anims, [z.copy, dim, sk], () => { app.style.zIndex = ''; });
       } else {
         // Le menu revient là où il était quand on l'a quitté.
-        app.scrollTop = z.bk.scroll;
-        const r = shown(z.bk.el);
-        if(!r) return;
+        if(z.home && z.home.el.isConnected) app.scrollTop = z.home.scroll;
+        // La copie de l'écran quitté couvre tout tout de suite ; l'animation
+        // ne démarre qu'une fois le menu posé (défilement rétabli, bouton
+        // « collé » recalé), pour viser l'endroit exact où le bouton s'arrête.
         const shell = document.createElement('div');
         shell.className = 'ios-zoom-shell';
         shell.appendChild(z.copy);
         const dim = dimLayer(4);
+        dim.style.opacity = '.55';
         document.body.appendChild(shell);
-        const sk = skin(z.bk.el, r);
-        const b = shell.getBoundingClientRect(), rad = radius(z.bk.el);
-        const anims = [
-          shell.animate([{ clipPath:FULL }, { clipPath:inset(r, b, rad) }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-          z.copy.animate([{ transform:'none', opacity:1 }, { opacity:0, offset:.7 }, { transform:onBtn(r, z.copy), opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-          sk.animate([screenBox(), box(r, rad)], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-          sk.animate([{ opacity:0 }, { opacity:0, offset:.55 }, { opacity:1 }], { duration:CLOSE, fill:'forwards' }),
-          dim.animate([{ opacity:.55 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
-        ];
-        // Le menu remonte vers l'avant (et passe outre son propre fondu d'arrivée).
-        if(scr) anims.push(scr.animate([{ transform:'scale(.93)', opacity:1 }, { transform:'scale(1)', opacity:1 }], { duration:CLOSE, easing:EASE }));
-        track(anims, [shell, dim, sk]);
+        // En attendant, le menu reste reculé sous la copie.
+        const menuFrom = scr && scr.animate([{ transform:'scale(.93)', opacity:1 }], { duration:1, fill:'forwards' });
+        const me = live = { anims:menuFrom ? [menuFrom] : [], nodes:[shell, dim], done:null };
+        settled(() => {
+          if(live !== me) return;
+          // Le bouton qui a lancé la partie s'il est là (il peut avoir disparu,
+          // comme « Reprendre »), sinon « Lancer la partie ».
+          const fb = document.getElementById('btn-start-game');
+          const el = (z.home && shown(z.home.el)) ? z.home.el : fb;
+          const r = shown(el);
+          if(!r){ finish(); return; }
+          me.done = hideDuring(el);
+          const sk = skin(el, r);
+          me.nodes.push(sk);
+          const b = shell.getBoundingClientRect(), rad = radius(el);
+          me.anims.push(
+            shell.animate([{ clipPath:FULL }, { clipPath:inset(r, b, rad) }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+            z.copy.animate([{ transform:'none', opacity:1 }, { opacity:0, offset:.7 }, { transform:onBtn(r, z.copy), opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+            sk.animate([screenBox(), box(r, rad)], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+            sk.animate([{ opacity:0 }, { opacity:0, offset:.55 }, { opacity:1 }], { duration:CLOSE, fill:'forwards' }),
+            dim.animate([{ opacity:.55 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+          );
+          // Le menu remonte vers l'avant (et passe outre son propre fondu d'arrivée).
+          if(scr) me.anims.push(scr.animate([{ transform:'scale(.93)', opacity:1 }, { transform:'scale(1)', opacity:1 }], { duration:CLOSE, easing:EASE }));
+          if(menuFrom){ menuFrom.cancel(); me.anims = me.anims.filter(a => a !== menuFrom); }
+          watch(me);
+        });
       }
     }
     const safe = fn => (...a) => { try { return fn(...a); } catch(e){ finish(); return null; } };
@@ -5848,6 +5894,8 @@
       // Bouton du menu qui lance la suite (l'animation part de lui).
       from(el){ pending = { el, at:performance.now() }; },
       forget(){ pending = null; },
+      // « Quitter » confirmé : le prochain retour au menu rentre dans le bouton.
+      quit(){ quitting = true; },
       before:safe(before), after:safe(after),
       openOverlay:safe(openOverlay),
       closeOverlay(overlay, content, hide){ try { closeOverlay(overlay, content, hide); } catch(e){ finish(); hide(); } },
@@ -5961,6 +6009,7 @@
     roundFrozen = false;
     if(state.mode === 'full' && !state.isDebug) SAVED_GAME.clear(); // "Abandonner la partie" : elle ne se reprend pas (entraînement / test : on ne touche pas à une vraie partie enregistrée)
     document.getElementById('screen-play').classList.remove('finale-pending-start');
+    IOS_ZOOM.quit(); // l'écran rentre dans « Lancer la partie », comme une appli qu'on ferme
     showScreen('setup');
   });
   function escapeHtml(str){
