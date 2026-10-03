@@ -5720,6 +5720,9 @@ function mdpMain(){
     let home = null;     // { el, scroll } : bouton qui a lancé la partie, où elle rentre
     let quitting = false; // « Quitter » en pleine partie : retour animé vers home
     let live = null;     // animation en cours
+    // Écrans qu'un bouton de la partie peut ouvrir en grandissant (ceux qui
+    // arrivent par le cadre du mot, la manche, gardent leur fondu pour l'instant).
+    const STEP_TO = ['handoff', 'finalist', 'final', 'buzzIntro', 'soloTieChoice'];
     const overlaySrc = new Map();
     const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     // Rectangle du bouton s'il est à l'écran (sinon pas d'animation).
@@ -5882,8 +5885,8 @@ function mdpMain(){
       finish();
       Object.values(screens).forEach(s => s.classList.remove('ios-noenter'));
       const quit = quitting; quitting = false;
+      const p = pending; pending = null;
       if(prev === 'setup' && name !== 'setup'){
-        const p = pending; pending = null;
         // Seulement vers « Qui fait deviner » : les autres écrans (reprise d'une
         // finale, d'une décision…) ont leurs propres animations d'entrée, qui se
         // rejoueraient après l'ouverture ; ils gardent leur fondu habituel.
@@ -5891,6 +5894,19 @@ function mdpMain(){
         if(!r) return null;
         home = { el:p.el, scroll:app.scrollTop };
         return { kind:'open', src:p.el, scroll:app.scrollTop };
+      }
+      // Dans la partie (Continuer, Jouer pour…, S'arrêter, Rejouer) : le bouton
+      // touché devient l'écran suivant, l'écran quitté recule (copie figée,
+      // prise ici tant qu'il est encore affiché, bouton caché dedans).
+      if(prev !== 'setup' && name !== 'setup' && STEP_TO.includes(name) && p && !reduced() &&
+         (performance.now() - p.at < 60000) && screens[prev].contains(p.el)){
+        const r = shown(p.el);
+        if(r){
+          const back = copyOf(screens[prev]);
+          const tw = twinOf(screens[prev], back, p.el);
+          if(tw) tw.style.visibility = 'hidden';
+          return { kind:'step', src:p.el, r, rad:radius(p.el), back };
+        }
       }
       // Retour du premier écran, ou « Quitter » en pleine partie : l'écran
       // rentre dans le bouton qui a lancé la partie (« Lancer la partie » par
@@ -5914,6 +5930,40 @@ function mdpMain(){
     function after(z){
       if(!z) return;
       const scr = document.querySelector('#app > .screen.active');
+      if(z.kind === 'step'){
+        // Même geste que l'ouverture depuis le menu : la copie de l'écran
+        // d'arrivée naît en miniature dans le bouton et grandit, puis le vrai
+        // écran (dessous, sans fondu ni entrée rejouée) prend la place.
+        scr.classList.add('ios-noenter');
+        scr.classList.remove('ho-anim');
+        const copy = copyOf(scr);
+        const back = document.createElement('div');
+        back.className = 'ios-zoom-shell';
+        back.style.zIndex = 4; back.style.pointerEvents = 'auto'; // aucun appui pendant ce temps
+        document.body.appendChild(back);
+        ambient(back);
+        back.appendChild(z.back);
+        const dim = document.createElement('div');
+        dim.className = 'ios-zoom-dim';
+        back.appendChild(dim);
+        const shell = document.createElement('div');
+        shell.className = 'ios-zoom-shell';
+        shell.style.pointerEvents = 'auto';
+        document.body.appendChild(shell);
+        ambient(shell);
+        shell.appendChild(copy);
+        const sk = skin(z.src, z.r), b = shell.getBoundingClientRect();
+        const anims = [
+          shell.animate([{ clipPath:inset(z.r, b, z.rad) }, { clipPath:FULL }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          copy.animate(GROW_IN(intoBtn(z.r, b, copy)), { duration:OPEN, easing:EASE, fill:'forwards' }),
+          sk.animate([box(z.r, z.rad), screenBox()], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          sk.animate(SKIN_OUT, { duration:OPEN, easing:EASE, fill:'forwards' }),
+          z.back.animate([{ transform:'scale(1)' }, { transform:'scale(.93)' }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          dim.animate([{ opacity:0 }, { opacity:.55 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+        ];
+        track(anims, [back, shell, sk], null);
+        return;
+      }
       if(z.kind === 'open'){
         // Le vrai menu reste à l'écran sous l'animation (le recopier, sol de LED
         // compris, figeait l'image sur iPhone) ; l'écran qui s'ouvre est une
@@ -8820,7 +8870,10 @@ function mdpMain(){
     el.hidden = false;
   }
 
-  document.getElementById('btn-next-turn').addEventListener('click', advanceAfterTurn);
+  document.getElementById('btn-next-turn').addEventListener('click', e => {
+    IOS_ZOOM.from(e.currentTarget); // l'écran suivant grandira depuis « Continuer »
+    advanceAfterTurn();
+  });
   // Passe à la manche suivante (ou à la désignation des finalistes). Sert aussi
   // à reprendre une partie enregistrée juste après une manche.
   function advanceAfterTurn(){
@@ -8858,6 +8911,7 @@ function mdpMain(){
   });
   document.getElementById('btn-training-stop').addEventListener('click', () => {
     document.getElementById('screen-play').classList.remove('finale-pending-start');
+    IOS_ZOOM.quit(); // l'écran rentre dans « Commencer l'entraînement »
     showScreen('setup');
   });
 
@@ -9516,6 +9570,7 @@ function mdpMain(){
 
   document.getElementById('btn-start-final').addEventListener('click', () => {
     const btn = document.getElementById('btn-start-final');
+    IOS_ZOOM.from(btn); // après la montée de l'échelle, le palier grandit depuis ce bouton
     btn.disabled = true;
     const gen = state.gen;
     playLadderReveal('finalist-ladder', 1, () => {
@@ -9621,6 +9676,7 @@ function mdpMain(){
     const nextLevel = state.currentLevel + 1;
     const btnContinue = document.getElementById('btn-continue-final');
     const btnStop = document.getElementById('btn-stop-final');
+    IOS_ZOOM.from(btnContinue); // après la montée de l'échelle, le palier grandit depuis ce bouton
     btnContinue.disabled = true;
     btnStop.disabled = true;
     JOKER_TOKEN.disable(); // sinon le joker touché pendant la révélation ouvrait l'aperçu par-dessus le palier
@@ -9630,7 +9686,8 @@ function mdpMain(){
       startPalier(nextLevel);
     });
   });
-  document.getElementById('btn-stop-final').addEventListener('click', () => {
+  document.getElementById('btn-stop-final').addEventListener('click', e => {
+    IOS_ZOOM.from(e.currentTarget); // l'écran de fin grandit depuis « S'arrêter »
     JOKER_TOKEN.disable();
     state.endedByStop = true;
     // L'équipe repart avec l'argent : le son de fin des qualifs, seul (on
@@ -9980,13 +10037,15 @@ function mdpMain(){
 
   // "Rejouer" : même partie, mêmes réglages, sans repasser par le menu.
   // "Changer les réglages" : retour au menu, comme avant.
-  document.getElementById('btn-replay').addEventListener('click', () => {
+  document.getElementById('btn-replay').addEventListener('click', e => {
+    IOS_ZOOM.from(e.currentTarget); // la nouvelle partie grandit depuis « Rejouer »
     document.getElementById('screen-play').classList.remove('finale-pending-start');
     state.gen += 1; // coupe tout ce qui resterait en vol de la partie finie
     launchConfiguredGame();
   });
   document.getElementById('btn-change-settings').addEventListener('click', () => {
     document.getElementById('screen-play').classList.remove('finale-pending-start');
+    IOS_ZOOM.quit(); // l'écran de fin rentre dans « Lancer la partie », comme « Quitter »
     showScreen('setup');
   });
 
