@@ -6210,6 +6210,7 @@ function mdpMain(){
     function openDialog(src, overlay, card){
       finish();
       overlaySrc.set(overlay, src);
+      overlay._fromBtn = true;
       if(reduced()) return;
       const style = TRANS.pick('dialogs'), k = speed('dialogs');
       overlay._trStyle = style;
@@ -6234,7 +6235,8 @@ function mdpMain(){
     // hide : ce qui ferme vraiment la fenêtre, appelé une fois repliée.
     function closeDialog(overlay, card, hide){
       finish();
-      if(reduced() || !overlay.classList.contains('visible')){ hide(); return; }
+      const fromBtn = overlay._fromBtn; overlay._fromBtn = false;
+      if(!fromBtn || reduced() || !overlay.classList.contains('visible')){ hide(); return; }
       const style = overlay._trStyle || 'zoom', k = speed('dialogs');
       overlay.style.pointerEvents = 'none';
       const end = () => { overlay.style.pointerEvents = ''; hide(); };
@@ -6269,12 +6271,13 @@ function mdpMain(){
         // Seulement vers « Qui fait deviner » : les autres écrans (reprise d'une
         // finale, d'une décision…) ont leurs propres animations d'entrée, qui se
         // rejoueraient après l'ouverture ; ils gardent leur fondu habituel.
-        const r = name === 'handoff' && fresh && shown(p.el);
+        // p.rect : bouton d'une fenêtre déjà refermée (« Remplacer »), mesuré au toucher.
+        const r = name === 'handoff' && fresh && (shown(p.el) || p.rect);
         if(!r) return null;
         home = { el:p.el, scroll:app.scrollTop };
         const style = TRANS.pick('start'), k = speed('start');
         if(style === 'fade') return { kind:'fade', k };
-        return { kind:'open', style, src:p.el, scroll:app.scrollTop };
+        return { kind:'open', style, src:p.el, r, scroll:app.scrollTop };
       }
       // Dans la partie (Continuer, Jouer pour…, S'arrêter, Rejouer) : le bouton
       // touché devient l'écran suivant, l'écran quitté recule (copie figée,
@@ -6372,7 +6375,7 @@ function mdpMain(){
         screens.setup.classList.add('active', 'ios-noenter'); // pas de fondu d'arrivée (décalage de 6 points)
         app.scrollTop = z.scroll;
         document.body.classList.add('ios-zooming');
-        const r = shown(z.src);
+        const r = shown(z.src) || z.r;
         if(!r){ swapTo(dest, destScroll); return; }
         const dim = dimLayer(4);
         // Aucun appui sur le menu pendant ce temps, ni dans le calque ni autour
@@ -6453,6 +6456,9 @@ function mdpMain(){
       // Bouton qui lance la suite (l'animation part de lui) ; pid : passage
       // de l'atelier des transitions (« continue » : équipe suivante ou finale).
       from(el, pid){ pending = { el, pid, at:performance.now() }; },
+      // Même chose pour un bouton qui va être caché tout de suite (celui d'une
+      // fenêtre qu'on ferme) : sa place est mesurée maintenant.
+      fromLeaving(el, pid){ const b = el.getBoundingClientRect(); pending = { el, pid, rect:{ left:b.left, top:b.top, right:b.right, bottom:b.bottom, width:b.width, height:b.height }, at:performance.now() }; },
       // Départ sans bouton : rectangle (coordonnées de l'écran) sur l'écran scr.
       fromRect(rect, rad, scr, pid){ pending = { rect, rad, scr, pid, at:performance.now() }; },
       // Temps restant (ms) de l'animation en cours, 0 s'il n'y en a pas (pour
@@ -6739,7 +6745,7 @@ function mdpMain(){
   function syncToggle(groupId, on){
     document.querySelectorAll(`#${groupId} .toggle-btn`).forEach(b => b.classList.toggle('selected', b.dataset.val === (on ? 'on' : 'off')));
   }
-  document.getElementById('btn-reset-settings').addEventListener('click', () => {
+  document.getElementById('btn-reset-settings').addEventListener('click', e => {
     askConfirm('Revenir aux réglages d\u2019origine ? Les sons importés, les mots mis de côté, les prénoms et le palmarès sont gardés.', 'Réinitialiser', () => {
       UIPREFS.reset();
       SFX.reset();
@@ -6758,7 +6764,7 @@ function mdpMain(){
       applyArbitreMode();
       MUSIC.applyVolume();
       renderCustomSoundList();
-    });
+    }, { src:e.currentTarget });
   });
 
   // ---------- Retour visuel au toucher ("flash") ----------
@@ -7623,11 +7629,11 @@ function mdpMain(){
     }
   }
   document.getElementById('btn-resume-game').addEventListener('click', e => { IOS_ZOOM.from(e.currentTarget); resumeSavedGame(); });
-  document.getElementById('btn-abandon-saved').addEventListener('click', () => {
+  document.getElementById('btn-abandon-saved').addEventListener('click', e => {
     askConfirm("Abandonner la partie en cours ? Elle ne pourra plus être reprise.", "Abandonner", () => {
       SAVED_GAME.clear();
       renderResumeCard();
-    });
+    }, { src:e.currentTarget });
   });
   renderResumeCard();
 
@@ -7713,31 +7719,42 @@ function mdpMain(){
   }
   document.getElementById('btn-close-palmares').addEventListener('click', closePalmaresZoom);
   document.getElementById('palmares-overlay').addEventListener('click', e => { if(e.target.id === 'palmares-overlay') closePalmaresZoom(); });
-  document.getElementById('btn-reset-palmares').addEventListener('click', () => {
+  document.getElementById('btn-reset-palmares').addEventListener('click', e => {
     askConfirm("Remettre le palmarès à zéro ? Toutes les finales enregistrées seront effacées.", "Remettre à zéro", () => {
       PALMARES.clear();
       renderPalmares();
-    });
+    }, { src:e.currentTarget });
   });
 
   // ---- Confirmation générique ----
   // Une seule fenêtre "Annuler / <action>" pour les demandes qui n'ont pas la leur.
-  let genericConfirmAction = null;
-  function askConfirm(text, confirmLabel, onConfirm){
+  // opts.src : bouton d'où la fenêtre sort (et où elle rentre si on annule) ;
+  // opts.launch : l'action lance la partie, qui grandit depuis le bouton de
+  // confirmation (Fabien, 2026-10-03).
+  let genericConfirmAction = null, genericLaunch = false;
+  function askConfirm(text, confirmLabel, onConfirm, opts){
+    const ov = document.getElementById('generic-confirm-overlay');
     document.getElementById('generic-confirm-text').textContent = text;
     document.getElementById('btn-generic-confirm').textContent = confirmLabel;
     genericConfirmAction = onConfirm;
-    document.getElementById('generic-confirm-overlay').classList.add('visible');
+    genericLaunch = !!(opts && opts.launch);
+    ov.classList.add('visible');
+    if(opts && opts.src) IOS_ZOOM.openDialog(opts.src, ov, ov.querySelector('.card'));
   }
   document.getElementById('btn-generic-cancel').addEventListener('click', () => {
     genericConfirmAction = null;
     IOS_ZOOM.forget(); // « Remplacer la partie ? » annulé : plus de lancement en attente
-    document.getElementById('generic-confirm-overlay').classList.remove('visible');
+    const ov = document.getElementById('generic-confirm-overlay');
+    IOS_ZOOM.closeDialog(ov, ov.querySelector('.card'), () => ov.classList.remove('visible'));
   });
-  document.getElementById('btn-generic-confirm').addEventListener('click', () => {
+  document.getElementById('btn-generic-confirm').addEventListener('click', e => {
     const action = genericConfirmAction;
     genericConfirmAction = null;
-    document.getElementById('generic-confirm-overlay').classList.remove('visible');
+    IOS_ZOOM.stop(); // fenêtre encore en train de s'ouvrir : on la ferme net
+    if(genericLaunch) IOS_ZOOM.fromLeaving(e.currentTarget); // la partie grandit depuis ce bouton
+    const ov = document.getElementById('generic-confirm-overlay');
+    ov._fromBtn = false;
+    ov.classList.remove('visible');
     if(action) action();
   });
 
@@ -7747,11 +7764,16 @@ function mdpMain(){
     // Une partie enregistrée attend d'être reprise : on ne l'écrase pas sur un
     // simple appui (l'entraînement, lui, ne la touche pas).
     if(state.mode === 'full' && SAVED_GAME.load()){
+      // La question sort du bouton « Reprendre » de l'encadré (s'il est à
+      // l'écran, sinon de « Lancer la partie ») et y rentre si on annule.
+      // L'encadré reste derrière pendant l'ouverture (il se met à jour au
+      // retour au menu) : le retirer faisait sauter le menu sous l'animation.
+      const resume = document.getElementById('btn-resume-game'), rr = resume.getBoundingClientRect();
+      const src = (rr.height > 0 && rr.bottom > 0 && rr.top < innerHeight) ? resume : e.currentTarget;
       askConfirm("Une partie est en cours. La remplacer par une nouvelle ?", "Remplacer", () => {
         SAVED_GAME.clear();
-        renderResumeCard();
         launchConfiguredGame();
-      });
+      }, { src, launch:true });
       return;
     }
     launchConfiguredGame();
