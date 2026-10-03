@@ -44,21 +44,73 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Le code du jeu (page + manifest) est vérifié en ligne à chaque ouverture avec
-// internet, pour que les mises à jour du jeu apparaissent sans jamais avoir à
-// vider un cache manuellement. La requête passe en "no-cache" : sans ça, le
-// cache HTTP du navigateur pouvait resservir l'ancienne page jusqu'à 10 min
-// après un déploiement (GitHub Pages autorise max-age=600) ; là, il redemande
-// toujours au serveur (réponse 304 légère si rien n'a changé).
-const NETWORK_FIRST = ['/index.html', '/manifest.json', '/sw.js'];
+// La PAGE du jeu part tout de suite de la copie gardée sur le téléphone : la
+// faire attendre internet à chaque lancement (610 Ko, réseau à réveiller)
+// laissait l'iPhone sur un écran blanc entre l'icône et le chargement (vu par
+// Fabien le 2026-10-03). En même temps, on redemande la page au serveur
+// ("no-cache" : sinon le cache HTTP pouvait resservir l'ancienne jusqu'à
+// 10 min après un déploiement, GitHub Pages autorisant max-age=600). Si elle a
+// changé, la nouvelle est gardée et la page est prévenue ("mdp-update") : elle
+// se recharge si on est encore sur l'écran de chargement, sinon la nouvelle
+// version sera là au prochain lancement.
+// Manifest et sw.js restent vérifiés en ligne d'abord (ils ne retardent pas
+// l'affichage). Premier lancement (rien en cache) : réseau, comme avant.
+const NETWORK_FIRST = ['/manifest.json', '/sw.js'];
+
+function isPage(request, url){
+  return request.mode === 'navigate' ||
+    url.pathname.endsWith('/index.html') ||
+    url.pathname === new URL('./', self.registration.scope).pathname;
+}
+
+function freshPage(request, cached, clientId){
+  return fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' }).then(async (res) => {
+    if(!res || !res.ok) return res;
+    if(!cached){
+      const copy = res.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+      return res;
+    }
+    if(await differs(cached, res.clone())){
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, res.clone());
+      // Prévenir la page qui s'ouvre (elle n'existe peut-être pas encore :
+      // clients.get attend qu'elle soit prête) et les autres déjà ouvertes.
+      const wins = await self.clients.matchAll({ type: 'window' });
+      const opening = clientId ? await self.clients.get(clientId) : null;
+      new Set([opening, ...wins]).forEach((c) => c && c.postMessage({ type: 'mdp-update' }));
+    }
+    return res;
+  });
+}
+
+// Même étiquette du serveur : rien n'a changé (cas courant, sans lire 610 Ko).
+// Sinon on compare le texte, pour ne pas recharger pour rien.
+async function differs(a, b){
+  const tag = (r) => r.headers.get('etag') || r.headers.get('last-modified');
+  if(tag(a) && tag(a) === tag(b)) return false;
+  return (await a.text()) !== (await b.text());
+}
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  const isNetworkFirst = event.request.mode === 'navigate' ||
-    NETWORK_FIRST.some((p) => url.pathname.endsWith(p)) ||
-    url.pathname === new URL('./', self.registration.scope).pathname;
 
-  if (isNetworkFirst) {
+  if (isPage(event.request, url)) {
+    event.respondWith(
+      caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+        // Un double pour comparer : la réponse servie est lue par la page.
+        const network = freshPage(event.request, cached && cached.clone(), event.resultingClientId);
+        if (cached) {
+          event.waitUntil(network.catch(() => {}));
+          return cached;
+        }
+        return network.catch(() => caches.match('./index.html'));
+      })
+    );
+    return;
+  }
+
+  if (NETWORK_FIRST.some((p) => url.pathname.endsWith(p))) {
     event.respondWith(
       fetch(event.request.url, { cache: 'no-cache', credentials: 'same-origin' })
         .then((res) => {

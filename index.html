@@ -10073,6 +10073,7 @@
     btn.addEventListener('click', async () => {
       if(!btn.classList.contains('shown') || leaving) return;
       leaving = true;
+      btn.dataset.left = '1'; // plus de rechargement pour une mise à jour (voir sw.js)
       ensureAudioCtxRunning();
       updateBackgroundMusic('setup');
       // JOUER se replie comme le cadre du mot en fin de manche (son
@@ -10761,6 +10762,22 @@
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     });
+    // Nouvelle version du jeu arrivée pendant le lancement (la page est
+    // d'abord servie depuis le téléphone, voir sw.js) : si on est encore sur
+    // l'écran de chargement, on recharge tout de suite pour l'avoir ; une fois
+    // JOUER touché, elle attendra le prochain lancement. Une seule fois par
+    // minute, au cas où.
+    navigator.serviceWorker.onmessage = (e) => {
+      if(!e.data || e.data.type !== 'mdp-update') return;
+      const play = document.getElementById('boot-play');
+      if(!document.body.classList.contains('booting') || (play && play.dataset.left)) return;
+      try {
+        const last = +sessionStorage.getItem('mdp_update_reload') || 0;
+        if(Date.now() - last < 60000) return;
+        sessionStorage.setItem('mdp_update_reload', Date.now());
+      } catch(_){}
+      location.reload();
+    };
   }
 </script>
 </body>
