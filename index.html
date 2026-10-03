@@ -5814,8 +5814,7 @@ function mdpMain(){
   // ---------- Atelier des transitions (carte Testeurs, 2026-10-03) ----------
   // Chaque passage d'un écran à l'autre a son style (ou plusieurs, qui
   // alternent pour varier) et sa vitesse, choisis dans l'atelier. Par défaut :
-  // exactement les transitions en ligne (bouton qui grandit façon iPhone,
-  // fondu autour de la manche). Les styles sont décrits une seule fois
+  // « Comme l'iPhone » partout (choix de Fabien, 2026-10-03). Les styles sont décrits une seule fois
   // (TRANS_FX, plus bas) et servent aussi à l'aperçu de l'atelier.
   const TRANS = (() => {
     const STYLES = {
@@ -5832,13 +5831,13 @@ function mdpMain(){
     const ALL = ['zoom', 'slide', 'rise', 'cross', 'tv', 'chevrons', 'flip', 'fade'];
     const PASSAGES = [
       { id:'start', label:'Lancer la partie', sub:"Menu → Qui fait deviner (aussi Reprendre, Commencer l'entraînement)", styles:ALL, def:['zoom'] },
-      { id:'ready', label:"C'est parti", sub:"Qui fait deviner → Manche (et « Manche suivante » à l'entraînement)", styles:ALL, def:['fade'] },
-      { id:'roundEnd', label:'Fin de manche', sub:'Une fois le cadre refermé → Résumé', styles:ALL, def:['fade'] },
+      { id:'ready', label:"C'est parti", sub:"Qui fait deviner → Manche (et « Manche suivante » à l'entraînement)", styles:ALL, def:['zoom'] },
+      { id:'roundEnd', label:'Fin de manche', sub:'Une fois le cadre refermé → Résumé', styles:ALL, def:['zoom'] },
       { id:'next', label:'Continuer', sub:'Résumé → Équipe suivante', styles:ALL, def:['zoom'] },
       { id:'qualified', label:'Fin des qualifs', sub:'Continuer → Finalistes (ou tie-break)', styles:ALL, def:['zoom'] },
       { id:'palier', label:'Jouer pour…', sub:"Échelle → palier de la finale (après la montée de l'échelle)", styles:ALL, def:['zoom'] },
-      { id:'readyFinal', label:"C'est parti (finale)", sub:'Qui fait deviner → Palier', styles:ALL, def:['fade'] },
-      { id:'palierEnd', label:'Fin de palier', sub:'Une fois le cadre refermé → Échelle (ou fin de partie)', styles:ALL, def:['fade'] },
+      { id:'readyFinal', label:"C'est parti (finale)", sub:'Qui fait deviner → Palier', styles:ALL, def:['zoom'] },
+      { id:'palierEnd', label:'Fin de palier', sub:'Une fois le cadre refermé → Échelle (ou fin de partie)', styles:ALL, def:['zoom'] },
       { id:'stop', label:"S'arrêter", sub:'Échelle → Fin de partie', styles:ALL, def:['zoom'] },
       { id:'replay', label:'Rejouer', sub:'Fin → nouvelle partie', styles:ALL, def:['zoom'] },
       { id:'toMenu', label:'Retour au menu', sub:'Changer les réglages, Quitter, Retour, Arrêter', styles:['zoom', 'slide', 'rise', 'cross', 'fade'], def:['zoom'] },
@@ -7060,7 +7059,7 @@ function mdpMain(){
         const def = p.def.map(s => TRANS.STYLES[s].label).join(', ');
         card.innerHTML = `<div class="tr-head"><div><div class="tr-title">${escapeHtml(p.label)}</div><div class="tr-sub">${escapeHtml(p.sub)}</div></div></div>
           <div class="tr-chips tr-styles"></div><div class="tr-line"><span class="set-label">Vitesse</span><div class="tr-chips tr-speeds"></div></div>
-          <div class="tr-foot">Avant : ${escapeHtml(def)}</div>`;
+          <div class="tr-foot">Par défaut : ${escapeHtml(def)}</div>`;
         const head = card.querySelector('.tr-head');
         head.appendChild(chip('Varier', varied[p.id], () => {
           varied[p.id] = !varied[p.id];
