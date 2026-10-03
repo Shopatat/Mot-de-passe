@@ -2694,7 +2694,18 @@
 </div>
 
 <script>
+// Tout le jeu démarre juste APRÈS le premier dessin de la page (fond sombre) :
+// exécuté pendant la lecture de la page, ce gros bloc (~0,4 s sur téléphone)
+// retardait ce premier dessin, et l'iPhone montrait sa fenêtre vide, gris
+// clair, entre l'écran de démarrage et le jeu (vidéo de Fabien, 2026-10-03).
+// Filet de sécurité : lancé quand même si aucune image ne vient (page cachée).
 (function(){
+  let started = false;
+  const go = () => { if(started) return; started = true; mdpMain(); };
+  requestAnimationFrame(() => setTimeout(go, 0));
+  setTimeout(go, 1000);
+})();
+function mdpMain(){
   // ---------- Journal des hauteurs d'écran (diagnostic, 2026-09-30) ----------
   // Bande noire de la hauteur de l'encoche en bas de l'appli installée sur
   // iPhone : on note ce que le navigateur annonce au lancement et à chaque
@@ -10753,7 +10764,7 @@
     };
   })();
 
-})();
+}
 </script>
 <script>
   // Cache hors-ligne : n'a d'effet qu'une fois servi via http(s) (GitHub Pages),
