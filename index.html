@@ -1513,6 +1513,7 @@
     overflow:hidden; white-space:nowrap; display:flex; align-items:center; justify-content:center;
   }
   .ios-zoom-dim{ position:fixed; inset:0; background:#000; opacity:0; pointer-events:none; }
+  .ios-zoom-morph{ position:fixed; z-index:-1; pointer-events:none; margin:0; box-sizing:border-box; }
   .ios-zoom-shell{ position:fixed; inset:0; z-index:5; background:var(--bg); overflow:hidden; pointer-events:none; }
   .screen.ios-zoom-copy{ position:fixed; margin:0; pointer-events:none; }
   .ios-zoom-copy, .ios-zoom-copy *{ animation:none !important; transition:none !important; }
@@ -5842,6 +5843,7 @@ function mdpMain(){
       { id:'replay', label:'Rejouer', sub:'Fin → nouvelle partie', styles:ALL, def:['zoom'] },
       { id:'toMenu', label:'Retour au menu', sub:'Changer les réglages, Quitter, Retour, Arrêter', styles:['zoom', 'slide', 'rise', 'cross', 'fade'], def:['zoom'] },
       { id:'pages', label:'Paramètres, Palmarès, Règles', sub:'Ouverture et fermeture des pages', styles:['zoom', 'rise', 'fade'], def:['zoom'] },
+      { id:'dialogs', label:'Petites fenêtres', sub:'✕ (quitter), programme des manches, Terminer (entraînement)', styles:['zoom', 'fade'], def:['zoom'] },
     ];
     const KEY = 'mdp_transitions';
     const fresh = () => ({ speed:'normal', p:{} });
@@ -6189,6 +6191,73 @@ function mdpMain(){
       track(anims, [dim, sk], hideDuring(src, end));
     }
 
+    // ----- Petites fenêtres (✕, programme des manches…) -----
+    // La fenêtre naît dans le petit bouton et grandit jusqu'à sa place, le
+    // fond s'assombrit ; elle s'y replie à la fermeture (Fabien, 2026-10-03,
+    // comme les Paramètres ouverts depuis ⚙). morph = fond et liseré de la
+    // carte qui vont du bouton à la carte ; la carte, elle, grandit dedans.
+    // Posé DANS la fenêtre, sous la carte (z-index -1 dans son empilement) :
+    // au-dessus, il cachait le texte pendant qu'elle grandissait.
+    function morphOf(card, r, rad, overlay){
+      const cs = getComputedStyle(card), m = document.createElement('div');
+      m.className = 'ios-zoom-morph';
+      ['backgroundColor', 'backgroundImage', 'backgroundClip', 'backgroundOrigin', 'boxShadow',
+       'borderTopStyle', 'borderTopWidth', 'borderTopColor', 'borderRightStyle', 'borderRightWidth', 'borderRightColor',
+       'borderBottomStyle', 'borderBottomWidth', 'borderBottomColor', 'borderLeftStyle', 'borderLeftWidth', 'borderLeftColor'].forEach(p => { m.style[p] = cs[p]; });
+      Object.assign(m.style, box(r, rad));
+      overlay.insertBefore(m, overlay.firstChild);
+      return m;
+    }
+    function openDialog(src, overlay, card){
+      finish();
+      overlaySrc.set(overlay, src);
+      if(reduced()) return;
+      const style = TRANS.pick('dialogs'), k = speed('dialogs');
+      overlay._trStyle = style;
+      if(style === 'fade'){
+        track([overlay.animate([{ opacity:0 }, { opacity:1 }], { duration:200 * k, easing:'ease' })], [], null);
+        return;
+      }
+      const r = shown(src);
+      if(!r) return;
+      const D = OPEN * .85, c = card.getBoundingClientRect(), crad = radius(card), srad = radius(src);
+      const bg = getComputedStyle(overlay).backgroundColor;
+      const morph = morphOf(card, r, srad, overlay), sk = skin(src, r);
+      const anims = [
+        morph.animate([box(r, srad), box(c, crad)], { duration:D, easing:EASE, fill:'forwards' }),
+        card.animate(GROW_IN(intoBtn(r, c, card)), { duration:D, easing:EASE }),
+        sk.animate([box(r, srad), box(c, crad)], { duration:D, easing:EASE, fill:'forwards' }),
+        sk.animate(SKIN_OUT, { duration:D, easing:EASE, fill:'forwards' }),
+        overlay.animate([{ backgroundColor:'rgba(0,0,0,0)' }, { backgroundColor:bg }], { duration:D, easing:EASE }),
+      ];
+      track(anims, [morph, sk], hideDuring(src));
+    }
+    // hide : ce qui ferme vraiment la fenêtre, appelé une fois repliée.
+    function closeDialog(overlay, card, hide){
+      finish();
+      if(reduced() || !overlay.classList.contains('visible')){ hide(); return; }
+      const style = overlay._trStyle || 'zoom', k = speed('dialogs');
+      overlay.style.pointerEvents = 'none';
+      const end = () => { overlay.style.pointerEvents = ''; hide(); };
+      if(style === 'fade'){
+        track([overlay.animate([{ opacity:1 }, { opacity:0 }], { duration:160 * k, easing:'ease', fill:'forwards' })], [], end);
+        return;
+      }
+      const src = overlaySrc.get(overlay), r = shown(src);
+      if(!r){ end(); return; }
+      const D = CLOSE * .85, c = card.getBoundingClientRect(), crad = radius(card), srad = radius(src);
+      const bg = getComputedStyle(overlay).backgroundColor;
+      const morph = morphOf(card, c, crad, overlay), sk = skin(src, c);
+      const anims = [
+        morph.animate([box(c, crad), box(r, srad)], { duration:D, easing:EASE, fill:'forwards' }),
+        card.animate(SHRINK_OUT(intoBtn(r, c, card)), { duration:D, easing:EASE, fill:'forwards' }),
+        sk.animate([box(c, crad), box(r, srad)], { duration:D, easing:EASE, fill:'forwards' }),
+        sk.animate(SKIN_IN, { duration:D, easing:EASE, fill:'forwards' }),
+        overlay.animate([{ backgroundColor:bg }, { backgroundColor:'rgba(0,0,0,0)' }], { duration:D, easing:EASE, fill:'forwards' }),
+      ];
+      track(anims, [morph, sk], hideDuring(src, end));
+    }
+
     // ----- Écrans de #app (appelé par showScreen avant et après le changement) -----
     function before(prev, name){
       finish();
@@ -6403,6 +6472,8 @@ function mdpMain(){
       before:safe(before), after:safe(after),
       openOverlay:safe(openOverlay),
       closeOverlay(overlay, content, hide){ try { closeOverlay(overlay, content, hide); } catch(e){ finish(); hide(); } },
+      openDialog:safe(openDialog),
+      closeDialog(overlay, card, hide){ try { closeDialog(overlay, card, hide); } catch(e){ finish(); hide(); } },
     };
   })();
   // Empêche l'écran de s'éteindre pendant la partie : sans ça le téléphone se
@@ -6490,24 +6561,30 @@ function mdpMain(){
       el.appendChild(div);
     });
   }
-  document.getElementById('btn-schedule').addEventListener('click', () => {
+  // Fenêtres du programme et de « Quitter » : elles sortent de leur petit
+  // bouton et s'y replient (IOS_ZOOM.openDialog / closeDialog).
+  const dialogCard = id => document.querySelector('#' + id + ' > .card');
+  document.getElementById('btn-schedule').addEventListener('click', e => {
     freezeRound(); // ouvert en pleine manche : le chrono attend la fermeture, comme avec ✕ et ⚙
     renderScheduleOverlay();
     document.getElementById('schedule-overlay').classList.add('visible');
+    IOS_ZOOM.openDialog(e.currentTarget, document.getElementById('schedule-overlay'), dialogCard('schedule-overlay'));
   });
   document.getElementById('btn-close-schedule').addEventListener('click', () => {
-    document.getElementById('schedule-overlay').classList.remove('visible');
-    unfreezeRound();
+    const ov = document.getElementById('schedule-overlay');
+    IOS_ZOOM.closeDialog(ov, dialogCard('schedule-overlay'), () => { ov.classList.remove('visible'); unfreezeRound(); });
   });
-  document.getElementById('btn-quit-game').addEventListener('click', () => {
+  document.getElementById('btn-quit-game').addEventListener('click', e => {
     freezeRound(); // le chrono ne tourne pas pendant qu'on se décide
     document.getElementById('quit-confirm-overlay').classList.add('visible');
+    IOS_ZOOM.openDialog(e.currentTarget, document.getElementById('quit-confirm-overlay'), dialogCard('quit-confirm-overlay'));
   });
   document.getElementById('btn-quit-cancel').addEventListener('click', () => {
-    document.getElementById('quit-confirm-overlay').classList.remove('visible');
-    unfreezeRound();
+    const ov = document.getElementById('quit-confirm-overlay');
+    IOS_ZOOM.closeDialog(ov, dialogCard('quit-confirm-overlay'), () => { ov.classList.remove('visible'); unfreezeRound(); });
   });
   document.getElementById('btn-quit-confirm').addEventListener('click', () => {
+    IOS_ZOOM.stop(); // fenêtre encore en train de s'ouvrir : on la ferme net
     document.getElementById('quit-confirm-overlay').classList.remove('visible');
     stopTimer();
     state.running = false;
@@ -9248,16 +9325,18 @@ function mdpMain(){
   // Bouton "Terminer la manche" (entraînement uniquement) : clôture la manche
   // en cours à la demande, avec le même jingle de fin que quand les 5 mots
   // sont trouvés, puis enchaîne sur le résumé d'entraînement habituel.
-  document.getElementById('btn-training-end').addEventListener('click', () => {
+  document.getElementById('btn-training-end').addEventListener('click', e => {
     if(inputLocked) return;
     freezeRound(); // le chrono attend la réponse
     document.getElementById('training-end-confirm-overlay').classList.add('visible');
+    IOS_ZOOM.openDialog(e.currentTarget, document.getElementById('training-end-confirm-overlay'), dialogCard('training-end-confirm-overlay'));
   });
   document.getElementById('btn-training-end-cancel').addEventListener('click', () => {
-    document.getElementById('training-end-confirm-overlay').classList.remove('visible');
-    unfreezeRound();
+    const ov = document.getElementById('training-end-confirm-overlay');
+    IOS_ZOOM.closeDialog(ov, dialogCard('training-end-confirm-overlay'), () => { ov.classList.remove('visible'); unfreezeRound(); });
   });
   document.getElementById('btn-training-end-confirm').addEventListener('click', () => {
+    IOS_ZOOM.stop(); // fenêtre encore en train de s'ouvrir : on la ferme net
     document.getElementById('training-end-confirm-overlay').classList.remove('visible');
     roundFrozen = false; // la manche se termine : rien à faire repartir
     if(inputLocked) return;
