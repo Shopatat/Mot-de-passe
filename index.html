@@ -1517,6 +1517,62 @@
   .screen.ios-zoom-copy{ position:fixed; margin:0; pointer-events:none; }
   .ios-zoom-copy, .ios-zoom-copy *{ animation:none !important; transition:none !important; }
   .screen.ios-noenter{ animation:none; }
+  /* Styles de l'atelier des transitions (voir TRANS_FX) : fond noir de la
+     télé et du retournement, colonne de chevrons, éclair. */
+  .tr-tube{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; }
+  .tr-band{ z-index:6; pointer-events:none;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='36'%3E%3Cg fill='none' stroke='%23ff3b20' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 6 L22 18 L8 30'/%3E%3Cpath d='M30 6 L44 18 L30 30'/%3E%3C/g%3E%3C/svg%3E") repeat center / 56px 36px,
+      linear-gradient(90deg, transparent, rgba(10,2,1,.92) 22%, rgba(10,2,1,.92) 78%, transparent);
+    filter: drop-shadow(0 0 8px rgba(255,60,30,.7)); }
+  .tr-flash{ z-index:6; width:140px; height:140px; margin:-70px 0 0 -70px; border-radius:50%; pointer-events:none;
+    background: radial-gradient(circle, #fff 0 9%, rgba(255,225,205,.75) 20%, rgba(255,120,80,.22) 42%, transparent 68%); }
+  /* Page de l'atelier : aperçu dans un petit téléphone, une carte par passage. */
+  .tr-preview-card{ display:flex; flex-direction:column; align-items:center; gap:10px; padding:14px; margin-bottom:12px; }
+  .tr-stage{ position:relative; width:150px; height:290px; border-radius:22px; overflow:hidden; background:#000; isolation:isolate; cursor:pointer;
+    border:3px solid #2a2b30; box-shadow:0 10px 30px rgba(0,0,0,.6); }
+  .tr-mini{ position:absolute; inset:0; overflow:hidden;
+    background: radial-gradient(70% 40% at 15% 85%, rgba(40,70,160,.35), transparent 70%), radial-gradient(60% 35% at 90% 25%, rgba(150,30,25,.2), transparent 70%), var(--bg); }
+  .tr-mini.b{ display:none; }
+  .tr-mini-in{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; gap:3px; padding:26px 10px 12px; transform-origin:50% 50%; }
+  .tr-mini-dim{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; }
+  .tr-stage .tr-band{ z-index:6; }
+  .tm-k{ font-size:6.5px; font-weight:800; letter-spacing:1px; color:var(--gold); margin-bottom:28px; }
+  .tm-name{ font-family:'Anton', Impact, sans-serif; font-size:24px; line-height:1; color:#fff3ea; }
+  .tm-role{ font-size:6px; font-weight:800; letter-spacing:1px; color:#ff8a5c; }
+  .tm-role.g{ color:#8ea2c8; }
+  .tm-chev{ display:flex; flex-direction:column; align-items:center; margin:6px 0 2px; }
+  .tm-chev i{ display:block; width:7px; height:7px; margin-top:-3px; border-right:2px solid #e0301a; border-bottom:2px solid #e0301a; transform:rotate(45deg); }
+  .tr-mini-btn{ margin-top:auto; width:100%; padding:8px 0; border-radius:9px; border:1.5px solid #e0301a; background:#0a0606; color:#fff;
+    font-size:8px; font-weight:800; letter-spacing:.5px; text-align:center; box-shadow:0 0 8px rgba(224,48,26,.5); }
+  .tr-mini-skin{ position:absolute; margin:0; z-index:5; display:flex; align-items:center; justify-content:center; padding:0; box-sizing:border-box; }
+  .tm-top{ width:100%; display:flex; justify-content:space-between; align-items:center; font-size:7px; font-weight:800; color:var(--gold); }
+  .tm-top b{ font-family:'Anton', Impact, sans-serif; font-weight:400; font-size:10px; color:#fff; border:1.5px solid #cfd0d6; border-radius:6px; padding:1px 5px; }
+  .tm-dots{ display:flex; gap:3px; margin:14px 0 10px; padding:3px 6px; border-radius:9px; border:1px solid #6b6b72; }
+  .tm-dots i{ width:5px; height:5px; border-radius:50%; background:#2a2a2f; }
+  .tm-pill{ width:100%; padding:9px 0; border-radius:99px; border:3px solid #c62a1c; background:#0a0505; color:#fff; text-align:center;
+    font-family:'Anton', Impact, sans-serif; font-size:15px; letter-spacing:.5px; margin-bottom:12px; }
+  .tm-duo{ width:100%; display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+  .tm-duo span{ padding:8px 0; border-radius:8px; text-align:center; font-size:7px; font-weight:800; color:#fff; }
+  .tm-duo .r{ background:linear-gradient(180deg,#c9372b,#8e1d16); } .tm-duo .v{ background:linear-gradient(180deg,#43b26f,#237a47); }
+  .tm-int{ width:100%; margin-top:5px; padding:7px 0; border-radius:8px; border:1px solid rgba(224,48,26,.7); text-align:center; font-size:7px; font-weight:800; letter-spacing:1px; color:#ffb3a8; }
+  .tr-preview-text{ font-size:12px; color:var(--text-dim); text-align:center; line-height:1.4; min-height:34px; max-width:320px; white-space:pre-line; }
+  .tr-card{ gap:9px; }
+  .tr-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .tr-title{ font-size:14px; font-weight:800; color:var(--text); }
+  .tr-sub{ font-size:11.5px; color:var(--text-dim); line-height:1.35; margin-top:2px; }
+  .tr-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .tr-chip{ font-family:inherit; padding:7px 10px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer; color:var(--text-dim);
+    border:1.5px solid transparent;
+    background: linear-gradient(180deg, var(--bg-alt), #05070c) padding-box, linear-gradient(180deg, #4a4842, #2a2925 48%, #1c1b18 52%, #3e3c37) border-box; }
+  .tr-chip.selected{ color:#fff; border:2px solid transparent; padding:6.5px 9.5px;
+    background: linear-gradient(180deg, var(--bg-alt), #05070c) padding-box, linear-gradient(180deg, #f6f3ec, #a8a39a 46%, #6d6862 54%, #e2ded5) border-box;
+    box-shadow: 0 0 10px rgba(232,228,221,0.28); }
+  .tr-chip.tr-vary{ flex:none; font-size:11px; padding:6px 10px; }
+  .tr-chip.tr-vary.selected{ padding:5.5px 9.5px; }
+  .tr-line{ display:flex; align-items:center; gap:10px; }
+  .tr-foot{ font-size:11px; color:var(--text-dim); }
+  .tr-actions{ display:flex; flex-direction:column; align-items:center; gap:2px; }
   /* Pendant une ouverture / fermeture, le sol de LED du menu (des milliers de
      points qui se redessinent sans cesse) est mis en pause : il volait des
      images à l'animation sur iPhone. Une demi-seconde, sous le voile sombre. */
@@ -2259,10 +2315,9 @@
           </div>
         </div>
         <div class="set-row pset-row">
-          <span class="set-label">Manche</span>
-          <div class="toggle-row" id="tester-roundzoom">
-            <div class="toggle-btn" data-val="off">Fondu</div>
-            <div class="toggle-btn" data-val="on">Comme l'iPhone</div>
+          <span class="set-label">Transitions</span>
+          <div class="toggle-row">
+            <button type="button" class="toggle-btn" id="btn-open-trans">Atelier des transitions</button>
           </div>
         </div>
         <div class="set-row pset-row">
@@ -2308,6 +2363,44 @@
       </div>
       <div id="palmares-body"></div>
       <button class="text-action subtle palmares-reset" id="btn-reset-palmares">Remettre le palmarès à zéro</button>
+    </div>
+  </div>
+
+  <!-- Atelier des transitions (carte Testeurs) : style et vitesse de chaque passage -->
+  <div class="quit-overlay page-overlay" id="trans-overlay">
+    <div class="card settings-modal">
+      <div class="settings-sticky-header">
+        <span>🎬 Atelier des transitions</span>
+        <button class="settings-close-x" id="btn-close-trans" title="Fermer">✕</button>
+      </div>
+      <div class="card tr-preview-card">
+        <div class="tr-stage" id="tr-stage" role="img" aria-label="Aperçu de la transition">
+          <div class="tr-mini a"><div class="tr-mini-in">
+            <div class="tm-k">MANCHE 1 SUR 4</div>
+            <div class="tm-name">FABIEN</div><div class="tm-role">FAIT DEVINER</div>
+            <div class="tm-chev"><i></i><i></i><i></i></div>
+            <div class="tm-name">LÉA</div><div class="tm-role g">DEVINE</div>
+            <div class="tr-mini-btn">C'EST PARTI</div>
+          </div></div>
+          <div class="tr-mini b"><div class="tr-mini-in">
+            <div class="tm-top"><span>Fabien et Léa</span><b>0:30</b></div>
+            <div class="tm-dots"><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="tm-pill">VERROU</div>
+            <div class="tm-duo"><span class="r">PASSER</span><span class="v">TROUVÉ</span></div>
+            <div class="tm-int">INTERDIT</div>
+          </div></div>
+        </div>
+        <div class="tr-preview-text" id="tr-preview-text">Touche un style pour le voir ici, puis joue une partie pour le voir en vrai.</div>
+      </div>
+      <div class="card pset-card">
+        <div class="pset-title">Vitesse de toutes les transitions</div>
+        <div class="tr-chips" id="tr-speed-all"></div>
+      </div>
+      <div id="tr-list"></div>
+      <div class="tr-actions">
+        <button class="text-action" id="btn-tr-copy">Copier mes choix</button>
+        <button class="text-action subtle" id="btn-tr-reset">Tout remettre comme avant</button>
+      </div>
     </div>
   </div>
 
@@ -3609,19 +3702,6 @@ function mdpMain(){
   // mots. Mémorisé d'une session à l'autre, d'où le bandeau "MODE TEST" affiché
   // tant qu'il est actif (voir initTestWordMode).
   const TEST_WORD = 'TEST';
-  // Essai (2026-10-03, carte Testeurs) : arrivée sur la manche (« C'est parti »,
-  // « Manche suivante ») et sortie de manche façon iPhone. Le cadre du mot
-  // garde exactement son apparition et sa fermeture : la transition se fait
-  // avant qu'il naisse, et après qu'il s'est refermé (l'écran suivant naît
-  // de son dernier point de lumière). Coupé par défaut (fondu habituel).
-  const ROUND_ZOOM = (function(){
-    let on = false;
-    try { on = localStorage.getItem('mdp_round_zoom') === '1'; } catch(e){}
-    return {
-      isOn(){ return on; },
-      set(v){ on = !!v; try { localStorage.setItem('mdp_round_zoom', on ? '1' : '0'); } catch(e){} },
-    };
-  })();
   const TEST_WORD_MODE = (function(){
     let on = false;
     try { on = localStorage.getItem('mdp_test_word_mode') === '1'; } catch(e){}
@@ -5557,17 +5637,6 @@ function mdpMain(){
     btn.addEventListener('click', open);
   })();
 
-  (function initRoundZoom(){
-    const group = document.getElementById('tester-roundzoom');
-    const render = () => selectToggle('tester-roundzoom', ROUND_ZOOM.isOn() ? 'on' : 'off');
-    group.addEventListener('click', e => {
-      const b = e.target.closest('.toggle-btn');
-      if(!b) return;
-      ROUND_ZOOM.set(b.dataset.val === 'on'); render();
-    });
-    render();
-  })();
-
   (function initTestWordMode(){
     const group = document.getElementById('tester-wordmode');
     const banner = document.getElementById('test-mode-banner');
@@ -5741,21 +5810,175 @@ function mdpMain(){
   // figée de l'écran qu'on quitte. Le vrai bouton est caché pendant ce temps :
   // visible sous la copie, il bougeait avec le menu et l'arrivée semblait
   // ballotter (Fabien, 2026-10-02).
+  // ---------- Atelier des transitions (carte Testeurs, 2026-10-03) ----------
+  // Chaque passage d'un écran à l'autre a son style (ou plusieurs, qui
+  // alternent pour varier) et sa vitesse, choisis dans l'atelier. Par défaut :
+  // exactement les transitions en ligne (bouton qui grandit façon iPhone,
+  // fondu autour de la manche). Les styles sont décrits une seule fois
+  // (TRANS_FX, plus bas) et servent aussi à l'aperçu de l'atelier.
+  const TRANS = (() => {
+    const STYLES = {
+      zoom:     { label:"Comme l'iPhone", d:520, hint:"Le bouton touché grandit jusqu'à devenir l'écran." },
+      slide:    { label:'Glissé', d:480, hint:"L'écran arrive par la droite et pousse l'ancien, comme dans Réglages." },
+      rise:     { label:'Feuille', d:520, hint:"L'écran monte du bas comme une feuille, l'ancien recule." },
+      cross:    { label:'Fondu enchaîné', d:420, hint:"L'ancien s'efface en avançant, le nouveau apparaît en se posant." },
+      tv:       { label:'Télé', d:1000, hint:"L'écran s'écrase en une ligne de lumière et le suivant se rallume depuis elle." },
+      chevrons: { label:'Rideau de chevrons', d:760, hint:"Une colonne de chevrons rouges traverse l'écran et dévoile le suivant." },
+      flip:     { label:'Retournement', d:660, hint:"L'écran se retourne comme une carte : le suivant est au dos." },
+      fade:     { label:'Fondu', d:350, hint:"Le fondu court d'avant." },
+    };
+    const SPEEDS = [['slow', 'Lent', 1.35], ['normal', 'Normal', 1], ['quick', 'Vif', .75], ['flash', 'Éclair', .55]];
+    const ALL = ['zoom', 'slide', 'rise', 'cross', 'tv', 'chevrons', 'flip', 'fade'];
+    const PASSAGES = [
+      { id:'start', label:'Lancer la partie', sub:"Menu → Qui fait deviner (aussi Reprendre, Commencer l'entraînement)", styles:ALL, def:['zoom'] },
+      { id:'ready', label:"C'est parti", sub:"Qui fait deviner → Manche (et « Manche suivante » à l'entraînement)", styles:ALL, def:['fade'] },
+      { id:'roundEnd', label:'Fin de manche', sub:'Une fois le cadre refermé → Résumé', styles:ALL, def:['fade'] },
+      { id:'next', label:'Continuer', sub:'Résumé → Équipe suivante', styles:ALL, def:['zoom'] },
+      { id:'qualified', label:'Fin des qualifs', sub:'Continuer → Finalistes (ou tie-break)', styles:ALL, def:['zoom'] },
+      { id:'palier', label:'Jouer pour…', sub:"Échelle → palier de la finale (après la montée de l'échelle)", styles:ALL, def:['zoom'] },
+      { id:'readyFinal', label:"C'est parti (finale)", sub:'Qui fait deviner → Palier', styles:ALL, def:['fade'] },
+      { id:'palierEnd', label:'Fin de palier', sub:'Une fois le cadre refermé → Échelle (ou fin de partie)', styles:ALL, def:['fade'] },
+      { id:'stop', label:"S'arrêter", sub:'Échelle → Fin de partie', styles:ALL, def:['zoom'] },
+      { id:'replay', label:'Rejouer', sub:'Fin → nouvelle partie', styles:ALL, def:['zoom'] },
+      { id:'toMenu', label:'Retour au menu', sub:'Changer les réglages, Quitter, Retour, Arrêter', styles:['zoom', 'slide', 'rise', 'cross', 'fade'], def:['zoom'] },
+      { id:'pages', label:'Paramètres, Palmarès, Règles', sub:'Ouverture et fermeture des pages', styles:['zoom', 'rise', 'fade'], def:['zoom'] },
+    ];
+    const KEY = 'mdp_transitions';
+    const fresh = () => ({ speed:'normal', p:{} });
+    let cfg = fresh();
+    try {
+      const raw = localStorage.getItem(KEY);
+      if(raw) cfg = Object.assign(fresh(), JSON.parse(raw));
+      // L'ancien interrupteur « Manche : Comme l'iPhone » devient ce réglage.
+      else if(localStorage.getItem('mdp_round_zoom') === '1') ['ready', 'roundEnd', 'readyFinal', 'palierEnd'].forEach(id => { cfg.p[id] = { s:['zoom'] }; });
+    } catch(e){ cfg = fresh(); }
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch(e){} };
+    const byId = id => PASSAGES.find(x => x.id === id);
+    const turn = {}; // alternance : prochain style de chaque passage (pour la session)
+    function styles(id){
+      const p = byId(id); if(!p) return ['zoom'];
+      const s = cfg.p[id] && Array.isArray(cfg.p[id].s) ? cfg.p[id].s.filter(x => p.styles.includes(x)) : [];
+      return s.length ? s : p.def.slice();
+    }
+    return {
+      STYLES, SPEEDS, PASSAGES,
+      styles,
+      // Style à jouer pour ce passage (au tour suivant si plusieurs sont cochés).
+      pick(id){
+        const s = styles(id);
+        const i = (turn[id] || 0) % s.length;
+        turn[id] = i + 1;
+        return s[i];
+      },
+      speedOf(id){ return (cfg.p[id] && cfg.p[id].v) || null; },
+      globalSpeed(){ return cfg.speed || 'normal'; },
+      // Facteur de durée (1 = normal).
+      k(id){
+        const v = (cfg.p[id] && cfg.p[id].v) || cfg.speed || 'normal';
+        const s = SPEEDS.find(x => x[0] === v);
+        return s ? s[2] : 1;
+      },
+      setStyles(id, s){ cfg.p[id] = Object.assign({}, cfg.p[id], { s }); turn[id] = 0; save(); },
+      setSpeed(id, v){ cfg.p[id] = Object.assign({}, cfg.p[id], { v }); save(); },
+      setGlobalSpeed(v){ cfg.speed = v; save(); },
+      reset(){ cfg = fresh(); Object.keys(turn).forEach(k => { delete turn[k]; }); save(); },
+      // Résumé lisible des choix (bouton « Copier mes choix » de l'atelier).
+      summary(){
+        const sp = v => (SPEEDS.find(x => x[0] === v) || [, 'Normal'])[1];
+        return ['Vitesse générale : ' + sp(cfg.speed)].concat(PASSAGES.map(p =>
+          `${p.label} : ${styles(p.id).map(s => STYLES[s].label).join(' / ')}${cfg.p[p.id] && cfg.p[p.id].v ? ' (' + sp(cfg.p[p.id].v) + ')' : ''}`)).join('\n');
+      },
+    };
+  })();
+
+  // Styles sans « bouton qui grandit » : animations des deux écrans. back =
+  // élément de l'écran quitté (copie figée ou vrai menu), front = calque de
+  // l'écran d'arrivée (au-dessus), dim = voile entre les deux, tube = fond noir
+  // derrière l'écran quitté (Télé, Retournement), layer = où poser les décors
+  // (bande de chevrons, éclair). o = { W, H, y (ligne de la télé), k, fixed }.
+  // Renvoie les animations. Aussi utilisé par l'aperçu de l'atelier.
+  const TRANS_FX = (() => {
+    const EASE = 'cubic-bezier(.3,0,.1,1)';
+    const deco = (layer, cls, fixed) => { const d = document.createElement('div'); d.className = cls; d.style.position = fixed ? 'fixed' : 'absolute'; layer.appendChild(d); return d; };
+    function forward(style, back, front, dim, tube, layer, o){
+      const D = TRANS.STYLES[style].d * o.k, A = [], an = (el, kf, x) => { if(el) A.push(el.animate(kf, Object.assign({ duration:D, easing:EASE, fill:'forwards' }, x))); };
+      const nodes = [];
+      if(style === 'slide'){
+        front.style.boxShadow = '-14px 0 34px rgba(0,0,0,.55)';
+        an(front, [{ transform:`translateX(${o.W}px)` }, { transform:'none' }]);
+        an(back, [{ transform:'none' }, { transform:`translateX(${-o.W * .3}px)` }]);
+        an(dim, [{ opacity:0 }, { opacity:.45 }]);
+      } else if(style === 'rise'){
+        an(front, [{ transform:`translateY(${o.H}px)`, borderRadius:'28px 28px 0 0' }, { transform:'none', borderRadius:'0px' }]);
+        an(back, [{ transform:'scale(1)' }, { transform:'scale(.94)' }]);
+        an(dim, [{ opacity:0 }, { opacity:.5 }]);
+      } else if(style === 'cross'){
+        an(back, [{ opacity:1, transform:'scale(1)' }, { opacity:0, transform:'scale(1.06)' }]);
+        an(front, [{ opacity:0, transform:'scale(.94)' }, { opacity:1, transform:'none' }]);
+      } else if(style === 'tv'){
+        const org = `50% ${o.y}px`;
+        if(back) back.style.transformOrigin = o.backOrigin || org;
+        front.style.transformOrigin = org;
+        an(tube, [{ opacity:0 }, { opacity:1, offset:.3 }, { opacity:1, offset:.75 }, { opacity:0 }], { easing:'linear' });
+        an(back, [{ transform:'none', filter:'brightness(1)', opacity:1 }, { transform:'scale(1,.008)', filter:'brightness(2.2)', opacity:1, offset:.3 },
+          { transform:'scale(0,.008)', filter:'brightness(4)', opacity:1, offset:.44 }, { transform:'scale(0,.008)', filter:'brightness(4)', opacity:0, offset:.45 }, { transform:'scale(0,.008)', opacity:0 }], { easing:'linear' });
+        an(front, [{ transform:'scale(0,.008)', filter:'brightness(4)', opacity:0 }, { transform:'scale(0,.008)', filter:'brightness(4)', opacity:0, offset:.5 },
+          { transform:'scale(1,.008)', filter:'brightness(2.2)', opacity:1, offset:.64 }, { transform:'scale(1,1)', filter:'brightness(1)', opacity:1 }], { easing:'linear' });
+        const fl = deco(layer, 'tr-flash', o.fixed); nodes.push(fl);
+        fl.style.left = (o.W / 2) + 'px'; fl.style.top = o.y + 'px';
+        an(fl, [{ transform:'scale(.1)', opacity:0 }, { transform:'scale(.1)', opacity:0, offset:.38 }, { transform:'scale(1.3)', opacity:1, offset:.47 }, { transform:'scale(.1)', opacity:0, offset:.6 }, { transform:'scale(.1)', opacity:0 }], { easing:'linear' });
+      } else if(style === 'chevrons'){
+        const bw = o.W * .5, t0 = (bw / 2) / (o.W + bw), t1 = (o.W + bw / 2) / (o.W + bw), ez = 'cubic-bezier(.45,.05,.35,1)';
+        const band = deco(layer, 'tr-band', o.fixed); nodes.push(band);
+        band.style.width = bw + 'px'; band.style.height = o.H + 'px'; band.style.left = '0px'; band.style.top = '0px';
+        an(band, [{ transform:`translateX(${-bw}px)` }, { transform:`translateX(${o.W}px)` }], { easing:ez });
+        an(front, [{ clipPath:'inset(0px 100% 0px 0px)', offset:0 }, { clipPath:'inset(0px 100% 0px 0px)', offset:t0 }, { clipPath:'inset(0px 0% 0px 0px)', offset:t1 }, { clipPath:'inset(0px 0% 0px 0px)', offset:1 }], { easing:ez });
+        an(dim, [{ opacity:0 }, { opacity:.35 }], { easing:ez });
+      } else if(style === 'flip'){
+        const P = 'perspective(1400px) ';
+        an(tube, [{ opacity:0 }, { opacity:1, offset:.2 }, { opacity:1, offset:.8 }, { opacity:0 }], { easing:'linear' });
+        an(back, [{ transform:P + 'rotateY(0deg) scale(1)', opacity:1 }, { transform:P + 'rotateY(-90deg) scale(.9)', opacity:1, offset:.5 }, { transform:P + 'rotateY(-90deg) scale(.9)', opacity:0, offset:.501 }, { transform:P + 'rotateY(-90deg) scale(.9)', opacity:0 }], { easing:'cubic-bezier(.45,0,.55,1)' });
+        an(front, [{ transform:P + 'rotateY(90deg) scale(.9)', opacity:0 }, { transform:P + 'rotateY(90deg) scale(.9)', opacity:0, offset:.499 }, { transform:P + 'rotateY(90deg) scale(.9)', opacity:1, offset:.5 }, { transform:P + 'rotateY(0deg) scale(1)', opacity:1 }], { easing:'cubic-bezier(.45,0,.55,1)' });
+      }
+      return { anims:A, nodes };
+    }
+    // Retour vers le menu : over = copie de l'écran quitté (au-dessus),
+    // under = vrai menu, qui revient.
+    function backward(style, over, under, dim, o){
+      const D = TRANS.STYLES[style].d * .85 * o.k, A = [], an = (el, kf) => { if(el) A.push(el.animate(kf, { duration:D, easing:EASE, fill:'forwards' })); };
+      if(style === 'slide'){
+        over.style.boxShadow = '-14px 0 34px rgba(0,0,0,.55)';
+        an(over, [{ transform:'none' }, { transform:`translateX(${o.W}px)` }]);
+        an(under, [{ transform:`translateX(${-o.W * .3}px)` }, { transform:'none' }]);
+        an(dim, [{ opacity:.45 }, { opacity:0 }]);
+      } else if(style === 'rise'){
+        an(over, [{ transform:'none', borderRadius:'0px' }, { transform:`translateY(${o.H}px)`, borderRadius:'28px 28px 0 0' }]);
+        an(under, [{ transform:'scale(.94)' }, { transform:'scale(1)' }]);
+        an(dim, [{ opacity:.5 }, { opacity:0 }]);
+      } else if(style === 'cross'){
+        an(over, [{ opacity:1, transform:'scale(1)' }, { opacity:0, transform:'scale(.94)' }]);
+        an(under, [{ opacity:0, transform:'scale(1.06)' }, { opacity:1, transform:'none' }]);
+      }
+      return A;
+    }
+    return { forward, backward };
+  })();
+
   const IOS_ZOOM = (() => {
     // Courbe façon ressort iOS : départ doux (1 %, 3 %, 7 % du trajet aux trois
     // premières images), puis vive. L'ancienne (9 %, 19 %, 32 %) faisait de
     // grands pas dès le départ, vus comme un saut au moindre ralentissement.
-    const OPEN = 520, CLOSE = 440, EASE = 'cubic-bezier(.3,0,.1,1)', END_R = 44;
+    // Durées multipliées par la vitesse choisie dans l'atelier (TRANS.k).
+    const OPEN0 = 520, CLOSE0 = 440, EASE = 'cubic-bezier(.3,0,.1,1)', END_R = 44;
+    let OPEN = OPEN0, CLOSE = CLOSE0;
+    const speed = id => { const k = TRANS.k(id); OPEN = OPEN0 * k; CLOSE = CLOSE0 * k; return k; };
     const app = document.getElementById('app');
-    let pending = null;  // { el, at } : bouton du menu qui va ouvrir l'écran suivant
+    let pending = null;  // { el, at, pid } : bouton qui va ouvrir l'écran suivant (pid : passage de l'atelier)
     let home = null;     // { el, scroll } : bouton qui a lancé la partie, où elle rentre
     let quitting = false; // « Quitter » en pleine partie : retour animé vers home
     let live = null;     // animation en cours
-    // Écrans qu'un bouton de la partie peut ouvrir en grandissant (ceux qui
-    // arrivent par le cadre du mot, la manche, gardent leur fondu pour l'instant).
-    const STEP_TO = ['handoff', 'finalist', 'final', 'buzzIntro', 'soloTieChoice',
-      // Manche (essai ROUND_ZOOM : le départ n'est posé que si l'interrupteur est sur iPhone)
-      'play', 'summary', 'trainingSummary', 'decision'];
+    // Écrans qu'un bouton de la partie (ou la fin d'une manche) peut ouvrir.
+    const STEP_TO = ['handoff', 'finalist', 'final', 'buzzIntro', 'soloTieChoice', 'play', 'summary', 'trainingSummary', 'decision'];
     const overlaySrc = new Map();
     const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     // Rectangle du bouton s'il est à l'écran (sinon pas d'animation).
@@ -5842,6 +6065,15 @@ function mdpMain(){
       document.body.appendChild(d);
       return d;
     }
+    function shellLayer(z, block){
+      const s = document.createElement('div');
+      s.className = 'ios-zoom-shell';
+      if(z != null) s.style.zIndex = z;
+      if(block) s.style.pointerEvents = 'auto'; // aucun appui pendant ce temps
+      document.body.appendChild(s);
+      ambient(s);
+      return s;
+    }
     // Copie figée d'un écran, posée exactement à sa place.
     // Même élément dans la copie (même chemin d'enfants depuis l'écran).
     function twinOf(root, copy, el){
@@ -5857,9 +6089,11 @@ function mdpMain(){
       // l'échelle…) n'est pas dans le code de la page, et la copie n'a pas
       // d'animations : on recopie l'état visible de ces éléments. Seulement eux
       // (parcourir tout l'écran figeait l'image au moment du toucher sur iPhone).
-      document.getAnimations().forEach(a => {
+      // Seulement les animations de cet écran : parcourir celles de toute la page
+      // (les milliers de lumières du sol du menu) coûtait ~0,2 s au toucher.
+      scr.getAnimations({ subtree:true }).forEach(a => {
         const t = a.effect && a.effect.target;
-        if(!t || t === scr || !scr.contains(t) || t.nodeType !== 1) return;
+        if(!t || t === scr || t.nodeType !== 1) return;
         const twin = twinOf(scr, c, t);
         if(!twin) return;
         const cs = getComputedStyle(t);
@@ -5871,15 +6105,40 @@ function mdpMain(){
       Object.assign(c.style, { left:r.left + 'px', top:r.top + 'px', width:r.width + 'px', height:r.height + 'px' });
       return c;
     }
+    // Fond noir (Télé, Retournement) posé dans le calque de l'écran quitté.
+    function tubeIn(shell){
+      const t = document.createElement('div');
+      t.className = 'tr-tube';
+      shell.appendChild(t);
+      return t;
+    }
 
-    // ----- Paramètres, Palmarès : pages en position fixe -----
+    // ----- Paramètres, Palmarès, Règles : pages en position fixe -----
     function openOverlay(src, overlay, content){
       finish();
       overlaySrc.set(overlay, src);
-      const r = shown(src);
-      if(!r || reduced()) return;
-      const b = overlay.getBoundingClientRect(), rad = radius(src);
+      if(reduced()) return;
+      const style = TRANS.pick('pages'); speed('pages');
+      overlay._trStyle = style;
       const behind = document.querySelector('#app > .screen.active');
+      if(style === 'fade'){
+        track([overlay.animate([{ opacity:0 }, { opacity:1 }], { duration:250 * TRANS.k('pages'), easing:'ease' })], [], null);
+        return;
+      }
+      if(style === 'rise'){
+        const dim = dimLayer(9);
+        dim.style.pointerEvents = 'auto';
+        const anims = [
+          overlay.animate([{ transform:`translateY(${innerHeight}px)`, borderRadius:'28px 28px 0 0' }, { transform:'none', borderRadius:'0px' }], { duration:OPEN, easing:EASE }),
+          dim.animate([{ opacity:0 }, { opacity:.5 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
+        ];
+        if(behind) anims.push(behind.animate([{ transform:'scale(1)' }, { transform:'scale(.94)' }], { duration:OPEN, easing:EASE }));
+        track(anims, [dim], null);
+        return;
+      }
+      const r = shown(src);
+      if(!r) return;
+      const b = overlay.getBoundingClientRect(), rad = radius(src);
       const dim = dimLayer(9), sk = skin(src, r);
       dim.style.pointerEvents = 'auto'; // pas d'appui sur le menu pendant l'ouverture (hors du découpage)
       const anims = [
@@ -5895,13 +6154,30 @@ function mdpMain(){
     // hide : ce qui ferme vraiment la page, appelé une fois l'écran rentré.
     function closeOverlay(overlay, content, hide){
       finish();
+      if(reduced() || !overlay.classList.contains('visible')){ hide(); return; }
+      const style = overlay._trStyle || 'zoom'; speed('pages');
+      const behind = document.querySelector('#app > .screen.active');
+      overlay.style.pointerEvents = 'none';
+      const end = () => { overlay.style.pointerEvents = ''; hide(); };
+      if(style === 'fade'){
+        track([overlay.animate([{ opacity:1 }, { opacity:0 }], { duration:220 * TRANS.k('pages'), easing:'ease', fill:'forwards' })], [], end);
+        return;
+      }
+      if(style === 'rise'){
+        const dim = dimLayer(9);
+        const anims = [
+          overlay.animate([{ transform:'none', borderRadius:'0px' }, { transform:`translateY(${innerHeight}px)`, borderRadius:'28px 28px 0 0' }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+          dim.animate([{ opacity:.5 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
+        ];
+        if(behind) anims.push(behind.animate([{ transform:'scale(.94)' }, { transform:'scale(1)' }], { duration:CLOSE, easing:EASE }));
+        track(anims, [dim], end);
+        return;
+      }
       const src = overlaySrc.get(overlay);
       const r = shown(src);
-      if(!r || reduced() || !overlay.classList.contains('visible')){ hide(); return; }
+      if(!r){ end(); return; }
       const b = overlay.getBoundingClientRect(), rad = radius(src);
-      const behind = document.querySelector('#app > .screen.active');
       const dim = dimLayer(9), sk = skin(src, r);
-      overlay.style.pointerEvents = 'none';
       const anims = [
         overlay.animate([{ clipPath:FULL }, { clipPath:inset(r, b, rad) }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
         content.animate(SHRINK_OUT(intoBtn(r, b, content)), { duration:CLOSE, easing:EASE, fill:'forwards' }),
@@ -5910,43 +6186,53 @@ function mdpMain(){
         dim.animate([{ opacity:.55 }, { opacity:0 }], { duration:CLOSE, easing:EASE, fill:'forwards' }),
       ];
       if(behind) anims.push(behind.animate([{ transform:'scale(.93)' }, { transform:'scale(1)' }], { duration:CLOSE, easing:EASE }));
-      track(anims, [dim, sk], hideDuring(src, () => { overlay.style.pointerEvents = ''; hide(); }));
+      track(anims, [dim, sk], hideDuring(src, end));
     }
 
     // ----- Écrans de #app (appelé par showScreen avant et après le changement) -----
     function before(prev, name){
       finish();
-      Object.values(screens).forEach(s => s.classList.remove('ios-noenter'));
+      Object.values(screens).forEach(s => { s.classList.remove('ios-noenter'); s.style.animationDuration = ''; });
       const quit = quitting; quitting = false;
       const p = pending; pending = null;
+      if(reduced()) return null;
+      const fresh = p && (performance.now() - p.at < 60000);
       if(prev === 'setup' && name !== 'setup'){
         // Seulement vers « Qui fait deviner » : les autres écrans (reprise d'une
         // finale, d'une décision…) ont leurs propres animations d'entrée, qui se
         // rejoueraient après l'ouverture ; ils gardent leur fondu habituel.
-        const r = name === 'handoff' && p && !reduced() && (performance.now() - p.at < 60000) && shown(p.el);
+        const r = name === 'handoff' && fresh && shown(p.el);
         if(!r) return null;
         home = { el:p.el, scroll:app.scrollTop };
-        return { kind:'open', src:p.el, scroll:app.scrollTop };
+        const style = TRANS.pick('start'), k = speed('start');
+        if(style === 'fade') return { kind:'fade', k };
+        return { kind:'open', style, src:p.el, scroll:app.scrollTop };
       }
       // Dans la partie (Continuer, Jouer pour…, S'arrêter, Rejouer) : le bouton
       // touché devient l'écran suivant, l'écran quitté recule (copie figée,
       // prise ici tant qu'il est encore affiché, bouton caché dedans).
       // Sans bouton (fin de manche) : départ d'un rectangle donné (p.rect).
-      if(prev !== 'setup' && name !== 'setup' && STEP_TO.includes(name) && p && !reduced() &&
-         (performance.now() - p.at < 60000) && (p.el ? screens[prev].contains(p.el) : p.scr === prev)){
+      if(prev !== 'setup' && name !== 'setup' && STEP_TO.includes(name) && fresh &&
+         (p.el ? screens[prev].contains(p.el) : p.scr === prev)){
         const r = p.el ? shown(p.el) : p.rect;
         if(r){
+          // « Continuer » : équipe suivante, ou fin des qualifs.
+          const pid = p.pid === 'continue' ? (name === 'handoff' ? 'next' : 'qualified') : (p.pid || 'next');
+          const style = TRANS.pick(pid), k = speed(pid);
+          if(style === 'fade') return { kind:'fade', k };
           const back = copyOf(screens[prev]);
           const tw = p.el && twinOf(screens[prev], back, p.el);
           if(tw) tw.style.visibility = 'hidden';
-          return { kind:'step', src:p.el || null, r, rad:p.el ? radius(p.el) : p.rad, back };
+          return { kind:'step', style, k, src:p.el || null, r, rad:p.el ? radius(p.el) : p.rad, back };
         }
       }
       // Retour du premier écran, ou « Quitter » en pleine partie : l'écran
       // rentre dans le bouton qui a lancé la partie (« Lancer la partie » par
       // défaut, par exemple après « Rejouer » ou une reprise).
-      if(name === 'setup' && prev !== 'setup' && (prev === 'handoff' || quit) && !reduced()){
-        return { kind:'close', home, copy:copyOf(screens[prev]) };
+      if(name === 'setup' && prev !== 'setup' && (prev === 'handoff' || quit)){
+        const style = TRANS.pick('toMenu'), k = speed('toMenu');
+        if(style === 'fade') return { kind:'fade', k };
+        return { kind:'close', style, k, home, copy:copyOf(screens[prev]) };
       }
       return null;
     }
@@ -5961,31 +6247,36 @@ function mdpMain(){
       if(scroll != null) app.scrollTop = scroll;
       document.body.classList.remove('ios-zooming');
     }
+    const fxOpts = (k, y, extra) => Object.assign({ W:innerWidth, H:innerHeight, y, k, fixed:true }, extra);
     function after(z){
       if(!z) return;
       const scr = document.querySelector('#app > .screen.active');
+      if(z.kind === 'fade'){
+        // Fondu habituel de l'écran, à la vitesse choisie.
+        if(scr && z.k !== 1) scr.style.animationDuration = (0.35 * z.k).toFixed(3) + 's';
+        return;
+      }
       if(z.kind === 'step'){
-        // Même geste que l'ouverture depuis le menu : la copie de l'écran
-        // d'arrivée naît en miniature dans le bouton et grandit, puis le vrai
-        // écran (dessous, sans fondu ni entrée rejouée) prend la place.
+        // La copie de l'écran d'arrivée (au-dessus) arrive selon le style ;
+        // le vrai écran est dessous, sans fondu ni entrée rejouée, et prend la
+        // place à la fin.
         scr.classList.add('ios-noenter');
         scr.classList.remove('ho-anim');
         const copy = copyOf(scr);
-        const back = document.createElement('div');
-        back.className = 'ios-zoom-shell';
-        back.style.zIndex = 4; back.style.pointerEvents = 'auto'; // aucun appui pendant ce temps
-        document.body.appendChild(back);
-        ambient(back);
+        const back = shellLayer(4, true);
+        const tube = (z.style === 'tv' || z.style === 'flip') ? tubeIn(back) : null;
         back.appendChild(z.back);
         const dim = document.createElement('div');
         dim.className = 'ios-zoom-dim';
         back.appendChild(dim);
-        const shell = document.createElement('div');
-        shell.className = 'ios-zoom-shell';
-        shell.style.pointerEvents = 'auto';
-        document.body.appendChild(shell);
-        ambient(shell);
+        const shell = shellLayer(null, true);
         shell.appendChild(copy);
+        if(z.style !== 'zoom'){
+          const y = z.r ? z.r.top + z.r.height / 2 : innerHeight / 2;
+          const fx = TRANS_FX.forward(z.style, z.back, shell, dim, tube, document.body, fxOpts(z.k, y, { backOrigin:`50% ${(y - z.back.getBoundingClientRect().top).toFixed(1)}px` }));
+          track(fx.anims, [back, shell].concat(fx.nodes), null);
+          return;
+        }
         const sk = z.src ? skin(z.src, z.r) : null, b = shell.getBoundingClientRect();
         const anims = [
           shell.animate([{ clipPath:inset(z.r, b, z.rad) }, { clipPath:FULL }], { duration:OPEN, easing:EASE, fill:'forwards' }),
@@ -6019,15 +6310,20 @@ function mdpMain(){
         // Aucun appui sur le menu pendant ce temps, ni dans le calque ni autour
         // (le découpage ne bloque les appuis qu'à l'intérieur de sa forme).
         dim.style.pointerEvents = 'auto';
-        const shell = document.createElement('div');
-        shell.className = 'ios-zoom-shell';
-        shell.style.pointerEvents = 'auto';
-        document.body.appendChild(shell);
-        ambient(shell);
+        const shell = shellLayer(null, true);
         shell.appendChild(copy);
-        const sk = skin(z.src, r), rad = radius(z.src), b = shell.getBoundingClientRect();
         const menu = screens.setup;
         menu.style.willChange = 'transform';
+        if(z.style !== 'zoom'){
+          // Autres styles : le vrai menu joue l'écran quitté.
+          const y = r.top + r.height / 2, mr = menu.getBoundingClientRect();
+          const tube = (z.style === 'tv' || z.style === 'flip') ? dimLayer(3) : null;
+          if(tube){ tube.classList.add('tr-tube'); tube.style.position = 'fixed'; }
+          const fx = TRANS_FX.forward(z.style, menu, shell, dim, tube, document.body, fxOpts(TRANS.k('start'), y, { backOrigin:`${(innerWidth / 2 - mr.left).toFixed(1)}px ${(y - mr.top).toFixed(1)}px` }));
+          track(fx.anims, [shell, dim].concat(tube ? [tube] : [], fx.nodes), () => { menu.style.willChange = ''; menu.style.transformOrigin = ''; swapTo(dest, destScroll); });
+          return;
+        }
+        const sk = skin(z.src, r), rad = radius(z.src), b = shell.getBoundingClientRect();
         const showBtn = hideDuring(z.src);
         const anims = [
           // Fond plein jusqu'au bout (il cache le menu, pas de « fantôme ») : les
@@ -6043,7 +6339,7 @@ function mdpMain(){
         ];
         // Boutons du coin (✕ ⚙) rendus en même temps que le décor (~92 % du
         // mouvement, vers 320 ms avec cette courbe), sous le fond qui s'efface.
-        const cornerT = setTimeout(() => document.body.classList.remove('ios-zooming'), 320);
+        const cornerT = setTimeout(() => document.body.classList.remove('ios-zooming'), OPEN * 320 / 520);
         track(anims, [shell, dim, sk], () => { clearTimeout(cornerT); showBtn(); menu.style.willChange = ''; swapTo(dest, destScroll); });
       } else {
         // Le menu revient là où il était quand on l'a quitté, sans son fondu
@@ -6051,6 +6347,15 @@ function mdpMain(){
         // mesure le bouton, qui sautait d'autant à la fin (vidéo de Fabien).
         if(scr) scr.classList.add('ios-noenter');
         if(z.home && z.home.el.isConnected) app.scrollTop = z.home.scroll;
+        const shell = shellLayer(null, false);
+        const dim = dimLayer(4);
+        shell.appendChild(z.copy);
+        if(z.style !== 'zoom'){
+          if(scr) scr.style.willChange = 'transform';
+          const anims = TRANS_FX.backward(z.style, shell, scr, dim, fxOpts(z.k, innerHeight / 2));
+          track(anims, [shell, dim], () => { if(scr) scr.style.willChange = ''; });
+          return;
+        }
         // Le bouton qui a lancé la partie s'il est là (il peut avoir disparu,
         // comme « Reprendre »), sinon « Lancer la partie ». Mesuré tout de suite :
         // le fondu du menu est coupé et sa marge du bas fixée, la place est juste
@@ -6058,13 +6363,7 @@ function mdpMain(){
         const fb = document.getElementById('btn-start-game');
         const el = (z.home && shown(z.home.el)) ? z.home.el : fb;
         const r = shown(el);
-        if(!r) return;
-        const shell = document.createElement('div');
-        shell.className = 'ios-zoom-shell';
-        const dim = dimLayer(4);
-        document.body.appendChild(shell);
-        ambient(shell); // l'écran qui rentre garde son ambiance
-        shell.appendChild(z.copy);
+        if(!r){ shell.remove(); dim.remove(); return; }
         const sk = skin(el, r), b = shell.getBoundingClientRect(), rad = radius(el);
         if(scr) scr.style.willChange = 'transform';
         const anims = [
@@ -6083,12 +6382,19 @@ function mdpMain(){
     }
     const safe = fn => (...a) => { try { return fn(...a); } catch(e){ console.warn("IOS_ZOOM", e); finish(); return null; } };
     return {
-      // Bouton du menu qui lance la suite (l'animation part de lui).
-      from(el){ pending = { el, at:performance.now() }; },
+      // Bouton qui lance la suite (l'animation part de lui) ; pid : passage
+      // de l'atelier des transitions (« continue » : équipe suivante ou finale).
+      from(el, pid){ pending = { el, pid, at:performance.now() }; },
       // Départ sans bouton : rectangle (coordonnées de l'écran) sur l'écran scr.
-      fromRect(rect, rad, scr){ pending = { rect, rad, scr, at:performance.now() }; },
-      // Une ouverture est en cours (pour décaler ce qui doit attendre l'arrivée).
-      running(){ return !!live; },
+      fromRect(rect, rad, scr, pid){ pending = { rect, rad, scr, pid, at:performance.now() }; },
+      // Temps restant (ms) de l'animation en cours, 0 s'il n'y en a pas (pour
+      // décaler ce qui doit attendre l'arrivée, comme le bond de l'échelle).
+      running(){
+        if(!live) return 0;
+        let m = 0;
+        live.anims.forEach(a => { const t = a.effect && a.effect.getComputedTiming(); if(t && a.currentTime != null) m = Math.max(m, t.endTime - a.currentTime); });
+        return Math.max(1, m);
+      },
       forget(){ pending = null; },
       // « Quitter » confirmé : le prochain retour au menu rentre dans le bouton.
       quit(){ quitting = true; },
@@ -6584,6 +6890,151 @@ function mdpMain(){
     inner._fbObs.unobserve(inner);
     inner._fbObs.observe(inner);
   }
+
+  // ---- Atelier des transitions (carte Testeurs) ----
+  // Une carte par passage : styles (un seul, ou plusieurs qui alternent avec
+  // « Varier »), vitesse. Toucher un style le montre dans le petit téléphone
+  // du haut ; on le voit ensuite en vrai en jouant.
+  (() => {
+    const ov = document.getElementById('trans-overlay');
+    const modal = ov.querySelector('.settings-modal');
+    const list = document.getElementById('tr-list');
+    const stage = document.getElementById('tr-stage');
+    const A = stage.querySelector('.tr-mini.a'), B = stage.querySelector('.tr-mini.b');
+    const miniBtn = stage.querySelector('.tr-mini-btn');
+    const note = document.getElementById('tr-preview-text');
+    const varied = {}; // cartes en mode « Varier » (plusieurs styles)
+    TRANS.PASSAGES.forEach(p => { varied[p.id] = TRANS.styles(p.id).length > 1; });
+
+    // ----- Aperçu -----
+    let pv = null;
+    function stopPreview(){
+      if(!pv) return;
+      clearTimeout(pv.t);
+      pv.anims.forEach(a => { try { a.cancel(); } catch(e){} });
+      pv.nodes.forEach(n => n.remove());
+      [A, B].forEach(el => { el.style.cssText = ''; });
+      pv = null;
+    }
+    function preview(style, k, label){
+      stopPreview();
+      B.style.display = 'block'; // l'écran d'arrivée (caché au repos)
+      const W = stage.clientWidth, H = stage.clientHeight;
+      const dim = document.createElement('div'); dim.className = 'tr-mini-dim';
+      const tube = document.createElement('div'); tube.className = 'tr-tube';
+      stage.insertBefore(tube, A); A.after(dim);
+      const nodes = [dim, tube];
+      const sr = stage.getBoundingClientRect(), br = miniBtn.getBoundingClientRect();
+      const r = { x:br.left - sr.left, y:br.top - sr.top, w:br.width, h:br.height };
+      let anims = [];
+      const D = TRANS.STYLES[style].d * k, EASE = 'cubic-bezier(.3,0,.1,1)';
+      if(style === 'fade'){
+        anims = [B.animate([{ opacity:0, transform:'translateY(6px)' }, { opacity:1, transform:'none' }], { duration:D, easing:'ease', fill:'both' })];
+      } else if(style === 'zoom'){
+        const s = Math.min(r.w / W, r.h / H);
+        const tx = (r.x + r.w / 2) - W / 2, ty = (r.y + r.h / 2) - H / 2;
+        const ins = `inset(${r.y}px ${W - r.x - r.w}px ${H - r.y - r.h}px ${r.x}px round 8px)`;
+        const sk = miniBtn.cloneNode(true); sk.className = 'tr-mini-btn tr-mini-skin';
+        Object.assign(sk.style, { left:r.x + 'px', top:r.y + 'px', width:r.w + 'px', height:r.h + 'px' });
+        stage.appendChild(sk); nodes.push(sk);
+        anims = [
+          B.animate([{ clipPath:ins }, { clipPath:'inset(0px 0px 0px 0px round 22px)' }], { duration:D, easing:EASE, fill:'both' }),
+          B.firstElementChild.animate([{ transform:`translate(${tx}px, ${ty}px) scale(${s})`, opacity:0 }, { opacity:0, offset:.08 }, { opacity:1, offset:.45 }, { transform:'none', opacity:1 }], { duration:D, easing:EASE, fill:'both' }),
+          sk.animate([{ left:r.x + 'px', top:r.y + 'px', width:r.w + 'px', height:r.h + 'px', opacity:1 }, { opacity:1, offset:.03 }, { opacity:0, offset:.3 }, { left:'0px', top:'0px', width:W + 'px', height:H + 'px', opacity:0 }], { duration:D, easing:EASE, fill:'both' }),
+          A.animate([{ transform:'scale(1)' }, { transform:'scale(.93)' }], { duration:D, easing:EASE, fill:'both' }),
+          dim.animate([{ opacity:0 }, { opacity:.55 }], { duration:D, easing:EASE, fill:'both' }),
+        ];
+      } else {
+        const y = r.y + r.h / 2;
+        const fx = TRANS_FX.forward(style, A, B, dim, tube, stage, { W, H, y, k, fixed:false });
+        anims = fx.anims; fx.nodes.forEach(n => nodes.push(n));
+      }
+      note.textContent = label + ' — ' + TRANS.STYLES[style].hint;
+      pv = { anims, nodes, t:0 };
+      const me = pv;
+      Promise.all(anims.map(a => a.finished)).then(() => {
+        if(pv !== me) return;
+        me.t = setTimeout(() => { if(pv === me) stopPreview(); }, 900);
+      }, () => {});
+    }
+
+    // ----- Cartes -----
+    const speedLabel = v => (TRANS.SPEEDS.find(x => x[0] === v) || [, 'Normal'])[1];
+    function chip(text, on, onTap, cls){
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'tr-chip' + (on ? ' selected' : '') + (cls ? ' ' + cls : '');
+      b.textContent = text;
+      b.addEventListener('click', onTap);
+      return b;
+    }
+    function render(){
+      // Vitesse générale
+      const g = document.getElementById('tr-speed-all');
+      g.innerHTML = '';
+      TRANS.SPEEDS.forEach(([v, label]) => g.appendChild(chip(label, TRANS.globalSpeed() === v, () => {
+        TRANS.setGlobalSpeed(v); render();
+        preview('zoom', TRANS.k('start'), 'Vitesse ' + label.toLowerCase());
+      })));
+      list.innerHTML = '';
+      TRANS.PASSAGES.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'card pset-card tr-card';
+        const sel = TRANS.styles(p.id);
+        const def = p.def.map(s => TRANS.STYLES[s].label).join(', ');
+        card.innerHTML = `<div class="tr-head"><div><div class="tr-title">${escapeHtml(p.label)}</div><div class="tr-sub">${escapeHtml(p.sub)}</div></div></div>
+          <div class="tr-chips tr-styles"></div><div class="tr-line"><span class="set-label">Vitesse</span><div class="tr-chips tr-speeds"></div></div>
+          <div class="tr-foot">Avant : ${escapeHtml(def)}</div>`;
+        const head = card.querySelector('.tr-head');
+        head.appendChild(chip('Varier', varied[p.id], () => {
+          varied[p.id] = !varied[p.id];
+          if(!varied[p.id]) TRANS.setStyles(p.id, [TRANS.styles(p.id)[0]]);
+          render();
+        }, 'tr-vary'));
+        const st = card.querySelector('.tr-styles');
+        p.styles.forEach(s => st.appendChild(chip(TRANS.STYLES[s].label, sel.includes(s), () => {
+          let next;
+          if(varied[p.id]){
+            next = sel.includes(s) ? sel.filter(x => x !== s) : sel.concat(s);
+            if(!next.length) next = [s];
+          } else next = [s];
+          TRANS.setStyles(p.id, next);
+          render();
+          preview(s, TRANS.k(p.id), p.label);
+        })));
+        const sp = card.querySelector('.tr-speeds');
+        const cur = TRANS.speedOf(p.id);
+        sp.appendChild(chip('Auto', !cur, () => { TRANS.setSpeed(p.id, null); render(); preview(TRANS.styles(p.id)[0], TRANS.k(p.id), p.label); }));
+        TRANS.SPEEDS.forEach(([v, label]) => sp.appendChild(chip(label, cur === v, () => {
+          TRANS.setSpeed(p.id, v); render(); preview(TRANS.styles(p.id)[0], TRANS.k(p.id), p.label + ', ' + label.toLowerCase());
+        })));
+        if(sel.length > 1) card.querySelector('.tr-foot').textContent = `En alternance : ${sel.map(s => TRANS.STYLES[s].label).join(' → ')}`;
+        list.appendChild(card);
+      });
+    }
+
+    function close(){ stopPreview(); ov.classList.remove('visible'); }
+    const closeZoom = () => IOS_ZOOM.closeOverlay(ov, modal, close);
+    document.getElementById('btn-open-trans').addEventListener('click', e => {
+      render();
+      ov.classList.add('visible');
+      modal.scrollTop = 0;
+      IOS_ZOOM.openOverlay(e.currentTarget, ov, modal);
+    });
+    document.getElementById('btn-close-trans').addEventListener('click', closeZoom);
+    document.getElementById('btn-tr-reset').addEventListener('click', () => {
+      TRANS.reset();
+      TRANS.PASSAGES.forEach(p => { varied[p.id] = false; });
+      render();
+      note.textContent = 'Tout est revenu comme avant.';
+    });
+    document.getElementById('btn-tr-copy').addEventListener('click', () => {
+      const txt = TRANS.summary();
+      const done = () => { note.textContent = 'Choix copiés : colle-les-moi dans la conversation.'; };
+      try { navigator.clipboard.writeText(txt).then(done, () => { note.textContent = txt; }); }
+      catch(e){ note.textContent = txt; }
+    });
+    stage.addEventListener('click', () => preview(TRANS.styles('ready')[0], TRANS.k('ready'), "C'est parti"));
+  })();
 
   // ---- Les règles : page à part, comme Paramètres et Palmarès (Fabien, 2026-10-02) ----
   (() => {
@@ -7629,7 +8080,7 @@ function mdpMain(){
     // "C'est parti !" — pas au tap sur le mot (qui, lui, ne fait que démarrer le chrono).
     const turn = state.currentTurn;
     if(turn.kind === 'qualif' || turn.kind === 'final' || turn.kind === 'training') SFX.roundStart();
-    if(ROUND_ZOOM.isOn()) IOS_ZOOM.from(document.getElementById('btn-ready')); // essai : la manche grandit depuis « C'est parti »
+    IOS_ZOOM.from(document.getElementById('btn-ready'), turn.kind === 'final' ? 'readyFinal' : 'ready'); // passage « C'est parti » de l'atelier
     goToPlay();
   });
 
@@ -8557,15 +9008,15 @@ function mdpMain(){
     const pillEl = document.getElementById('word-pill');
     onDone = () => {
       if(gen !== state.gen) return; // partie quittée entretemps : on ne rouvre rien
-      // Essai ROUND_ZOOM : l'écran suivant naît du dernier point de lumière du
-      // cadre refermé (sa forme juste avant de s'éteindre, voir WB_GEO).
-      if(ROUND_ZOOM.isOn()){
-        const r = pillEl.getBoundingClientRect();
-        if(r.width && r.height){
-          const hh = r.height * .55, ww = Math.max(r.width * .115, hh);
-          const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-          IOS_ZOOM.fromRect({ left:cx - ww / 2, top:cy - hh / 2, right:cx + ww / 2, bottom:cy + hh / 2, width:ww, height:hh }, hh / 2, 'play');
-        }
+      // L'écran suivant part du dernier point de lumière du cadre refermé (sa
+      // forme juste avant de s'éteindre, voir WB_GEO), selon le style choisi
+      // dans l'atelier (fondu par défaut).
+      const r = pillEl.getBoundingClientRect();
+      if(r.width && r.height){
+        const hh = r.height * .55, ww = Math.max(r.width * .115, hh);
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const pid = state.currentTurn && state.currentTurn.kind === 'final' ? 'palierEnd' : 'roundEnd';
+        IOS_ZOOM.fromRect({ left:cx - ww / 2, top:cy - hh / 2, right:cx + ww / 2, bottom:cy + hh / 2, width:ww, height:hh }, hh / 2, 'play', pid);
       }
       done();
     };
@@ -8924,7 +9375,7 @@ function mdpMain(){
   }
 
   document.getElementById('btn-next-turn').addEventListener('click', e => {
-    IOS_ZOOM.from(e.currentTarget); // l'écran suivant grandira depuis « Continuer »
+    IOS_ZOOM.from(e.currentTarget, 'continue'); // l'écran suivant part de « Continuer »
     advanceAfterTurn();
   });
   // Passe à la manche suivante (ou à la désignation des finalistes). Sert aussi
@@ -8960,7 +9411,7 @@ function mdpMain(){
     // Même son de lancement que "C'est parti" : "Manche suivante" relance la
     // manche directement, sans repasser par l'écran d'avant-manche.
     SFX.roundStart();
-    if(ROUND_ZOOM.isOn()) IOS_ZOOM.from(document.getElementById('btn-training-next')); // essai : la manche grandit depuis ce bouton
+    IOS_ZOOM.from(document.getElementById('btn-training-next'), 'ready'); // passage « C'est parti » de l'atelier
     goToPlay();
   });
   document.getElementById('btn-training-stop').addEventListener('click', () => {
@@ -9624,7 +10075,7 @@ function mdpMain(){
 
   document.getElementById('btn-start-final').addEventListener('click', () => {
     const btn = document.getElementById('btn-start-final');
-    IOS_ZOOM.from(btn); // après la montée de l'échelle, le palier grandit depuis ce bouton
+    IOS_ZOOM.from(btn, 'palier'); // après la montée de l'échelle, le palier part de ce bouton
     btn.disabled = true;
     const gen = state.gen;
     playLadderReveal('finalist-ladder', 1, () => {
@@ -9719,7 +10170,7 @@ function mdpMain(){
           btnStopFinal.disabled = false;
           JOKER_TOKEN.appear();
         });
-      }, IOS_ZOOM.running() ? 600 : 450); // laisse l'écran finir d'apparaître (fondu de 0,35 s, ou ouverture façon iPhone de 0,52 s)
+      }, Math.max(450, IOS_ZOOM.running() + 80)); // laisse l'écran finir d'apparaître (fondu de 0,35 s, ou la transition choisie)
     } else {
       const gen = state.gen;
       setTimeout(() => { if(gen === state.gen) JOKER_TOKEN.appear(); }, 450);
@@ -9730,7 +10181,7 @@ function mdpMain(){
     const nextLevel = state.currentLevel + 1;
     const btnContinue = document.getElementById('btn-continue-final');
     const btnStop = document.getElementById('btn-stop-final');
-    IOS_ZOOM.from(btnContinue); // après la montée de l'échelle, le palier grandit depuis ce bouton
+    IOS_ZOOM.from(btnContinue, 'palier'); // après la montée de l'échelle, le palier part de ce bouton
     btnContinue.disabled = true;
     btnStop.disabled = true;
     JOKER_TOKEN.disable(); // sinon le joker touché pendant la révélation ouvrait l'aperçu par-dessus le palier
@@ -9741,7 +10192,7 @@ function mdpMain(){
     });
   });
   document.getElementById('btn-stop-final').addEventListener('click', e => {
-    IOS_ZOOM.from(e.currentTarget); // l'écran de fin grandit depuis « S'arrêter »
+    IOS_ZOOM.from(e.currentTarget, 'stop'); // l'écran de fin part de « S'arrêter »
     JOKER_TOKEN.disable();
     state.endedByStop = true;
     // L'équipe repart avec l'argent : le son de fin des qualifs, seul (on
@@ -10092,7 +10543,7 @@ function mdpMain(){
   // "Rejouer" : même partie, mêmes réglages, sans repasser par le menu.
   // "Changer les réglages" : retour au menu, comme avant.
   document.getElementById('btn-replay').addEventListener('click', e => {
-    IOS_ZOOM.from(e.currentTarget); // la nouvelle partie grandit depuis « Rejouer »
+    IOS_ZOOM.from(e.currentTarget, 'replay'); // la nouvelle partie part de « Rejouer »
     document.getElementById('screen-play').classList.remove('finale-pending-start');
     state.gen += 1; // coupe tout ce qui resterait en vol de la partie finie
     launchConfiguredGame();
