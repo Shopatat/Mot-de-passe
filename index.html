@@ -2259,6 +2259,13 @@
           </div>
         </div>
         <div class="set-row pset-row">
+          <span class="set-label">Manche</span>
+          <div class="toggle-row" id="tester-roundzoom">
+            <div class="toggle-btn" data-val="off">Fondu</div>
+            <div class="toggle-btn" data-val="on">Comme l'iPhone</div>
+          </div>
+        </div>
+        <div class="set-row pset-row">
           <span class="set-label">Outils</span>
           <div class="toggle-row">
             <button type="button" class="toggle-btn" id="btn-debug-copy-settings">Copier l'audio</button>
@@ -3602,6 +3609,19 @@ function mdpMain(){
   // mots. Mémorisé d'une session à l'autre, d'où le bandeau "MODE TEST" affiché
   // tant qu'il est actif (voir initTestWordMode).
   const TEST_WORD = 'TEST';
+  // Essai (2026-10-03, carte Testeurs) : arrivée sur la manche (« C'est parti »,
+  // « Manche suivante ») et sortie de manche façon iPhone. Le cadre du mot
+  // garde exactement son apparition et sa fermeture : la transition se fait
+  // avant qu'il naisse, et après qu'il s'est refermé (l'écran suivant naît
+  // de son dernier point de lumière). Coupé par défaut (fondu habituel).
+  const ROUND_ZOOM = (function(){
+    let on = false;
+    try { on = localStorage.getItem('mdp_round_zoom') === '1'; } catch(e){}
+    return {
+      isOn(){ return on; },
+      set(v){ on = !!v; try { localStorage.setItem('mdp_round_zoom', on ? '1' : '0'); } catch(e){} },
+    };
+  })();
   const TEST_WORD_MODE = (function(){
     let on = false;
     try { on = localStorage.getItem('mdp_test_word_mode') === '1'; } catch(e){}
@@ -5537,6 +5557,17 @@ function mdpMain(){
     btn.addEventListener('click', open);
   })();
 
+  (function initRoundZoom(){
+    const group = document.getElementById('tester-roundzoom');
+    const render = () => selectToggle('tester-roundzoom', ROUND_ZOOM.isOn() ? 'on' : 'off');
+    group.addEventListener('click', e => {
+      const b = e.target.closest('.toggle-btn');
+      if(!b) return;
+      ROUND_ZOOM.set(b.dataset.val === 'on'); render();
+    });
+    render();
+  })();
+
   (function initTestWordMode(){
     const group = document.getElementById('tester-wordmode');
     const banner = document.getElementById('test-mode-banner');
@@ -5722,7 +5753,9 @@ function mdpMain(){
     let live = null;     // animation en cours
     // Écrans qu'un bouton de la partie peut ouvrir en grandissant (ceux qui
     // arrivent par le cadre du mot, la manche, gardent leur fondu pour l'instant).
-    const STEP_TO = ['handoff', 'finalist', 'final', 'buzzIntro', 'soloTieChoice'];
+    const STEP_TO = ['handoff', 'finalist', 'final', 'buzzIntro', 'soloTieChoice',
+      // Manche (essai ROUND_ZOOM : le départ n'est posé que si l'interrupteur est sur iPhone)
+      'play', 'summary', 'trainingSummary', 'decision'];
     const overlaySrc = new Map();
     const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     // Rectangle du bouton s'il est à l'écran (sinon pas d'animation).
@@ -5898,14 +5931,15 @@ function mdpMain(){
       // Dans la partie (Continuer, Jouer pour…, S'arrêter, Rejouer) : le bouton
       // touché devient l'écran suivant, l'écran quitté recule (copie figée,
       // prise ici tant qu'il est encore affiché, bouton caché dedans).
+      // Sans bouton (fin de manche) : départ d'un rectangle donné (p.rect).
       if(prev !== 'setup' && name !== 'setup' && STEP_TO.includes(name) && p && !reduced() &&
-         (performance.now() - p.at < 60000) && screens[prev].contains(p.el)){
-        const r = shown(p.el);
+         (performance.now() - p.at < 60000) && (p.el ? screens[prev].contains(p.el) : p.scr === prev)){
+        const r = p.el ? shown(p.el) : p.rect;
         if(r){
           const back = copyOf(screens[prev]);
-          const tw = twinOf(screens[prev], back, p.el);
+          const tw = p.el && twinOf(screens[prev], back, p.el);
           if(tw) tw.style.visibility = 'hidden';
-          return { kind:'step', src:p.el, r, rad:radius(p.el), back };
+          return { kind:'step', src:p.el || null, r, rad:p.el ? radius(p.el) : p.rad, back };
         }
       }
       // Retour du premier écran, ou « Quitter » en pleine partie : l'écran
@@ -5952,16 +5986,17 @@ function mdpMain(){
         document.body.appendChild(shell);
         ambient(shell);
         shell.appendChild(copy);
-        const sk = skin(z.src, z.r), b = shell.getBoundingClientRect();
+        const sk = z.src ? skin(z.src, z.r) : null, b = shell.getBoundingClientRect();
         const anims = [
           shell.animate([{ clipPath:inset(z.r, b, z.rad) }, { clipPath:FULL }], { duration:OPEN, easing:EASE, fill:'forwards' }),
           copy.animate(GROW_IN(intoBtn(z.r, b, copy)), { duration:OPEN, easing:EASE, fill:'forwards' }),
-          sk.animate([box(z.r, z.rad), screenBox()], { duration:OPEN, easing:EASE, fill:'forwards' }),
-          sk.animate(SKIN_OUT, { duration:OPEN, easing:EASE, fill:'forwards' }),
           z.back.animate([{ transform:'scale(1)' }, { transform:'scale(.93)' }], { duration:OPEN, easing:EASE, fill:'forwards' }),
           dim.animate([{ opacity:0 }, { opacity:.55 }], { duration:OPEN, easing:EASE, fill:'forwards' }),
         ];
-        track(anims, [back, shell, sk], null);
+        if(sk) anims.push(
+          sk.animate([box(z.r, z.rad), screenBox()], { duration:OPEN, easing:EASE, fill:'forwards' }),
+          sk.animate(SKIN_OUT, { duration:OPEN, easing:EASE, fill:'forwards' }));
+        track(anims, [back, shell, sk].filter(Boolean), null);
         return;
       }
       if(z.kind === 'open'){
@@ -6050,6 +6085,10 @@ function mdpMain(){
     return {
       // Bouton du menu qui lance la suite (l'animation part de lui).
       from(el){ pending = { el, at:performance.now() }; },
+      // Départ sans bouton : rectangle (coordonnées de l'écran) sur l'écran scr.
+      fromRect(rect, rad, scr){ pending = { rect, rad, scr, at:performance.now() }; },
+      // Une ouverture est en cours (pour décaler ce qui doit attendre l'arrivée).
+      running(){ return !!live; },
       forget(){ pending = null; },
       // « Quitter » confirmé : le prochain retour au menu rentre dans le bouton.
       quit(){ quitting = true; },
@@ -7590,6 +7629,7 @@ function mdpMain(){
     // "C'est parti !" — pas au tap sur le mot (qui, lui, ne fait que démarrer le chrono).
     const turn = state.currentTurn;
     if(turn.kind === 'qualif' || turn.kind === 'final' || turn.kind === 'training') SFX.roundStart();
+    if(ROUND_ZOOM.isOn()) IOS_ZOOM.from(document.getElementById('btn-ready')); // essai : la manche grandit depuis « C'est parti »
     goToPlay();
   });
 
@@ -8514,9 +8554,22 @@ function mdpMain(){
   function playClosingChevronTransition(onDone){
     state.roundClosing = true; syncPauseBtn(); // plus de pause pendant la fermeture
     const gen = state.gen, done = onDone;
-    onDone = () => { if(gen === state.gen) done(); }; // partie quittée entretemps : on ne rouvre rien
-    const isFinaleStyle = state.currentTurn && state.currentTurn.style === 'clues';
     const pillEl = document.getElementById('word-pill');
+    onDone = () => {
+      if(gen !== state.gen) return; // partie quittée entretemps : on ne rouvre rien
+      // Essai ROUND_ZOOM : l'écran suivant naît du dernier point de lumière du
+      // cadre refermé (sa forme juste avant de s'éteindre, voir WB_GEO).
+      if(ROUND_ZOOM.isOn()){
+        const r = pillEl.getBoundingClientRect();
+        if(r.width && r.height){
+          const hh = r.height * .55, ww = Math.max(r.width * .115, hh);
+          const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          IOS_ZOOM.fromRect({ left:cx - ww / 2, top:cy - hh / 2, right:cx + ww / 2, bottom:cy + hh / 2, width:ww, height:hh }, hh / 2, 'play');
+        }
+      }
+      done();
+    };
+    const isFinaleStyle = state.currentTurn && state.currentTurn.style === 'clues';
     if(isFinaleStyle){
       // Fin de manche : même bascule aller-retour, mais rien ne revient au
       // centre — le cadre se referme une fois les chevrons retirés.
@@ -8907,6 +8960,7 @@ function mdpMain(){
     // Même son de lancement que "C'est parti" : "Manche suivante" relance la
     // manche directement, sans repasser par l'écran d'avant-manche.
     SFX.roundStart();
+    if(ROUND_ZOOM.isOn()) IOS_ZOOM.from(document.getElementById('btn-training-next')); // essai : la manche grandit depuis ce bouton
     goToPlay();
   });
   document.getElementById('btn-training-stop').addEventListener('click', () => {
@@ -9665,7 +9719,7 @@ function mdpMain(){
           btnStopFinal.disabled = false;
           JOKER_TOKEN.appear();
         });
-      }, 450); // laisse l'écran finir d'apparaître (fondu de 0,35 s)
+      }, IOS_ZOOM.running() ? 600 : 450); // laisse l'écran finir d'apparaître (fondu de 0,35 s, ou ouverture façon iPhone de 0,52 s)
     } else {
       const gen = state.gen;
       setTimeout(() => { if(gen === state.gen) JOKER_TOKEN.appear(); }, 450);
