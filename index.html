@@ -11690,21 +11690,10 @@ function mdpMain(){
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     });
     // Nouvelle version du jeu arrivée pendant le lancement (la page est
-    // d'abord servie depuis le téléphone, voir sw.js) : si on est encore sur
-    // l'écran de chargement, on recharge tout de suite pour l'avoir ; une fois
-    // JOUER touché, elle attendra le prochain lancement. Une seule fois par
-    // minute, au cas où.
-    navigator.serviceWorker.onmessage = (e) => {
-      if(!e.data || e.data.type !== 'mdp-update') return;
-      const play = document.getElementById('boot-play');
-      if(!document.body.classList.contains('booting') || (play && play.dataset.left)) return;
-      try {
-        const last = +sessionStorage.getItem('mdp_update_reload') || 0;
-        if(Date.now() - last < 60000) return;
-        sessionStorage.setItem('mdp_update_reload', Date.now());
-      } catch(_){}
-      location.reload();
-    };
+    // d'abord servie depuis le téléphone, voir sw.js) : elle est gardée et
+    // sera là au prochain lancement. Plus de rechargement immédiat : entre
+    // les deux pages, l'iPhone montrait un écran gris (saccade vue par Fabien
+    // le 2026-10-08).
   }
 </script>
 </body>

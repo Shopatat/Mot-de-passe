@@ -50,9 +50,8 @@ self.addEventListener('activate', (event) => {
 // Fabien le 2026-10-03). En même temps, on redemande la page au serveur
 // ("no-cache" : sinon le cache HTTP pouvait resservir l'ancienne jusqu'à
 // 10 min après un déploiement, GitHub Pages autorisant max-age=600). Si elle a
-// changé, la nouvelle est gardée et la page est prévenue ("mdp-update") : elle
-// se recharge si on est encore sur l'écran de chargement, sinon la nouvelle
-// version sera là au prochain lancement.
+// changé, la nouvelle est gardée et sera là au prochain lancement (pas de
+// rechargement immédiat : l'iPhone montrait un écran gris entre les deux pages).
 // Manifest et sw.js restent vérifiés en ligne d'abord (ils ne retardent pas
 // l'affichage). Premier lancement (rien en cache) : réseau, comme avant.
 const NETWORK_FIRST = ['/manifest.json', '/sw.js'];
@@ -63,7 +62,7 @@ function isPage(request, url){
     url.pathname === new URL('./', self.registration.scope).pathname;
 }
 
-function freshPage(request, cached, clientId){
+function freshPage(request, cached){
   return fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' }).then(async (res) => {
     if(!res || !res.ok) return res;
     if(!cached){
@@ -74,11 +73,6 @@ function freshPage(request, cached, clientId){
     if(await differs(cached, res.clone())){
       const cache = await caches.open(CACHE_NAME);
       await cache.put(request, res.clone());
-      // Prévenir la page qui s'ouvre (elle n'existe peut-être pas encore :
-      // clients.get attend qu'elle soit prête) et les autres déjà ouvertes.
-      const wins = await self.clients.matchAll({ type: 'window' });
-      const opening = clientId ? await self.clients.get(clientId) : null;
-      new Set([opening, ...wins]).forEach((c) => c && c.postMessage({ type: 'mdp-update' }));
     }
     return res;
   });
@@ -99,7 +93,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match(event.request, { ignoreSearch: true }).then((cached) => {
         // Un double pour comparer : la réponse servie est lue par la page.
-        const network = freshPage(event.request, cached && cached.clone(), event.resultingClientId);
+        const network = freshPage(event.request, cached && cached.clone());
         if (cached) {
           event.waitUntil(network.catch(() => {}));
           return cached;
