@@ -7876,7 +7876,7 @@ function mdpMain(){
     return h;
   }
   function renderStatDuos(S){
-    if(!S.duos.length) return '<p class="palmares-empty">Un duo apparaît ici après 2 manches joués ensemble.</p>';
+    if(!S.duos.length) return '<p class="palmares-empty">Un duo apparaît ici après 2 manches jouées ensemble.</p>';
     return `<div class="pst-card">${S.duos.map((d, i) => `<div class="pst-duo"><span class="r">${i + 1}</span><span class="w">${escapeHtml(S.nameOf(d.g))}<i>→</i>${escapeHtml(S.nameOf(d.v))}</span><span class="s">${statFr(d.avg)}</span>
       <span class="m">${d.f.length} manches${d.t.length ? ' · 5 sur 5 en ' + Math.round(Math.min(...d.t)) + ' s' : ''}</span></div>`).join('')}</div>
       <p class="pst-note">Mots trouvés par manche, en moyenne (au moins 2 manches ensemble). Le premier nom fait deviner.</p>`;
