@@ -390,14 +390,22 @@
   .set-label{ font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-dim); }
   .set-row .toggle-row{ flex-wrap:nowrap; gap:6px; }
   .set-row .toggle-btn{ min-width:0; padding:8px 4px; font-size:12.5px; }
-  /* Nombre de manches conseillé : liseré en chrome doré au lieu de gris,
-     or brillant quand il est sélectionné (Fabien, 2026-09-30, idée E). */
-  #rounds-group .toggle-btn.is-default{
+  /* Type d'entraînement : « Sans chrono » tient sur une ligne même en 375 px. */
+  #trainkind-group .toggle-btn{ white-space:nowrap; padding-left:2px; padding-right:2px; }
+  #trainkind-group .toggle-btn[data-val="free"]{ flex:1.4; }
+  /* Finale seule : lignes figées (voir lockRowsForFinale) ; le « 2 » reste net. */
+  .set-row .toggle-row.locked{ pointer-events:none; }
+  .set-row .toggle-row.locked .toggle-btn:not(.selected){ opacity:.3; }
+  #rounds-group.locked .toggle-btn{ opacity:.3; }
+  /* Choix conseillé (nombre de manches, mode Émission) : liseré en chrome doré
+     au lieu de gris, or brillant quand il est sélectionné (Fabien, 2026-09-30,
+     idée E ; étendu au mode et au type d'entraînement le 2026-10-09). */
+  #rounds-group .toggle-btn.is-default, #mode-group .toggle-btn.is-default, #trainkind-group .toggle-btn.is-default{
     background:
       linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
       linear-gradient(180deg, #7a6224, #4a3b14 48%, #2e250c 52%, #6b5620) border-box;
   }
-  #rounds-group .toggle-btn.is-default.selected{
+  #rounds-group .toggle-btn.is-default.selected, #mode-group .toggle-btn.is-default.selected, #trainkind-group .toggle-btn.is-default.selected{
     background:
       linear-gradient(180deg, var(--bg-alt), #05070c) padding-box,
       linear-gradient(180deg, #fff3c4, #f2c94c 46%, #a57d1c 54%, #f6dc8a) border-box;
@@ -1728,6 +1736,12 @@
   }
   .final-rank .name{ font-weight:800; flex:1; font-size:13px; }
   .final-rank .pts{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:18px; }
+  /* Podium des qualifs seules : médaille, nom (détail des points en solo), score. */
+  .podium-row{ gap:12px; }
+  .podium-row .medal{ width:26px; text-align:center; font-size:20px; line-height:1; color:var(--text-dim); font-weight:800; }
+  .podium-row .name small{ display:block; font-size:11.5px; font-weight:600; color:var(--text-dim); margin-top:2px; }
+  .podium-row.off{ background:transparent; padding-top:8px; padding-bottom:8px; }
+  .podium-row.off .medal{ font-size:13px; }
   .footer-note{ text-align:center; color:var(--text-dim); font-size:11px; margin-top:2px; }
   #play-hint{ min-height:2.8em; line-height:1.4; }
   /* Consigne de la finale, sous le mot : grand texte crème au halo chaud (comme
@@ -2531,11 +2545,22 @@
     <!-- Réglages de la partie : une seule carte, une ligne par question (menu
          compact, pour que « Lancer la partie » tienne dans l'écran d'un iPhone). -->
     <div class="card set-card">
+      <!-- Seule l'Émission compte (palmarès, stats). L'entraînement a trois
+           types : les qualifs chronométrées (podium), les manches sans chrono
+           (mode libre), la finale avec le duo de son choix (Fabien, 2026-10-09). -->
       <div class="set-row">
         <span class="set-label">Mode</span>
         <div class="toggle-row" id="mode-group">
-          <div class="toggle-btn selected" data-val="full">Partie complète</div>
+          <div class="toggle-btn selected is-default" data-val="emission">Émission</div>
           <div class="toggle-btn" data-val="training">Entraînement</div>
+        </div>
+      </div>
+      <div class="set-row" id="trainkind-row" style="display:none;">
+        <span class="set-label">Type</span>
+        <div class="toggle-row" id="trainkind-group">
+          <div class="toggle-btn" data-val="qualifs">Qualifs</div>
+          <div class="toggle-btn selected is-default" data-val="free">Sans chrono</div>
+          <div class="toggle-btn" data-val="finale">Finale</div>
         </div>
       </div>
       <div class="set-rows" id="full-mode-rows">
@@ -2574,7 +2599,7 @@
 
     <div id="full-mode-block">
       <div class="card names-card">
-        <label class="field-label" style="text-align:center;">Joueurs</label>
+        <label class="field-label" style="text-align:center;" id="names-card-label">Joueurs</label>
         <div id="player-fields"></div>
       </div>
     </div>
@@ -2791,7 +2816,7 @@
 
   <!-- FINALIST ANNOUNCE -->
   <section class="screen" id="screen-finalist">
-    <div class="phase-tag final">La finale</div>
+    <div class="phase-tag final" id="finalist-tag">La finale</div>
     <div class="card handoff-wrap">
       <div class="summary-icon">⭐</div>
       <div class="handoff-label" id="finalist-label">Se qualifient pour la finale</div>
@@ -5811,6 +5836,7 @@ function mdpMain(){
   // ---------- STATE ----------
   const state = {
     mode: 'full',        // 'full' | 'training'
+    format: 'emission',  // partie complète : 'emission' (qualifs + finale) | 'qualifs' (podium) | 'finale' (finale seule)
     subMode: 'team',      // 'team' | 'solo'
     subModeForcedSolo: false, // true si passé en solo automatiquement (nb impair), pas par choix
     teamAssignment: 'predefined', // 'predefined' | 'random'
@@ -7246,17 +7272,61 @@ function mdpMain(){
     later();
   })();
 
-  // Partie complète : lignes de réglages + noms ; entraînement : le texte du mode libre.
-  function showModeBlocks(full){
-    document.getElementById('full-mode-rows').style.display = full ? '' : 'none';
-    document.getElementById('full-mode-block').style.display = full ? '' : 'none';
-    document.getElementById('training-mode-block').style.display = full ? 'none' : '';
+  // Menu : Émission ou Entraînement, et le type d'entraînement. Dans le moteur :
+  // Émission = mode 'full' + format 'emission' ; entraînement Qualifs = 'full' +
+  // 'qualifs' (podium) ; Finale = 'full' + 'finale' (duo du menu) ; Sans chrono
+  // = mode 'training' (le mode libre). Seule l'Émission compte au palmarès et
+  // dans les stats. Le menu repart sur Émission à chaque ouverture de l'appli.
+  const menuSel = { mode:'emission', kind:'free' };
+  const isFinaleOnly = () => state.mode === 'full' && state.format === 'finale';
+  const isTrainingGame = () => state.mode === 'training' || state.format !== 'emission';
+  function applyMenuSel(){
+    if(menuSel.mode === 'emission'){ state.mode = 'full'; state.format = 'emission'; }
+    else if(menuSel.kind === 'free'){ state.mode = 'training'; }
+    else { state.mode = 'full'; state.format = menuSel.kind; }
   }
-  wireToggleGroup('mode-group', val => {
-    state.mode = val;
-    showModeBlocks(val === 'full');
-    document.getElementById('btn-start-game').textContent = (val === 'training') ? "Commencer l'entraînement" : "Lancer la partie";
-  });
+  // Entraînement Finale : les lignes restent visibles mais figées (Fabien,
+  // 2026-10-09) : 2 joueurs, en duo, pas de manches ; seuls les prénoms se
+  // changent. On n'y touche qu'à l'écran : state.playerCount, subMode et les
+  // manches restent ceux de l'émission et reviennent tels quels en sortant.
+  function lockRowsForFinale(lock){
+    const counts = document.querySelectorAll('#playercount-group .toggle-btn');
+    if(lock){
+      counts.forEach(b => { b.classList.toggle('selected', b.dataset.val === '2'); b.classList.toggle('disabled', b.dataset.val !== '2'); });
+      selectToggle('submode-group', 'team');
+      document.querySelectorAll('#rounds-group .toggle-btn').forEach(b => b.classList.remove('selected'));
+      document.getElementById('rounds-note').textContent = `La finale : ${PALIERS.length} paliers, de ${euro(PALIERS[0].gain)} à ${euro(PALIERS[PALIERS.length-1].gain)}`;
+      document.getElementById('team-assignment-card').style.display = 'none';
+    } else {
+      counts.forEach(b => b.classList.remove('disabled'));
+      selectToggle('playercount-group', String(state.playerCount));
+      const teamImpossible = state.playerCount % 2 === 1 || state.playerCount < 4;
+      document.querySelector('#submode-group .toggle-btn[data-val="team"]').classList.toggle('disabled', teamImpossible);
+      selectToggle('submode-group', state.subMode);
+      document.getElementById('team-assignment-card').style.display = (state.subMode === 'team') ? '' : 'none';
+      renderRoundsRow();
+    }
+    ['playercount-group', 'submode-group', 'rounds-group'].forEach(id => document.getElementById(id).classList.toggle('locked', lock));
+  }
+  function showModeBlocks(){
+    const training = state.mode === 'training', finaleOnly = isFinaleOnly();
+    const wasLocked = document.getElementById('submode-group').classList.contains('locked');
+    if(finaleOnly !== wasLocked) lockRowsForFinale(finaleOnly);
+    document.getElementById('trainkind-row').style.display = menuSel.mode === 'training' ? '' : 'none';
+    document.getElementById('full-mode-rows').style.display = training ? 'none' : '';
+    document.getElementById('full-mode-block').style.display = training ? 'none' : '';
+    document.getElementById('training-mode-block').style.display = training ? '' : 'none';
+    document.getElementById('names-card-label').textContent = finaleOnly ? 'Le duo de la finale' : 'Joueurs';
+    document.getElementById('btn-start-game').textContent = menuSel.mode === 'training' ? "Commencer l'entraînement" : "Lancer la partie";
+  }
+  function onMenuSelChange(){
+    const wasFinale = isFinaleOnly();
+    applyMenuSel();
+    showModeBlocks();
+    if(wasFinale !== isFinaleOnly()) renderPlayerFields(); // 2 champs en finale, sinon tous les joueurs
+  }
+  wireToggleGroup('mode-group', val => { menuSel.mode = val; onMenuSelChange(); });
+  wireToggleGroup('trainkind-group', val => { menuSel.kind = val; onMenuSelChange(); });
 
   wireToggleGroup('playercount-group', val => {
     const prevCount = state.playerCount;
@@ -7302,7 +7372,10 @@ function mdpMain(){
   function renderPlayerFields(){
     const container = document.getElementById('player-fields');
     container.innerHTML = "";
-    const N = state.playerCount;
+    // Finale seule : un seul duo, présenté comme une équipe (Fait deviner ⇄
+    // Devine), dans les deux premiers champs (les mêmes que l'équipe 1).
+    const finaleOnly = isFinaleOnly();
+    const N = finaleOnly ? 2 : state.playerCount;
 
     // Équipes prédéfinies et chacun pour soi partagent la même grille : la
     // rangée r contient les joueurs 2r (à gauche) et 2r+1 (à droite), soit en
@@ -7311,7 +7384,7 @@ function mdpMain(){
     // chaque colonne échange avec la rangée du dessus, sans toucher au reste.
     // En chacun pour soi la place compte aussi (couleur, ordre de passage) ;
     // en équipes aléatoires elle ne sert à rien, donc pas de boutons.
-    const isTeam = state.subMode === 'team' && state.teamAssignment === 'predefined';
+    const isTeam = finaleOnly || (state.subMode === 'team' && state.teamAssignment === 'predefined');
     const withSwaps = isTeam || state.subMode === 'solo';
     const inputs = [];
     const cellId = i => isTeam ? `team${i >> 1}-${i % 2 ? 'guesser' : 'giver'}` : `player${i}`;
@@ -7546,6 +7619,7 @@ function mdpMain(){
       ? `${cur} manches par équipe · environ ${total} min` // « manche » comme en jeu (Manche 1 sur 4)
       : `Chacun fait deviner ${cur} fois · ${total} duos · environ ${total} min`;
     document.getElementById('rounds-note').textContent = note;
+    if(isFinaleOnly()) lockRowsForFinale(true); // finale seule : pas de manches, ligne figée
   }
 
   // ---- Réglages du menu gardés d'une ouverture à l'autre ----
@@ -7604,7 +7678,7 @@ function mdpMain(){
     'turnQueue', 'currentTurnIndex', 'soloFirstGiver', 'buzz', 'finaleGiverName', 'finaleGuesserName',
     'finaleColorIdx', 'inFinale', 'currentLevel', 'bank', 'safeBank', 'jokerAvailable', 'jokerUsed',
     'finalHistory', 'endedByStop', 'peekedPool', 'peekedLevel', 'wordsFound', 'wordsFailed', 'pool',
-    'roundsTeam', 'roundsSolo', 'wordsShown', 'gameId'];
+    'roundsTeam', 'roundsSolo', 'wordsShown', 'gameId', 'format'];
   // where : { at:'handoff'|'afterTurn'|'buzz'|'finalist'|'decision', ...détails }
   function saveGameProgress(where){
     if(state.mode !== 'full' || state.isDebug) return;
@@ -7620,8 +7694,9 @@ function mdpMain(){
     const st = sv.state;
     const dot = idx => `<span class="dot" style="display:inline-block;width:8px;height:8px;margin-right:5px;background:${PLAYER_COLORS[idx]};"></span>`;
     let kicker = 'Partie en cours', title = '', detail = '';
+    if(st.format === 'qualifs') kicker = 'Entraînement en cours';
     if(st.inFinale){
-      kicker = 'Finale en cours';
+      kicker = st.format === 'finale' ? 'Entraînement à la finale en cours' : 'Finale en cours';
       const level = sv.at === 'finalist' ? 1 : (sv.at === 'decision' ? st.currentLevel + 1 : st.currentLevel);
       title = `${st.finaleGiverName} et ${st.finaleGuesserName} · Palier ${level} à ${euro(PALIERS[level-1].gain)}`;
       detail = st.safeBank > 0 ? `<b>${euro(st.safeBank)}</b> assurés` : 'Aucun gain assuré pour l’instant';
@@ -7651,9 +7726,13 @@ function mdpMain(){
   // Remet les choix du menu d'accord avec la partie reprise (pour que
   // "Rejouer" en fin de partie relance bien la même configuration).
   function syncMenuToState(){
-    selectToggle('mode-group', 'full');
-    showModeBlocks(true);
-    document.getElementById('btn-start-game').textContent = "Lancer la partie";
+    state.mode = 'full';
+    if(!['emission', 'qualifs', 'finale'].includes(state.format)) state.format = 'emission';
+    menuSel.mode = state.format === 'emission' ? 'emission' : 'training';
+    if(state.format !== 'emission') menuSel.kind = state.format;
+    selectToggle('mode-group', menuSel.mode);
+    selectToggle('trainkind-group', menuSel.kind);
+    showModeBlocks();
     selectToggle('playercount-group', String(state.playerCount));
     const teamImpossible = state.playerCount % 2 === 1 || state.playerCount < 4;
     document.querySelector('#submode-group .toggle-btn[data-val="team"]').classList.toggle('disabled', teamImpossible);
@@ -7670,6 +7749,7 @@ function mdpMain(){
     if(!sv){ renderResumeCard(); return; }
     const snap = JSON.parse(JSON.stringify(sv.state));
     SAVED_STATE_FIELDS.forEach(k => { if(k in snap) state[k] = snap[k]; });
+    if(!('format' in snap)) state.format = 'emission'; // partie enregistrée avant les modes de jeu
     state.isDebug = false;
     state.gameOver = false;
     state.holdFinaleAmbient = false;
@@ -7682,7 +7762,8 @@ function mdpMain(){
       return;
     }
     if(sv.at === 'finalist'){
-      if(sv.team != null) announceTeamFinalist(sv.team, true);
+      if(sv.finaleOnly) showFinaleOnly();
+      else if(sv.team != null) announceTeamFinalist(sv.team, true);
       else finalizeSoloFinalists(sv.giver, sv.guesser, true);
       return;
     }
@@ -7724,7 +7805,7 @@ function mdpMain(){
   // k 'q' qualif / 'f' finale, g donneur, v devineur, f mots trouvés, n mots
   // de la liste, t secondes jouées, i interdits, p mots passés, sm 'team' /
   // 'solo', duel 1 si duel de départage ; finale : lvl palier, ok réussi,
-  // c indices pris par mot trouvé. Ni entraînement, ni tie-break au buzz,
+  // c indices pris par mot trouvé. Ni entraînement (aucun des trois types), ni tie-break au buzz,
   // ni tuto, ni mode test.
   const ROUNDLOG = (function(){
     const KEY = 'mdp_rounds';
@@ -7738,7 +7819,7 @@ function mdpMain(){
     };
   })();
   function logRound(turn, elapsed){
-    if(state.mode !== 'full' || state.isDebug || TEST_WORD_MODE.isOn() || (TUTO && TUTO.active)) return;
+    if(state.mode !== 'full' || state.format !== 'emission' || state.isDebug || TEST_WORD_MODE.isOn() || (TUTO && TUTO.active)) return; // entraînements : rien
     const e = {
       d: Date.now(), gid: state.gameId || 0, k: turn.kind === 'final' ? 'f' : 'q',
       g: String(turn.giverName || '').trim(), v: String(turn.guesserName || '').trim(),
@@ -7919,8 +8000,9 @@ function mdpMain(){
     {
       const top = all.filter(e => e.amount > 0)
         .sort((a, b) => b.amount - a.amount || a.date - b.date).slice(0, 10);
+      const rows = list => list.map((e, i) => `<div class="palmares-rec"><span class="rank">${i+1}</span><span class="who">${escapeHtml(String(e.giver).trim())} → ${escapeHtml(String(e.guesser).trim())}</span><span class="amt">${euro(e.amount)}</span><span class="meta">${palmaresOutcome(e)} · ${palmaresDate(e.date)}</span></div>`).join('');
       body.innerHTML = top.length
-        ? top.map((e, i) => `<div class="palmares-rec"><span class="rank">${i+1}</span><span class="who">${escapeHtml(String(e.giver).trim())} → ${escapeHtml(String(e.guesser).trim())}</span><span class="amt">${euro(e.amount)}</span><span class="meta">${palmaresOutcome(e)} · ${palmaresDate(e.date)}</span></div>`).join('')
+        ? rows(top)
         : '<p class="palmares-empty">Aucune finale gagnante enregistrée pour l’instant.</p>';
     }
   }
@@ -8025,7 +8107,7 @@ function mdpMain(){
   function launchConfiguredGame(){
     // Chacun pour soi à 2 joueurs : on demande qui commence via une popup
     // (avec les vrais prénoms) avant de lancer la partie.
-    if(state.mode === 'full' && state.subMode === 'solo' && state.playerCount === 2){
+    if(state.mode === 'full' && state.format !== 'finale' && state.subMode === 'solo' && state.playerCount === 2){
       document.getElementById('btn-first-giver-0').textContent = PLAYERNAMES.getFlat(0) || 'Joueur 1';
       document.getElementById('btn-first-giver-1').textContent = PLAYERNAMES.getFlat(1) || 'Joueur 2';
       document.getElementById('first-giver-overlay').classList.add('visible');
@@ -8149,6 +8231,7 @@ function mdpMain(){
     // Ce raccourci de test doit amener à l'écran de découverte du premier palier
     // (comme en vraie partie), pas directement dans la manche.
     document.getElementById('finalist-label').textContent = "Se qualifient pour la finale";
+    document.getElementById('finalist-tag').textContent = 'La finale';
     document.getElementById('finalist-name').textContent = `${state.finaleGiverName} et ${state.finaleGuesserName}`;
     document.getElementById('finalist-name').style.color = PLAYER_COLORS[state.finaleColorIdx];
     document.getElementById('finalist-detail').innerHTML = "Test — accès direct à la finale.";
@@ -8167,8 +8250,10 @@ function mdpMain(){
     // fonctionnalité) est forcé. On synchronise l'interface pour la même raison
     // que le raccourci finale ci-dessus : éviter un retour au menu désynchronisé.
     state.mode = 'full';
-    selectToggle('mode-group', 'full');
-    showModeBlocks(true);
+    state.format = 'emission';
+    menuSel.mode = 'emission';
+    selectToggle('mode-group', 'emission');
+    showModeBlocks();
     state.playerCount = 6;
     selectToggle('playercount-group', '6');
     state.subMode = 'team';
@@ -8207,6 +8292,20 @@ function mdpMain(){
     }
     PLAYERNAMES.remember([...document.querySelectorAll('#player-fields input')].map(i => i.value));
     MENU_PREFS.save();
+
+    if(state.format === 'finale'){
+      // Finale seule : le duo du menu part directement à l'écran des
+      // finalistes, puis au palier 1. Pas de qualifs, pas d'annonce.
+      state.finaleGiverName = document.getElementById('team0-giver').value.trim() || 'Joueur 1';
+      state.finaleGuesserName = document.getElementById('team0-guesser').value.trim() || 'Joueur 2';
+      state.finaleColorIdx = 0;
+      state.teams = []; state.soloStats = [];
+      state.turnQueue = [];
+      state.currentTurnIndex = -1;
+      state.currentTurn = null;
+      showFinaleOnly();
+      return;
+    }
 
     if(state.subMode === 'team'){
       buildTeams();
@@ -8363,11 +8462,11 @@ function mdpMain(){
       document.getElementById('ho-guesser').textContent = turn.guesserName;
       if(isFinal){
         kicker.classList.add('gold');
-        kicker.textContent = `La finale · Palier 1 · ${euro(PALIERS[0].gain)}`;
+        kicker.textContent = `${isTrainingGame() ? 'Entraînement' : 'La finale'} · Palier 1 · ${euro(PALIERS[0].gain)}`;
       } else if(state.subMode === 'team' && turn.manche){
-        kicker.textContent = `Manche ${turn.manche} sur ${turn.manches || 4}`;
+        kicker.textContent = `${isTrainingGame() ? 'Entraînement · ' : ''}Manche ${turn.manche} sur ${turn.manches || 4}`;
       } else {
-        kicker.textContent = turn.progressLabel || 'Qualification';
+        kicker.textContent = (isTrainingGame() ? 'Entraînement · ' : '') + (turn.progressLabel || 'Qualification');
       }
       // Scores des équipes en une ligne (celle qui joue un peu plus claire).
       if(turn.kind === 'qualif' && state.subMode === 'team'){
@@ -8379,7 +8478,7 @@ function mdpMain(){
       const p = PALIERS[turn.level-1];
       kicker.innerHTML = '';
       scores.innerHTML = `<span class="ho-duo"><b>${escapeHtml(turn.giverName)}</b> fait deviner à <b>${escapeHtml(turn.guesserName)}</b></span>`;
-      document.getElementById('ho-palier-kicker').textContent = `Palier ${turn.level} sur ${PALIERS.length}`;
+      document.getElementById('ho-palier-kicker').textContent = `${isTrainingGame() ? 'Entraînement · ' : ''}Palier ${turn.level} sur ${PALIERS.length}`;
       const amount = document.getElementById('ho-amount');
       amount.className = 'ho-amount';
       amount.textContent = euro(p.gain);
@@ -9774,6 +9873,7 @@ function mdpMain(){
 
   // ================= PHASE RESOLUTION (fin de qualification) =================
   function resolvePhase(){
+    if(state.format === 'qualifs'){ showQualifPodium(); return; }
     if(state.subMode === 'team'){ resolveTeamPhase(); }
     else { resolveSoloPhase(); }
   }
@@ -10026,6 +10126,7 @@ function mdpMain(){
     state.finaleGuesserName = giverIsBest ? team.guesserName : team.giverName;
     state.finaleColorIdx = team.colorIdx;
     document.getElementById('finalist-label').textContent = "Se qualifient pour la finale";
+    document.getElementById('finalist-tag').textContent = 'La finale';
     document.getElementById('finalist-name').textContent = `${team.giverName} et ${team.guesserName}`;
     document.getElementById('finalist-name').style.color = PLAYER_COLORS[team.colorIdx];
     document.getElementById('finalist-detail').innerHTML = `${team.score} point${team.score>1?'s':''} en qualification.`;
@@ -10160,6 +10261,7 @@ function mdpMain(){
     state.finaleGuesserName = guesser.name;
     state.finaleColorIdx = giver.colorIdx;
     document.getElementById('finalist-label').textContent = "Se qualifient pour la finale";
+    document.getElementById('finalist-tag').textContent = 'La finale';
     document.getElementById('finalist-name').textContent = `${giver.name} et ${guesser.name}`;
     document.getElementById('finalist-name').style.color = PLAYER_COLORS[giver.colorIdx];
     document.getElementById('finalist-detail').innerHTML =
@@ -10168,6 +10270,23 @@ function mdpMain(){
     document.getElementById('btn-start-final').textContent = `Jouer pour ${euro(PALIERS[0].gain)}`;
     hideFinaleRoleChoice();
     saveGameProgress({ at:'finalist', giver: giverIdx, guesser: guesserIdx });
+    showScreen('finalist');
+  }
+
+  // Entraînement à la finale : même écran que des finalistes qualifiés, avec le
+  // duo du menu. Aussi à la reprise d'un tel entraînement avant le palier 1.
+  function showFinaleOnly(){
+    state.inFinale = true;
+    document.getElementById('finalist-tag').textContent = 'Entraînement';
+    document.getElementById('finalist-label').textContent = 'Entraînement à la finale';
+    document.getElementById('finalist-name').textContent = `${state.finaleGiverName} et ${state.finaleGuesserName}`;
+    document.getElementById('finalist-name').style.color = PLAYER_COLORS[state.finaleColorIdx];
+    document.getElementById('finalist-detail').innerHTML =
+      `<b>${escapeHtml(state.finaleGiverName)}</b> fait deviner à <b>${escapeHtml(state.finaleGuesserName)}</b>`;
+    renderLadder('finalist-ladder', 1);
+    document.getElementById('btn-start-final').textContent = `Jouer pour ${euro(PALIERS[0].gain)}`;
+    hideFinaleRoleChoice();
+    saveGameProgress({ at:'finalist', finaleOnly:true });
     showScreen('finalist');
   }
 
@@ -10849,7 +10968,7 @@ function mdpMain(){
 
     if(wonAll){
       document.getElementById('final-trophy').textContent = "🏆";
-      document.getElementById('final-title').textContent = `${label} remportent la partie !`;
+      document.getElementById('final-title').textContent = state.format === 'finale' ? `${label} franchissent les 5 paliers !` : `${label} remportent la partie !`;
       document.getElementById('final-sub').textContent = `Les 5 paliers franchis d'affilée.`;
     } else if(state.endedByStop){
       document.getElementById('final-trophy').textContent = "🤝";
@@ -10862,8 +10981,10 @@ function mdpMain(){
         `${last.found} mot${last.found>1?'s':''} sur ${last.target} trouvé${last.found>1?'s':''} parmi ${last.pool}.`;
     }
     document.getElementById('final-title').style.color = '';
-    document.getElementById('final-bank').innerHTML =
-      amount > 0 ? `Repartent avec <b>${euro(amount)}</b>` : `Repartent sans gain`;
+    // Entraînement : les sommes restent (l'enjeu fait partie de l'exercice), au conditionnel.
+    document.getElementById('final-bank').innerHTML = state.format === 'finale'
+      ? (amount > 0 ? `Entraînement · auraient gagné <b>${euro(amount)}</b>` : `Entraînement · auraient fini sans gain`)
+      : (amount > 0 ? `Repartent avec <b>${euro(amount)}</b>` : `Repartent sans gain`);
 
     const ranking = document.getElementById('final-ranking');
     ranking.innerHTML = "";
@@ -10876,8 +10997,10 @@ function mdpMain(){
     });
     // Palmarès (jamais en mode test ni via les raccourcis de test) + badge si
     // ce gain dépasse tout ce qui a été enregistré jusqu'ici.
+    // Entraînement à la finale : rien au palmarès, pas de record (seule l'Émission compte).
+    const training = state.format === 'finale';
     let isRecord = false;
-    if(!state.isDebug && !TEST_WORD_MODE.isOn()){
+    if(!state.isDebug && !TEST_WORD_MODE.isOn() && !training){
       isRecord = amount > 0 && amount > PALMARES.best();
       PALMARES.add({
         amount, date: Date.now(),
@@ -10889,6 +11012,44 @@ function mdpMain(){
     document.getElementById('final-record-badge').hidden = !isRecord;
     // Mots du dernier palier joué (déjà vus sur l'écran de décision si on s'est arrêté).
     renderWordRecap('final-recap', last ? last.success : true, 'Détails du dernier palier');
+    showScreen('final');
+  }
+
+  // Entraînement aux qualifs : pas de finale, un podium (Fabien, 2026-10-09). Équipes :
+  // le score de l'équipe ; chacun pour soi : les mots trouvés en faisant
+  // deviner + en devinant. Mêmes points = même place (pas de tie-break).
+  function showQualifPodium(){
+    if(!state.isDebug) SAVED_GAME.clear(); // partie terminée : plus rien à reprendre
+    MUSIC.stop();
+    const node = SFX.qualifsEnd();
+    const menuAfter = () => { if(activeScreen() === 'final' && !MUSIC.current()) MUSIC.play('menu', {loop:true}); };
+    if(node) node.addEventListener('ended', menuAfter, { once:true }); else menuAfter();
+    renderTiles('final-tiles');
+    const rows = state.subMode === 'team'
+      ? state.teams.map(t => ({ name:`${t.giverName} et ${t.guesserName}`, color:PLAYER_COLORS[t.colorIdx], score:t.score, plural:true }))
+      : state.soloStats.map(p => ({ name:p.name, color:PLAYER_COLORS[p.colorIdx], score:p.giverScore + p.guesserScore,
+          detail:`${p.giverScore} en faisant deviner · ${p.guesserScore} en devinant` }));
+    rows.forEach(r => { r.rank = 1 + rows.filter(o => o.score > r.score).length; });
+    rows.sort((a, b) => a.rank - b.rank);
+    const first = rows.filter(r => r.rank === 1);
+    document.getElementById('final-trophy').textContent = '🏅';
+    document.getElementById('final-record-badge').hidden = true;
+    const title = document.getElementById('final-title');
+    title.style.color = '';
+    title.textContent = first.length > 1
+      ? `Égalité en tête : ${first.map(r => r.name).join(', ')}`
+      : `${first[0].name} ${first[0].plural ? 'remportent' : 'remporte'} les qualifs !`;
+    const nb = state.turnQueue.length;
+    document.getElementById('final-sub').textContent = `Entraînement · ${nb} manche${nb > 1 ? 's' : ''} jouée${nb > 1 ? 's' : ''}`;
+    document.getElementById('final-bank').innerHTML = '';
+    const MEDAL = { 1:'🥇', 2:'🥈', 3:'🥉' };
+    document.getElementById('final-ranking').innerHTML = rows.map(r => `
+      <div class="final-rank podium-row${r.rank > 3 ? ' off' : ''}">
+        <span class="medal">${MEDAL[r.rank] || r.rank}</span>
+        <div class="name" style="color:${r.rank > 3 ? 'var(--text-dim)' : r.color};">${escapeHtml(r.name)}${r.detail ? `<small>${r.detail}</small>` : ''}</div>
+        <div class="pts" style="color:${r.rank > 3 ? 'var(--text-dim)' : r.color};">${r.score}</div>
+      </div>`).join('');
+    document.getElementById('final-recap').innerHTML = '';
     showScreen('final');
   }
 
