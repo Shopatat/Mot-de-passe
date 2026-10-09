@@ -1956,6 +1956,7 @@
 
   /* ---- Classement chacun pour soi (fin de manche) ---- */
   .solo-board:not([hidden]){ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .solo-board.single:not([hidden]){ grid-template-columns:1fr; }
   .solo-board-col{ background: var(--card); border:1px solid var(--card-edge); border-radius:14px; padding:10px 12px; }
   .solo-board-col h4{ margin:0 0 6px; font-size:10.5px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; color: var(--text-dim); text-align:center; }
   .solo-board-row{ display:grid; grid-template-columns:16px 1fr auto; gap:6px; align-items:center; font-size:13px; padding:3px 0; font-variant-numeric:tabular-nums; }
@@ -7293,6 +7294,7 @@ function mdpMain(){
     const counts = document.querySelectorAll('#playercount-group .toggle-btn');
     if(lock){
       counts.forEach(b => { b.classList.toggle('selected', b.dataset.val === '2'); b.classList.toggle('disabled', b.dataset.val !== '2'); });
+      document.querySelector('#submode-group .toggle-btn[data-val="team"]').classList.remove('disabled'); // (5 joueurs en émission : il l'était)
       selectToggle('submode-group', 'team');
       document.querySelectorAll('#rounds-group .toggle-btn').forEach(b => b.classList.remove('selected'));
       document.getElementById('rounds-note').textContent = `La finale : ${PALIERS.length} paliers, de ${euro(PALIERS[0].gain)} à ${euro(PALIERS[PALIERS.length-1].gain)}`;
@@ -7714,7 +7716,10 @@ function mdpMain(){
         title = 'Chacun pour soi · ' + (t ? (t.progressLabel || 'Qualifications') : 'fin des qualifications');
         const best = (sk, tk) => st.soloStats.slice().sort((a, b) => b[sk] - a[sk] || a[tk] - b[tk])[0];
         const g = best('giverScore', 'giverTime'), q = best('guesserScore', 'guesserTime');
-        detail = `En tête : <b>${escapeHtml(g.name)}</b> (donneur, ${g.giverScore}) · <b>${escapeHtml(q.name)}</b> (devineur, ${q.guesserScore})`;
+        const lead = st.soloStats.slice().sort((a, b) => (b.giverScore + b.guesserScore) - (a.giverScore + a.guesserScore))[0];
+        detail = st.format === 'qualifs'
+          ? `En tête : <b>${escapeHtml(lead.name)}</b> (${lead.giverScore + lead.guesserScore} pts)`
+          : `En tête : <b>${escapeHtml(g.name)}</b> (donneur, ${g.giverScore}) · <b>${escapeHtml(q.name)}</b> (devineur, ${q.guesserScore})`;
       }
     }
     document.getElementById('resume-kicker').textContent = kicker;
@@ -9598,7 +9603,7 @@ function mdpMain(){
       setTimeout(() => { roundWinJingleOn = false; }, 8000); // filet : 'ended' perdu (arrière-plan...)
       // Menu seulement si rien d'autre n'a démarré entretemps : en enchaînant
       // vite, la musique d'attente du mot suivant tourne déjà.
-      node.addEventListener('ended', () => { roundWinJingleOn = false; if(!state.inFinale && !MUSIC.current()) MUSIC.play('menu', {loop:true}); }, { once:true });
+      node.addEventListener('ended', () => { roundWinJingleOn = false; if(!state.inFinale && !podiumSoundOn && !MUSIC.current()) MUSIC.play('menu', {loop:true}); }, { once:true });
     } else {
       MUSIC.play('menu', {loop:true}); // pas de jingle dispo (son coupé...) : retour immédiat
     }
@@ -9821,6 +9826,20 @@ function mdpMain(){
         `<div class="solo-board-row${rankOf(r) === 1 && r.score > 0 ? ' lead' : ''}${r.i === currentIdx ? ' current' : ''}"><span class="rank">${rankOf(r)}</span><span class="who">${escapeHtml(r.name)}</span><span class="pts">${r.score}</span></div>`
       ).join('')}</div>`;
     }
+    if(state.format === 'qualifs'){
+      // Entraînement aux qualifs : pas de finale, donc pas de meilleur donneur /
+      // devineur ; le classement du podium (points faits deviner + devinés).
+      const rows = state.soloStats.map((p, i) => ({ i, name: p.name, score: p.giverScore + p.guesserScore }));
+      const rankOf = r => 1 + rows.filter(o => o.score > r.score).length;
+      rows.sort((a, b) => rankOf(a) - rankOf(b));
+      el.innerHTML = `<div class="solo-board-col"><h4>Classement</h4>${rows.map(r =>
+        `<div class="solo-board-row${rankOf(r) === 1 && r.score > 0 ? ' lead' : ''}${r.i === turn.giverIdx || r.i === turn.guesserIdx ? ' current' : ''}"><span class="rank">${rankOf(r)}</span><span class="who">${escapeHtml(r.name)}</span><span class="pts">${r.score}</span></div>`
+      ).join('')}</div>`;
+      el.classList.add('single');
+      el.hidden = false;
+      return;
+    }
+    el.classList.remove('single');
     el.innerHTML = col('Donneurs', 'giverScore', 'giverTime', turn.giverIdx) + col('Devineurs', 'guesserScore', 'guesserTime', turn.guesserIdx);
     el.hidden = false;
   }
@@ -10968,7 +10987,7 @@ function mdpMain(){
 
     if(wonAll){
       document.getElementById('final-trophy').textContent = "🏆";
-      document.getElementById('final-title').textContent = state.format === 'finale' ? `${label} franchissent les 5 paliers !` : `${label} remportent la partie !`;
+      document.getElementById('final-title').textContent = state.format === 'finale' ? `${label} vont au bout de la finale !` : `${label} remportent la partie !`;
       document.getElementById('final-sub').textContent = `Les 5 paliers franchis d'affilée.`;
     } else if(state.endedByStop){
       document.getElementById('final-trophy').textContent = "🤝";
@@ -11018,12 +11037,15 @@ function mdpMain(){
   // Entraînement aux qualifs : pas de finale, un podium (Fabien, 2026-10-09). Équipes :
   // le score de l'équipe ; chacun pour soi : les mots trouvés en faisant
   // deviner + en devinant. Mêmes points = même place (pas de tie-break).
+  // Son de fin des qualifs en cours : le jingle de la dernière manche, s'il
+  // finit pendant ce temps, ne relance pas la musique du menu par-dessus.
+  let podiumSoundOn = false;
   function showQualifPodium(){
     if(!state.isDebug) SAVED_GAME.clear(); // partie terminée : plus rien à reprendre
     MUSIC.stop();
     const node = SFX.qualifsEnd();
-    const menuAfter = () => { if(activeScreen() === 'final' && !MUSIC.current()) MUSIC.play('menu', {loop:true}); };
-    if(node) node.addEventListener('ended', menuAfter, { once:true }); else menuAfter();
+    const menuAfter = () => { podiumSoundOn = false; if(activeScreen() === 'final' && !MUSIC.current()) MUSIC.play('menu', {loop:true}); };
+    if(node){ podiumSoundOn = true; node.addEventListener('ended', menuAfter, { once:true }); setTimeout(() => { podiumSoundOn = false; }, 9000); } else menuAfter();
     renderTiles('final-tiles');
     const rows = state.subMode === 'team'
       ? state.teams.map(t => ({ name:`${t.giverName} et ${t.guesserName}`, color:PLAYER_COLORS[t.colorIdx], score:t.score, plural:true }))
