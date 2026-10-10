@@ -538,15 +538,6 @@
     color: #fff;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 0 10px rgba(232,228,221,0.28);
   }
-  /* Tie-break buzz : le badge de l'équipe en train de jouer s'anime brièvement
-     dès qu'on passe la main (bouton "Pas trouvé"), pour signaler le changement
-     sans avoir besoin de le lire. */
-  @keyframes buzzHandoff{
-    0%{ transform:scale(1); }
-    35%{ transform:scale(1.08); }
-    100%{ transform:scale(1); }
-  }
-  .chip.buzz-switch{ animation: buzzHandoff .38s ease; }
   #buzz-turn-label b{ color:inherit; }
 
   /* Plus de pilules : les boutons prennent la forme du cadre du mot (coins de
@@ -832,7 +823,6 @@
     text-align:center; gap:8px; padding: 28px 10px;
   }
   .handoff-label{ color: var(--text-dim); font-size:13px; letter-spacing:1px; text-transform:uppercase; font-weight:700; }
-  .tiebreak-text{ font-size:13px; font-weight:700; letter-spacing:0.3px; color:#eaf6ff; text-shadow: 0 0 6px rgba(150,220,255,0.35); line-height:1.4; }
   .handoff-team{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:28px; letter-spacing:0.5px; line-height:1.15; }
   .handoff-role{ font-size:14px; color:var(--text-dim); }
   .handoff-role b{ color: var(--text); }
@@ -915,6 +905,92 @@
   @keyframes hoLight{ 0%{ opacity:0; filter:brightness(.4); } 60%{ opacity:1; filter:brightness(1.35); } 100%{ opacity:1; filter:none; } }
   @media (prefers-reduced-motion: reduce){
     #screen-handoff.ho-anim *{ animation:none !important; }
+  }
+
+  /* ---- Tie-break (2026-10-10) : remis au niveau des qualifs ----
+     Annonce façon avant-manche (écran plein, équipes en grand, bouton en
+     bas), bandeaux de 2 LED par équipe pour le score, mêmes boutons, même
+     bandeau Interdit et même rappel des interdits qu'en manche. */
+  #screen-buzz-intro.active{ flex:1; padding-bottom:34px; }
+  .bz-stage{ gap:0; }
+  .bz-team{ display:flex; flex-direction:column; align-items:center; gap:10px; max-width:100%; }
+  .bz-team-name{
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:40px; line-height:1.05; letter-spacing:1px;
+    text-transform:uppercase; max-width:100%; overflow-wrap:anywhere;
+    text-shadow: 0 0 24px rgba(255,210,140,0.18);
+  }
+  .bz-stage.many .bz-team-name{ font-size:32px; }
+  .bz-vs{
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:17px; letter-spacing:3px;
+    color:#ff6a55; text-shadow:0 0 12px rgba(255,59,48,.7); margin:16px 0;
+  }
+  .bz-stage.many .bz-vs{ margin:10px 0; }
+  .bz-rule{ text-align:center; font-size:13px; line-height:1.55; color:#cfc9bd; }
+  .bz-rule b{ color:#fff; }
+  #screen-buzz-intro.ho-anim .bz-team{ animation: hoIn .38s ease-out both; }
+  #screen-buzz-intro.ho-anim .bz-vs{ animation: hoFade .3s ease-out both; }
+  #screen-buzz-intro.ho-anim .bz-stage > :nth-child(2){ animation-delay:.25s; }
+  #screen-buzz-intro.ho-anim .bz-stage > :nth-child(3){ animation-delay:.4s; }
+  #screen-buzz-intro.ho-anim .bz-stage > :nth-child(4){ animation-delay:.65s; }
+  #screen-buzz-intro.ho-anim .bz-stage > :nth-child(5){ animation-delay:.8s; }
+  #screen-buzz-intro.ho-anim .bz-rule{ animation: hoFade .4s ease-out .9s both; }
+  /* Bandeau de 2 LED d'une équipe : celui des qualifs en petit. */
+  .bz-track.dot-row{
+    border-radius:13px; padding:5px 12px; gap:7px; flex-wrap:nowrap;
+    box-shadow: 0 7px 16px rgba(0,0,0,0.55), 0 2px 5px rgba(0,0,0,0.45),
+      inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -3px 5px rgba(0,0,0,0.5);
+  }
+  .bz-track.dot-row .dot-mark{ width:13px; height:13px; }
+  .bz-track .dot-mark.pop{ animation: bzPop .5s ease-out; }
+  @keyframes bzPop{ 0%{ transform:scale(.4); filter:brightness(2.2); } 60%{ transform:scale(1.25); } 100%{ transform:none; filter:none; } }
+  /* Score en jeu : l'équipe qui a la main éclairée, les autres en retrait. */
+  .bz-tag{ font-size:11px; font-weight:800; letter-spacing:3px; text-transform:uppercase; color: var(--gold-dim); }
+  .bz-board{ display:flex; justify-content:center; align-items:flex-start; gap:8px 14px; flex-wrap:wrap; }
+  .bz-board .bz-team{ gap:6px; flex:0 1 auto; min-width:0; transition: opacity .3s ease; opacity:.5; }
+  .bz-board .bz-team.cur{ opacity:1; }
+  .bz-board .bz-team-name{
+    font-family:inherit; font-size:12px; font-weight:800; letter-spacing:0; text-transform:none; text-shadow:none;
+    color: var(--text-dim); max-width:118px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .bz-board .bz-team.cur .bz-team-name{ color: var(--tc, #fff); }
+  .bz-board .bz-team.out{ opacity:.32; }
+  .bz-board .bz-team.out .bz-team-name{ text-decoration:line-through; text-decoration-color:var(--wrong); color: var(--text-dim); }
+  .bz-board .bz-team.out .dot-row::before{ animation:none; background:#5a1a14; }
+  .bz-board .bz-team.out-now{ animation: bzOut .9s ease-out; }
+  @keyframes bzOut{
+    0%{ opacity:1; filter:none; }
+    20%{ opacity:1; filter: drop-shadow(0 0 10px rgba(255,59,48,.95)) brightness(1.4); }
+    100%{ opacity:.32; filter:none; }
+  }
+  /* « Interdit · éliminatoire » sur une ligne ; en Régie (bouton carré),
+     « éliminatoire » passe dessous, en petit. */
+  #btn-buzz-interdit{ gap:0; }
+  #btn-buzz-interdit .bz-elim::before{ content:"\00a0·\00a0"; }
+  #screen-buzz-play.arbitre-mode #btn-buzz-interdit .bz-elim{ display:block; font-size:11px; letter-spacing:1.6px; opacity:.75; }
+  #screen-buzz-play.arbitre-mode #btn-buzz-interdit .bz-elim::before{ content:none; }
+  #buzz-turn-label{ min-height:2.8em; line-height:1.4; font-size:12px; }
+  #buzz-turn-label .out{ color:#ff7a6e; font-weight:800; font-size:13px; }
+  #screen-buzz-play #btn-buzz-elim-continue{ margin-top:0; }
+  /* Changement de main : calque plein écran, sans bloquer les appuis (le
+     verrou du tie-break s'en charge). Posé bord à bord (pas de centrage par
+     translate : texte flou sur iPhone). */
+  .bz-pass{
+    position:fixed; left:0; right:0; top:0; bottom:0; z-index:60; pointer-events:none;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    padding:0 20px; text-align:center;
+    background: radial-gradient(ellipse 80% 55% at 50% 45%, rgba(18,6,5,.94), rgba(4,2,2,.9));
+    -webkit-font-smoothing:antialiased;
+  }
+  .bz-pass[hidden]{ display:none; }
+  .bz-pass-kick{ font-size:11.5px; font-weight:800; letter-spacing:3px; text-transform:uppercase; color: var(--gold-dim); }
+  .bz-pass-name{
+    font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:64px; line-height:1.02; letter-spacing:1px;
+    text-transform:uppercase; max-width:100%; overflow-wrap:anywhere; text-shadow: 0 0 28px rgba(255,210,140,0.25);
+  }
+  .bz-pass-role{ font-size:12px; font-weight:800; letter-spacing:2.6px; text-transform:uppercase; color:#ffb49c; }
+  .bz-pass-role b{ color:#fff4ec; }
+  @media (prefers-reduced-motion: reduce){
+    #screen-buzz-intro.ho-anim *, .bz-track .dot-mark.pop, .bz-board .bz-team.out-now{ animation:none !important; }
   }
 
   .countdown-num{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:90px; color: var(--red); text-shadow: 0 0 30px rgba(255,59,48,0.6); }
@@ -1444,8 +1520,8 @@
      voyant a été retiré ; le tie-break garde son propre bouton, voir plus bas). */
   /* 30 px sous Passer / Trouvé (atelier des bandeaux des qualifs, 2026-09-25) :
      assez loin pour qu'un tap un peu bas sur ces boutons ne tombe pas dessus. */
-  #final-extra-row{ margin-top:30px; gap:0; }
-  #btn-interdit{
+  #final-extra-row, #buzz-extra-row{ margin-top:30px; gap:0; }
+  #btn-interdit, #btn-buzz-interdit{
     width:100%; height:50px; padding:0; justify-content:center;
     border-radius:14px; border:2px solid #7a1410; background-color:#180a08;
     color:#ffc3bb; font-size:15px; letter-spacing:1.4px; text-transform:uppercase;
@@ -1458,9 +1534,9 @@
   }
   /* Grisé (chrono pas lancé) : plus d'animation. Pendant le court verrou entre
      deux mots (no-dim), il continue de respirer, comme avant. */
-  #btn-interdit:disabled:not(.no-dim){ animation:none; }
+  #btn-interdit:disabled:not(.no-dim), #btn-buzz-interdit:disabled{ animation:none; }
   @media (prefers-reduced-motion: reduce){
-    #btn-interdit{ animation:none; }
+    #btn-interdit, #btn-buzz-interdit{ animation:none; }
   }
 
   /* Mode arbitre (réglage "Aide", désactivé par défaut) : le joueur garde le
@@ -1469,24 +1545,24 @@
      geste le plus fréquent, en très grand, "Passer" et "Interdit" dessous. Les
      deux rangées deviennent transparentes (display:contents) pour que les trois
      boutons se rangent dans une même grille, sans toucher au DOM ni au JS. */
-  #screen-play.arbitre-mode .play-controls{
+  :is(#screen-play, #screen-buzz-play).arbitre-mode .play-controls{
     display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;
   }
-  #screen-play.arbitre-mode .play-controls .controls-row,
-  #screen-play.arbitre-mode #final-extra-row{ display:contents; }
-  #screen-play.arbitre-mode .play-controls button{
+  :is(#screen-play, #screen-buzz-play).arbitre-mode .play-controls .controls-row,
+  :is(#screen-play, #screen-buzz-play).arbitre-mode .final-extra-row{ display:contents; }
+  :is(#screen-play, #screen-buzz-play).arbitre-mode .play-controls button{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:6px; padding:0 8px; border-radius:20px; text-align:center;
   }
-  #screen-play.arbitre-mode #btn-correct{ grid-column:1 / -1; grid-row:1; height:170px; font-size:22px; }
-  #screen-play.arbitre-mode #btn-correct .check-glow{ font-size:46px; line-height:1; }
-  #screen-play.arbitre-mode #btn-not-found{ grid-column:1; grid-row:2; height:88px; font-size:15px; }
-  #screen-play.arbitre-mode #btn-not-found svg{ margin-right:0 !important; width:28px; height:28px; }
-  #screen-play.arbitre-mode #btn-interdit{ grid-column:2; grid-row:2; height:88px; }
+  :is(#screen-play, #screen-buzz-play).arbitre-mode .btn-correct{ grid-column:1 / -1; grid-row:1; height:170px; font-size:22px; }
+  :is(#screen-play, #screen-buzz-play).arbitre-mode .btn-correct .check-glow{ font-size:46px; line-height:1; }
+  :is(#screen-play, #screen-buzz-play).arbitre-mode .btn-wrong{ grid-column:1; grid-row:2; height:88px; font-size:15px; }
+  :is(#screen-play, #screen-buzz-play).arbitre-mode .btn-wrong svg{ margin-right:0 !important; width:28px; height:28px; }
+  :is(#screen-play, #screen-buzz-play).arbitre-mode .final-extra-row .text-action{ grid-column:2; grid-row:2; height:88px; }
   /* « Interdit » du côté de l'adversaire qui fait la régie (réglage Aide) :
      c'est lui qui surveille les bourdes du donneur. */
-  #screen-play.arbitre-mode.interdit-left #btn-interdit{ grid-column:1; }
-  #screen-play.arbitre-mode.interdit-left #btn-not-found{ grid-column:2; }
+  :is(#screen-play, #screen-buzz-play).arbitre-mode.interdit-left .final-extra-row .text-action{ grid-column:1; }
+  :is(#screen-play, #screen-buzz-play).arbitre-mode.interdit-left .btn-wrong{ grid-column:2; }
 
   /* Retour visuel au toucher ("flash") : un éclair clair traverse l'élément touché
      et un halo de sa teinte s'élargit autour, puis tout s'éteint (~0,5 s). Posé
@@ -1494,7 +1570,7 @@
      son. La teinte vient de --tap-tint, définie par type de bouton. */
   :root{ --tap-tint: 255,200,150; }
   .btn-correct{ --tap-tint: 106,214,150; }
-  .btn-wrong, #btn-interdit{ --tap-tint: 255,90,74; }
+  .btn-wrong, #btn-interdit, #btn-buzz-interdit{ --tap-tint: 255,90,74; }
   .btn-gold{ --tap-tint: 255,120,80; }
   .word-pill{ --tap-tint: 255,150,70; }
   .toggle-btn{ --tap-tint: 242,201,76; }
@@ -2755,21 +2831,25 @@
     <div class="controls-row" id="solo-tie-buttons"></div>
   </section>
 
-  <!-- TIE-BREAK BUZZ : ANNONCE -->
+  <!-- TIE-BREAK : ANNONCE (même mise en scène que l'avant-manche des qualifs :
+       les équipes à égalité en grand, chacune avec son bandeau de 2 LED vide) -->
   <section class="screen" id="screen-buzz-intro">
-    <div class="card handoff-wrap">
-      <div class="summary-title">Tie-break</div>
-      <div class="tiebreak-text">Un seul mot pour toutes les équipes.</div>
-      <div class="tiebreak-text">À son tour, chacune donne un mot-indice pour son équipe. Si le mot est trouvé, l'équipe marque le point. Sinon, ce mot passe à l'équipe suivante. Un interdit prononcé élimine l'équipe.</div>
-      <div class="handoff-team" id="buzz-intro-teams" style="font-size:17px;"></div>
-      <div class="handoff-role">La première à 2 points accède à la finale</div>
+    <div class="ho-top">
+      <div class="ho-kicker gold">Tie-break</div>
+      <div class="ho-scores" id="buzz-intro-tie"></div>
     </div>
+    <div class="ho-stage bz-stage" id="buzz-intro-teams"></div>
+    <div class="bz-rule">Un seul mot, un indice chaque équipe à son tour.<br>Première à <b>2 points</b> en finale · un interdit élimine.</div>
     <button class="btn btn-gold" id="btn-buzz-ready">C'est parti</button>
   </section>
 
-  <!-- TIE-BREAK BUZZ : JEU -->
+  <!-- TIE-BREAK : JEU -->
   <section class="screen" id="screen-buzz-play">
-    <div class="chip-group" id="buzz-points-row" style="justify-content:center; margin-bottom:4px;"></div>
+    <div class="play-meta">
+      <div class="team-name" id="buzz-team-name"></div>
+      <div class="bz-tag">Tie-break</div>
+    </div>
+    <div class="bz-board" id="buzz-points-row"></div>
     <div class="word-row">
       <div class="word-pill" id="buzz-word-pill">
         <div class="word-flare" id="buzz-word-flare"></div>
@@ -2780,40 +2860,34 @@
         <div class="word-text" id="buzz-word"></div>
       </div>
     </div>
-    <p class="footer-note" id="buzz-turn-label" style="min-height:2.8em; line-height:1.4; font-size:14px;"></p>
-    <p class="footer-note" style="font-size:12px; margin:4px 0;">⚠️ Interdits : mot composé, même famille, même son, mime</p>
+    <p class="footer-note" id="buzz-turn-label"></p>
     <button class="btn btn-gold" id="btn-buzz-elim-continue" style="display:none;">C'est bon, on reprend</button>
+    <div class="play-controls" id="buzz-controls">
     <div class="controls-row">
-      <button class="btn btn-wrong" id="btn-buzz-not-found">✗ Pas trouvé</button>
+      <button class="btn btn-wrong" id="btn-buzz-not-found"><svg class="skip-icon-glow" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="vertical-align:-2px; margin-right:5px;" aria-hidden="true"><polygon points="2,5 2,19 11,12"/><polygon points="11,5 11,19 20,12"/></svg>Passer</button>
       <button class="btn btn-correct" id="btn-buzz-correct"><span class="check-glow">✓</span> Trouvé</button>
     </div>
-    <div class="final-extra-row" style="justify-content:center;">
-      <button class="text-action" id="btn-buzz-interdit">
-        <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
-          <defs>
-            <radialGradient id="voyantBezelBuzz" cx="35%" cy="30%" r="75%">
-              <stop offset="0%" stop-color="#3a3a3a"/>
-              <stop offset="100%" stop-color="#0c0c0c"/>
-            </radialGradient>
-            <radialGradient id="voyantLampBuzz" cx="38%" cy="32%" r="70%">
-              <stop offset="0%" stop-color="#ffb199"/>
-              <stop offset="35%" stop-color="#ff3b30"/>
-              <stop offset="100%" stop-color="#7a1410"/>
-            </radialGradient>
-            <radialGradient id="voyantGlowBuzz" cx="50%" cy="50%" r="50%">
-              <stop offset="45%" stop-color="#ff3b30" stop-opacity="0.9"/>
-              <stop offset="100%" stop-color="#ff3b30" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <circle class="voyant-halo" cx="16" cy="16" r="15.5" fill="url(#voyantGlowBuzz)"/>
-          <circle cx="16" cy="16" r="12" fill="url(#voyantBezelBuzz)"/>
-          <circle class="voyant-lamp" cx="16" cy="16" r="9" fill="url(#voyantLampBuzz)"/>
-          <ellipse cx="12.8" cy="12.6" rx="2.5" ry="1.6" fill="#fff" opacity="0.5"/>
-        </svg>
-        Interdit (éliminatoire)
-      </button>
+    <div class="final-extra-row" id="buzz-extra-row">
+      <button class="text-action" id="btn-buzz-interdit">Interdit<span class="bz-elim">éliminatoire</span></button>
+    </div>
+    </div>
+    <div class="forbidden-reminder-compact" id="buzz-forbidden-reminder" style="display:none;">
+      <div class="forbidden-reminder-title">INTERDITS</div>
+      <ul class="forbidden-reminder-list">
+        <li>Mot composé</li>
+        <li>Même famille</li>
+        <li>Même son au début</li>
+        <li>Mime</li>
+      </ul>
     </div>
   </section>
+  <!-- Changement de main du tie-break : le prénom du nouveau donneur en grand,
+       le temps de se passer le téléphone (s'efface tout seul). -->
+  <div class="bz-pass" id="buzz-pass" hidden aria-live="polite">
+    <div class="bz-pass-kick" id="buzz-pass-kick"></div>
+    <div class="bz-pass-name" id="buzz-pass-name"></div>
+    <div class="bz-pass-role" id="buzz-pass-role"></div>
+  </div>
 
   <!-- FINALIST ANNOUNCE -->
   <section class="screen" id="screen-finalist">
@@ -5516,8 +5590,10 @@ function mdpMain(){
   // Affiche ou cache le rappel compact des interdits sur l'écran de jeu,
   // selon le réglage "Aide" > "Afficher les interdits pendant la manche".
   function updateForbiddenReminderVisibility(){
-    const el = document.getElementById('forbidden-reminder-compact');
-    if(el) el.style.display = UIPREFS.getShowForbiddenInPlay() ? '' : 'none';
+    ['forbidden-reminder-compact', 'buzz-forbidden-reminder'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = UIPREFS.getShowForbiddenInPlay() ? '' : 'none';
+    });
   }
 
   // ---------- NOMS DES JOUEURS ----------
@@ -6209,7 +6285,7 @@ function mdpMain(){
     let quitting = false; // « Quitter » en pleine partie : retour animé vers home
     let live = null;     // animation en cours
     // Écrans qu'un bouton de la partie (ou la fin d'une manche) peut ouvrir.
-    const STEP_TO = ['handoff', 'finalist', 'final', 'buzzIntro', 'soloTieChoice', 'play', 'summary', 'trainingSummary', 'decision'];
+    const STEP_TO = ['handoff', 'finalist', 'final', 'buzzIntro', 'buzzPlay', 'soloTieChoice', 'play', 'summary', 'trainingSummary', 'decision'];
     const overlaySrc = new Map();
     const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     // Rectangle du bouton s'il est à l'écran (sinon pas d'animation).
@@ -6743,6 +6819,7 @@ function mdpMain(){
     IOS_ZOOM.stop(); // une ouverture en cours remet d'abord le bon écran
     const zoom = IOS_ZOOM.before(activeScreen(), name);
     if(TUTO && TUTO.active && name !== 'play') TUTO.abort();
+    if(name !== 'buzzPlay') hideBuzzPass(); // quitter en plein changement de main
     // Écran maintenu allumé sur tous les écrans de jeu, relâché au menu.
     if(name === 'setup'){ WAKE.release(); state.gen += 1; renderResumeCard(); } else WAKE.acquire();
     Object.values(screens).forEach(s => s.classList.remove('active'));
@@ -6953,9 +7030,12 @@ function mdpMain(){
   // Paramètres : Non / ← Interdit (à gauche) / Interdit → (à droite).
   function arbitreChoice(){ return !UIPREFS.getArbitreMode() ? 'off' : (UIPREFS.getInterditLeft() ? 'left' : 'right'); }
   function applyArbitreMode(){
-    const screen = document.getElementById('screen-play');
-    screen.classList.toggle('arbitre-mode', UIPREFS.getArbitreMode());
-    screen.classList.toggle('interdit-left', UIPREFS.getInterditLeft());
+    // Manche et tie-break : mêmes boutons, même disposition.
+    ['screen-play', 'screen-buzz-play'].forEach(id => {
+      const screen = document.getElementById(id);
+      screen.classList.toggle('arbitre-mode', UIPREFS.getArbitreMode());
+      screen.classList.toggle('interdit-left', UIPREFS.getInterditLeft());
+    });
     const cur = arbitreChoice();
     document.querySelectorAll('#arbitre-group .toggle-btn').forEach(b => b.classList.toggle('selected', b.dataset.val === cur));
     // Mini-aperçu (à l'essai) : boutons placés comme en jeu.
@@ -10048,33 +10128,86 @@ function mdpMain(){
     }
   }
   // ---- Tie-break buzz (mode équipe) ----
+  // order : toutes les équipes à égalité, éliminées comprises (elles restent
+  // affichées, barrées) ; teams : celles encore en lice.
   function pushTeamTiebreak(tiedIdxs){
     const points = {};
     tiedIdxs.forEach(idx => { points[idx] = 0; });
-    state.buzz = { teams: tiedIdxs.slice(), points, startPos: 0, turnPos: 0, word: '' };
+    state.buzz = { teams: tiedIdxs.slice(), order: tiedIdxs.slice(), points, startPos: 0, turnPos: 0, word: '' };
     saveGameProgress({ at:'buzz' });
     goToBuzzIntro();
   }
+  // Bandeau de 2 LED d'une équipe (annonce et score en jeu).
+  function buzzTrackHtml(pts){
+    let h = '';
+    for(let i = 0; i < BUZZ_TARGET; i++) h += `<i class="dot-mark${i < pts ? ' found' : ''}"></i>`;
+    return `<div class="dot-row bz-track">${h}</div>`;
+  }
+  const buzzTeamLabel = t => `${t.giverName} & ${t.guesserName}`;
+  // Annonce, façon avant-manche des qualifs : les équipes en grand avec leur
+  // bandeau, « VS » entre elles, une ligne de règle, « C'est parti » en bas.
   function goToBuzzIntro(){
     const b = state.buzz;
-    document.getElementById('buzz-intro-teams').innerHTML = b.teams.map(idx => {
+    const stage = document.getElementById('buzz-intro-teams');
+    stage.classList.toggle('many', b.teams.length > 2);
+    stage.innerHTML = b.teams.map(idx => {
       const t = state.teams[idx];
-      return `<span style="color:${PLAYER_COLORS[t.colorIdx]};">${escapeHtml(t.giverName)} et ${escapeHtml(t.guesserName)}</span>`;
-    }).join(' <span style="color:var(--text-dim); font-weight:400;">vs</span> ');
+      return `<div class="bz-team"><div class="bz-team-name" style="color:${PLAYER_COLORS[t.colorIdx]};">${escapeHtml(buzzTeamLabel(t))}</div>${buzzTrackHtml(b.points[idx])}</div>`;
+    }).join('<div class="bz-vs">VS</div>');
+    const sc = state.teams[b.teams[0]].score;
+    document.getElementById('buzz-intro-tie').innerHTML = `<span>Égalité à<b>${sc}</b> point${sc > 1 ? 's' : ''}</span>`;
+    const scr = document.getElementById('screen-buzz-intro');
+    scr.classList.remove('ho-anim'); void scr.offsetWidth; scr.classList.add('ho-anim');
     showScreen('buzzIntro');
   }
   document.getElementById('btn-buzz-ready').addEventListener('click', () => {
     SFX.roundStart();
+    IOS_ZOOM.from(document.getElementById('btn-buzz-ready'), 'ready'); // même passage que « C'est parti » des qualifs
     startBuzzRound(false);
   });
+  // Changement de main : le prénom du nouveau donneur en grand, le temps de se
+  // passer le téléphone ; s'efface tout seul (aucun appui en plus).
+  const BUZZ_PASS_MS = 1300;
+  function showBuzzPass(first, delay){
+    const b = state.buzz;
+    const t = state.teams[b.teams[b.turnPos]];
+    const el = document.getElementById('buzz-pass');
+    hideBuzzPass();
+    document.getElementById('buzz-pass-kick').textContent = first ? 'On commence avec' : 'Le téléphone passe à';
+    const nm = document.getElementById('buzz-pass-name');
+    nm.textContent = t.giverName;
+    nm.style.color = PLAYER_COLORS[t.colorIdx];
+    document.getElementById('buzz-pass-role').innerHTML = `fait deviner à <b>${escapeHtml(t.guesserName)}</b>`;
+    const run = () => {
+      el.hidden = false;
+      el._anim = el.animate([{ opacity:0 }, { opacity:1, offset:.14 }, { opacity:1, offset:.78 }, { opacity:0 }],
+        { duration:BUZZ_PASS_MS, easing:'ease-out', fill:'forwards' });
+      // Minuterie plutôt que la fin de l'animation : il s'efface même si le
+      // navigateur gèle les animations.
+      el._hide = setTimeout(hideBuzzPass, BUZZ_PASS_MS);
+    };
+    if(delay) el._delay = setTimeout(run, delay); else run();
+  }
+  function hideBuzzPass(){
+    const el = document.getElementById('buzz-pass');
+    if(!el) return;
+    clearTimeout(el._delay); clearTimeout(el._hide);
+    if(el._anim){ try { el._anim.cancel(); } catch(e){} el._anim = null; }
+    el.hidden = true;
+  }
   function startBuzzRound(animate){
     const b = state.buzz;
+    const prevTeam = b.teams[b.turnPos]; // celle qui a le téléphone (aucune après une élimination)
     b.turnPos = b.startPos;
+    const handChanged = b.teams[b.turnPos] !== prevTeam;
     b.word = drawTieredWords(1, BUZZ_TIERS)[0];
     markWordShown(b.word);
     buzzLocked = true; // relâché une fois le nouveau mot affiché
     renderBuzzPoints();
     renderBuzzTurn();
+    document.getElementById('btn-buzz-elim-continue').style.display = 'none';
+    document.getElementById('buzz-controls').style.display = '';
+    updateForbiddenReminderVisibility();
     showScreen('buzzPlay');
     const pillEl = document.getElementById('buzz-word-pill');
     const wordEl = document.getElementById('buzz-word');
@@ -10085,6 +10218,9 @@ function mdpMain(){
     if(animate === false){
       pillEl.style.opacity = '0'; // caché : ne s'affiche qu'après PLAY_REVEAL_DELAY, comme goToPlay()
       setBuzzControlsEnabled(false);
+      // L'équipe qui commence, annoncée pendant que le cadre attend (après le
+      // passage « C'est parti »), effacée juste avant l'apparition du mot.
+      showBuzzPass(true, PLAY_REVEAL_DELAY - BUZZ_PASS_MS);
       setTimeout(() => {
         setWordText(b.word.toUpperCase(), 'buzz-word');
         pillEl.style.opacity = '';
@@ -10095,28 +10231,44 @@ function mdpMain(){
         buzzLocked = false;
       }, PLAY_REVEAL_DELAY);
     } else {
-      animateBuzzWordChange(b.word, () => { buzzLocked = false; });
+      const t0 = performance.now();
+      if(handChanged) showBuzzPass(false);
+      animateBuzzWordChange(b.word, () => {
+        // Verrou gardé tant que le prénom du nouveau donneur couvre l'écran.
+        const wait = handChanged ? Math.max(0, BUZZ_PASS_MS * 0.8 - (performance.now() - t0)) : 0;
+        setTimeout(() => { buzzLocked = false; }, wait);
+      });
     }
   }
-  function renderBuzzPoints(){
+  // Score : un bandeau de 2 LED par équipe, celle qui a la main éclairée, les
+  // éliminées barrées. popIdx : équipe qui vient de marquer (LED qui s'allume).
+  function renderBuzzPoints(popIdx){
     const b = state.buzz;
     const row = document.getElementById('buzz-points-row');
-    row.innerHTML = "";
-    b.teams.forEach((idx, i) => {
+    const cur = b.teams[b.turnPos];
+    row.innerHTML = (b.order || b.teams).map(idx => {
       const t = state.teams[idx];
-      const chip = document.createElement('div');
-      chip.className = 'chip' + (i === b.turnPos ? ' selected' : '');
-      chip.id = `buzz-chip-${idx}`;
-      chip.innerHTML = `${escapeHtml(t.giverName)} & ${escapeHtml(t.guesserName)} — ${b.points[idx]}/${BUZZ_TARGET}`;
-      row.appendChild(chip);
-    });
+      const out = !b.teams.includes(idx);
+      const cls = 'bz-team' + (idx === cur ? ' cur' : '') + (out ? ' out' : '');
+      return `<div class="${cls}" id="buzz-team-${idx}" style="--tc:${PLAYER_COLORS[t.colorIdx]};">` +
+        `<div class="bz-team-name">${escapeHtml(buzzTeamLabel(t))}</div>${buzzTrackHtml(out ? 0 : b.points[idx])}</div>`;
+    }).join('');
+    if(popIdx != null){
+      const lit = row.querySelectorAll(`#buzz-team-${popIdx} .dot-mark.found`);
+      if(lit.length) lit[lit.length - 1].classList.add('pop');
+    }
   }
+  // En haut, l'équipe qui a la main (comme en qualifs) ; sous le mot, à qui
+  // il passera si elle ne le trouve pas.
   function renderBuzzTurn(){
     const b = state.buzz;
-    const idx = b.teams[b.turnPos];
-    const t = state.teams[idx];
+    const t = state.teams[b.teams[b.turnPos]];
+    const nameEl = document.getElementById('buzz-team-name');
+    nameEl.textContent = `${t.giverName} et ${t.guesserName}`;
+    nameEl.style.color = PLAYER_COLORS[t.colorIdx];
+    const n = state.teams[b.teams[(b.turnPos + 1) % b.teams.length]];
     document.getElementById('buzz-turn-label').innerHTML =
-      `C'est à <b style="color:${PLAYER_COLORS[t.colorIdx]};">${escapeHtml(t.giverName)}</b> de faire deviner à <b style="color:${PLAYER_COLORS[t.colorIdx]};">${escapeHtml(t.guesserName)}</b>`;
+      `Pas trouvé ? Le mot passe à <b style="color:${PLAYER_COLORS[n.colorIdx]};">${escapeHtml(n.giverName)} et ${escapeHtml(n.guesserName)}</b>`;
   }
   // Verrou anti double-appui du tie-break (même rôle que inputLocked en manche) :
   // sans lui, un 2e tap pendant le changement de mot donnait le point à
@@ -10133,9 +10285,9 @@ function mdpMain(){
     const b = state.buzz;
     const idx = b.teams[b.turnPos];
     b.points[idx] += 1;
+    renderBuzzPoints(idx);
     if(b.points[idx] >= BUZZ_TARGET){
       setBuzzControlsEnabled(false);
-      renderBuzzPoints();
       playBuzzClosingTransition(() => {
         state.buzz = null;
         announceTeamFinalist(idx);
@@ -10146,7 +10298,9 @@ function mdpMain(){
     // toujours le même surplus d'indices "gratuits" à la même position.
     b.startPos = (b.startPos + 1) % b.teams.length;
     saveGameProgress({ at:'buzz' });
-    startBuzzRound();
+    // La LED du point s'allume d'abord, puis le mot change (et la main passe).
+    const gen = state.gen;
+    setTimeout(() => { if(gen === state.gen && state.buzz === b) startBuzzRound(); }, 450);
   });
   // Fermeture du mot gagnant du tie-break buzz : même principe que la fermeture
   // de manche classique (chevrons qui recouvrent le mot puis cadre qui s'éteint),
@@ -10167,25 +10321,22 @@ function mdpMain(){
 
   document.getElementById('btn-buzz-not-found').addEventListener('click', () => {
     if(buzzLocked) return;
-    lockBuzz(400); // le temps de l'animation de passage de main : un double tap sautait une équipe
+    lockBuzz(Math.round(BUZZ_PASS_MS * 0.8)); // le temps que la main passe : un double tap sautait une équipe
     SFX.forbidden();
     const b = state.buzz;
     b.turnPos = (b.turnPos + 1) % b.teams.length;
     renderBuzzPoints();
     renderBuzzTurn();
-    const idx = b.teams[b.turnPos];
-    const chip = document.getElementById(`buzz-chip-${idx}`);
-    chip.classList.remove('buzz-switch');
-    void chip.offsetWidth; // relance l'animation même si c'est déjà la même équipe qui repasse
-    chip.classList.add('buzz-switch');
+    showBuzzPass(false);
   });
   function setBuzzControlsEnabled(enabled){
     ['btn-buzz-correct','btn-buzz-not-found','btn-buzz-interdit'].forEach(id => {
       document.getElementById(id).disabled = !enabled;
     });
   }
-  let buzzMsgTimer = null;
   document.getElementById('btn-buzz-interdit').addEventListener('click', () => {
+    if(buzzLocked) return;
+    lockBuzz(); // relâché par « C'est bon, on reprend »
     SFX.forbidden();
     const b = state.buzz;
     const p = b.turnPos;
@@ -10200,15 +10351,22 @@ function mdpMain(){
     b.startPos = p % b.teams.length;
     b.turnPos = -1; // personne en jeu le temps que l'équipe éliminée s'écarte
     saveGameProgress({ at:'buzz' });
+    // Son bandeau s'éteint (LED grises, nom barré) dans un éclair rouge.
     renderBuzzPoints();
+    const card = document.getElementById(`buzz-team-${eliminatedIdx}`);
+    if(card) card.classList.add('out-now');
+    document.getElementById('buzz-team-name').textContent = '';
     document.getElementById('buzz-turn-label').innerHTML =
-      `<b style="color:var(--wrong);">${escapeHtml(elimTeam.giverName)} et ${escapeHtml(elimTeam.guesserName)}</b> — interdit prononcé, équipe éliminée.`;
+      `<span class="out">${escapeHtml(elimTeam.giverName)} et ${escapeHtml(elimTeam.guesserName)} éliminés</span><br>Interdit prononcé`;
+    document.getElementById('buzz-controls').style.display = 'none';
     document.getElementById('btn-buzz-elim-continue').style.display = '';
   });
   document.getElementById('btn-buzz-elim-continue').addEventListener('click', () => {
     const b = state.buzz;
     document.getElementById('btn-buzz-elim-continue').style.display = 'none';
+    document.getElementById('buzz-controls').style.display = '';
     setBuzzControlsEnabled(true);
+    buzzLocked = false;
     if(b.teams.length === 1){
       const winnerIdx = b.teams[0];
       state.buzz = null;
