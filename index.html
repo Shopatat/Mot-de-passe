@@ -259,12 +259,14 @@
      (visibility:hidden), l'iPhone ne le dessinait qu'au tap sur JOUER, d'un
      coup (sol de LED, anneaux, titre) ; l'écran se figeait puis le titre
      sautait de 75 pt (vidéos de Fabien, 2026-10-02). Le sol reste en pause
-     jusqu'à ce que le menu soit posé (body.ios-zoom-run, voir initBoot). */
+     pendant le chargement, puis repart dès que JOUER apparaît (body.boot-live,
+     voir initBoot) : la scène est déjà en mouvement quand le titre s'y pose
+     (demande de Fabien, 2026-10-25 : elle « attendait » le titre). */
   /* Sans son fondu d'arrivée : il l'affichait en entier au démarrage, avant
      le chargement (vidéo de Fabien). JOUER pose ios-noenter pour qu'il ne se
      rejoue pas à la sortie du chargement. */
   body.booting #screen-setup{ opacity:.001; animation:none; }
-  body.booting .ms-floor .fc, body.booting .ms-comet, body.booting .ms-spin{ animation-play-state:paused; }
+  body.booting:not(.boot-live) .ms-floor .fc, body.booting:not(.boot-live) .ms-comet, body.booting:not(.boot-live) .ms-spin{ animation-play-state:paused; }
   .boot-inner{ width:100%; max-width:480px; display:flex; flex-direction:column; align-items:center; }
   .boot-inner .tile-row{ width:100%; }
   /* Au lancement de l'appli installée, iPhone ne donne la hauteur de l'encoche
@@ -11497,12 +11499,9 @@ function mdpMain(){
       // du chargement, pendant que ses lettres se brouillent et que le sol
       // du générique apparaît derrière.
       const from = document.getElementById('boot-title').getBoundingClientRect();
-      // Sol de LED toujours en pause le temps que tout se pose : il volait des
-      // images au titre (comme aux transitions façon iPhone).
-      if(!reduced){
-        document.body.classList.add('ios-zoom-run');
-        setTimeout(() => document.body.classList.remove('ios-zoom-run'), 1300);
-      }
+      // Le sol de LED n'est plus mis en pause pendant le vol du titre : il
+      // tourne déjà depuis l'apparition de JOUER, donc la scène est en
+      // mouvement quand le titre s'y pose.
       screens.setup.classList.add('ios-noenter'); // pas de fondu d'écran en plus du vol du titre
       document.body.classList.remove('booting');
       boot.hidden = true;
@@ -11521,7 +11520,9 @@ function mdpMain(){
       menuTitle.style.willChange = 'transform';
       menuTitle.animate([{ transform:`translate(${dx}px, ${dy}px) scale(${k})` }, { transform:'none' }], { duration:700, easing:'cubic-bezier(.3,0,.1,1)' })
         .finished.then(() => { menuTitle.style.willChange = ''; }, () => { menuTitle.style.willChange = ''; });
-      hero.querySelector('.ms-stage').animate([{ opacity:0 }, { opacity:1 }], { duration:700, delay:150, easing:'ease-out', fill:'backwards' });
+      // La scène (déjà en mouvement) apparaît tout de suite et est posée avant
+      // que le titre n'arrive (700 ms) : il se pose dans une scène vivante.
+      hero.querySelector('.ms-stage').animate([{ opacity:0 }, { opacity:1 }], { duration:500, easing:'ease-out', fill:'backwards' });
       [...screens.setup.children].filter(c => c !== hero && c.offsetParent !== null).forEach((c, i) =>
         c.animate([{ opacity:0, transform:'translateY(8px)' }, { opacity:1, transform:'none' }],
           { duration:320, delay:300 + i * 60, easing:'ease-out', fill:'backwards' }));
@@ -11537,6 +11538,7 @@ function mdpMain(){
     // On ne peut pas se fier à MUSIC.current() ici : il est déjà renseigné dès
     // l'appel à play(), avant même de savoir si audio.play() a réussi ou pas
     // (promesse async). On relance donc systématiquement au premier clic/tap ;
+      document.body.classList.add('boot-live'); // la scène du menu repart, encore invisible (voir le CSS)
     // play() se charge lui-même de ne rien faire si une musique tourne déjà pour de vrai.
     updateBackgroundMusic(activeScreen());
     document.removeEventListener('click', retryMusicOnFirstInteraction);
