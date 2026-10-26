@@ -1939,6 +1939,8 @@
   .pset-card .footer-note.pset-note{ margin:-5px 0 0; padding-left:74px; text-align:left; font-size:10.5px; line-height:1.35; }
   .pset-card .footer-note.pset-note-full{ padding-left:0; margin-top:2px; }
   .pset-note:empty{ display:none; }
+  .toggle-row.pset-full{ flex-wrap:nowrap; gap:6px; }
+  .pset-full .toggle-btn{ flex:1; min-width:0; font-size:12px; padding:8px 3px; }
   .pset-row .toggle-btn.pset-small, .pset-small{ flex:0 0 auto; padding:7px 12px; font-size:11.5px; }
   .pset-volume{ display:flex; align-items:center; gap:10px; }
   .pset-volume input[type="range"]{ margin:0; flex:1; }
@@ -2403,15 +2405,12 @@
       </div>
 
       <div class="card pset-card">
-        <div class="pset-title">Affichage</div>
-        <div class="set-row pset-row">
-          <span class="set-label">Effets</span>
-          <div class="toggle-row" id="motion-toggle">
-            <div class="toggle-btn" data-val="off">Complètes</div>
-            <div class="toggle-btn" data-val="on">Douces</div>
-          </div>
+        <div class="pset-title">Animations</div>
+        <div class="toggle-row pset-full" id="motion-toggle">
+          <div class="toggle-btn" data-val="off">Complètes</div>
+          <div class="toggle-btn" data-val="on">Douces</div>
         </div>
-        <p class="footer-note pset-note">Douces : les animations deviennent de simples fondus, sans zoom ni effets de lumière.</p>
+        <p class="footer-note pset-note pset-note-full">Douces : de simples fondus, sans zoom ni effets de lumière.</p>
       </div>
 
       <div class="card pset-card">
@@ -6474,7 +6473,7 @@ function mdpMain(){
     function closeOverlay(overlay, content, hide){
       finish();
       if(reduced() || !overlay.classList.contains('visible')){ hide(); return; }
-      const style = overlay._trStyle || 'zoom'; speed('pages');
+      const style = softMotion() ? 'fade' : (overlay._trStyle || 'zoom'); speed('pages'); // Douces choisi page ouverte : fondu tout de suite
       const behind = document.querySelector('#app > .screen.active');
       overlay.style.pointerEvents = 'none';
       const end = () => { overlay.style.pointerEvents = ''; hide(); };
@@ -6555,7 +6554,7 @@ function mdpMain(){
       finish();
       const fromBtn = overlay._fromBtn; overlay._fromBtn = false;
       if(!fromBtn || reduced() || !overlay.classList.contains('visible')){ hide(); return; }
-      const style = overlay._trStyle || 'zoom', k = speed('dialogs');
+      const style = softMotion() ? 'fade' : (overlay._trStyle || 'zoom'), k = speed('dialogs');
       overlay.style.pointerEvents = 'none';
       const end = () => { overlay.style.pointerEvents = ''; hide(); };
       if(style === 'fade'){
