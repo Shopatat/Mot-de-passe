@@ -235,11 +235,9 @@
       linear-gradient(#070403 0px, rgba(7,4,3,.7) 60px, rgba(7,4,3,.2) 120px, rgba(7,4,3,0) 168px);
   }
   .menu-hero #title-tiles{ position:absolute; left:calc(50% - 125px); bottom:131px; width:250px; margin:0; z-index:1; }
-  @media (prefers-reduced-motion: reduce){
-    .ms-floor .fc, .ms-spin{ animation:none; }
-    .ms-floor .fc{ opacity:.7; }
-    .ms-comet{ display:none; }
-  }
+  body.motion-soft .ms-floor .fc, body.motion-soft .ms-spin{ animation:none; }
+  body.motion-soft .ms-floor .fc{ opacity:.7; }
+  body.motion-soft .ms-comet{ display:none; }
   /* Écran de chargement à l'ouverture de l'appli, réglé par Fabien dans
      l'atelier du chargement (https://claude.ai/artifact/VzwKGJu1DcjaaVSoZpave8,
      doc chargement/atelier, 2026-09-26) : titre LED au milieu de l'écran,
@@ -318,10 +316,8 @@
   #boot-play.shown{ opacity:1; pointer-events:auto; animation: bootPulse 1.25s ease-in-out infinite; }
   @keyframes bootPulse{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.4); } }
   #boot-play .boot-lbl{ position:relative; }
-  @media (prefers-reduced-motion: reduce){
-    #boot-bar::before{ animation:none; }
-    #boot-play.shown{ animation:none; }
-  }
+  body.motion-soft #boot-bar::before{ animation:none; }
+  body.motion-soft #boot-play.shown{ animation:none; }
   .tile{
     background:transparent; border:none; box-shadow:none;
     padding: 0 1px; height:auto; flex-shrink:0;
@@ -676,7 +672,7 @@
     animation: word-pill-shine 14s linear infinite;
     box-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
-  @media (prefers-reduced-motion: reduce){ .fb-pill::before{ animation:none; } }
+  body.motion-soft .fb-pill::before{ animation:none; } 
   /* Titre en petit, sans pilule, LED rouges (atelier du panneau Interdits,
      https://claude.ai/artifact/Jkniniuia44JNrWpZ8k8T7, choix du 2026-10-01). */
   .forbidden-title{ display:block; width:50%; margin:13px auto 11px; }
@@ -688,10 +684,8 @@
   .forbidden-inner.armed .fb-seq{ opacity:0; }
   .forbidden-inner.lit .fb-seq{ animation: fbSeqIn .55s ease-out both; animation-delay: calc(var(--i) * 150ms + 200ms); }
   @keyframes fbSeqIn{ 0%{ opacity:0; filter:brightness(2.2); } 35%{ opacity:1; } 100%{ opacity:1; filter:none; } }
-  @media (prefers-reduced-motion: reduce){
-    .forbidden-inner.armed .fb-seq{ opacity:1; }
-    .forbidden-inner.lit .fb-seq{ animation:none; }
-  }
+  body.motion-soft .forbidden-inner.armed .fb-seq{ opacity:1; }
+  body.motion-soft .forbidden-inner.lit .fb-seq{ animation:none; }
   .forbidden-list{
     list-style:none; margin:0; padding:0;
     display:flex; flex-direction:column; gap:9px;
@@ -905,9 +899,7 @@
   @keyframes hoChev{ from{ opacity:0; transform:translateY(-6px); } }
   @keyframes hoFade{ from{ opacity:0; } }
   @keyframes hoLight{ 0%{ opacity:0; filter:brightness(.4); } 60%{ opacity:1; filter:brightness(1.35); } 100%{ opacity:1; filter:none; } }
-  @media (prefers-reduced-motion: reduce){
-    #screen-handoff.ho-anim *{ animation:none !important; }
-  }
+  body.motion-soft #screen-handoff.ho-anim *{ animation:none !important; }
 
   /* ---- Tie-break (2026-10-10) : remis au niveau des qualifs ----
      Annonce façon avant-manche (écran plein, équipes en grand, bouton en
@@ -991,9 +983,7 @@
   }
   .bz-pass-role{ font-size:12px; font-weight:800; letter-spacing:2.6px; text-transform:uppercase; color:#ffb49c; }
   .bz-pass-role b{ color:#fff4ec; }
-  @media (prefers-reduced-motion: reduce){
-    #screen-buzz-intro.ho-anim *, .bz-track .dot-mark.pop, .bz-board .bz-team.out-now{ animation:none !important; }
-  }
+  body.motion-soft #screen-buzz-intro.ho-anim *, body.motion-soft .bz-track .dot-mark.pop, body.motion-soft .bz-board .bz-team.out-now{ animation:none !important; }
 
   .countdown-num{ font-family:'Anton', Impact, 'Arial Narrow', sans-serif; font-size:90px; color: var(--red); text-shadow: 0 0 30px rgba(255,59,48,0.6); }
 
@@ -1452,7 +1442,7 @@
     0%,100%{ opacity:0; }
     50%{ opacity:1; }
   }
-  @media (prefers-reduced-motion: reduce){ .chevrons .cv.next .hot{ animation:none; opacity:.5; } }
+  body.motion-soft .chevrons .cv.next .hot{ animation:none; opacity:.5; } 
   /* Trains de chevrons LED quand le mot change (voir buildLedTrain) : 3
      chevrons LED épais (trait de 4 LED) devant une bande pleine de la couleur
      de l'intérieur du cadre (le « rideau », qui cache le mot pendant qu'ils
@@ -1512,9 +1502,7 @@
   }
   .text-action:disabled .voyant-lamp,
   .text-action:disabled .voyant-halo{ animation:none; }
-  @media (prefers-reduced-motion: reduce){
-    .voyant-lamp, .voyant-halo{ animation:none; }
-  }
+  body.motion-soft .voyant-lamp, body.motion-soft .voyant-halo{ animation:none; }
 
   /* "Interdit" de l'écran de jeu : un vrai bandeau pleine largeur (une cible bien
      nette) dont le fond, le contour et la lueur respirent comme un feu d'alarme.
@@ -1537,9 +1525,7 @@
   /* Grisé (chrono pas lancé) : plus d'animation. Pendant le court verrou entre
      deux mots (no-dim), il continue de respirer, comme avant. */
   #btn-interdit:disabled:not(.no-dim), #btn-buzz-interdit:disabled{ animation:none; }
-  @media (prefers-reduced-motion: reduce){
-    #btn-interdit, #btn-buzz-interdit{ animation:none; }
-  }
+  body.motion-soft #btn-interdit, body.motion-soft #btn-buzz-interdit{ animation:none; }
 
   /* Mode arbitre (réglage "Aide", désactivé par défaut) : le joueur garde le
      téléphone et ne s'occupe que du mot (et des indices en finale) ; quelqu'un à
@@ -1592,7 +1578,7 @@
     100%{ opacity:0; box-shadow: 0 0 0 14px rgba(var(--tap-tint),0), 0 0 58px 22px rgba(var(--tap-tint),0); }
   }
   @keyframes tapFlashFill{ 0%{ opacity:.7; } 100%{ opacity:0; } }
-  @media (prefers-reduced-motion: reduce){ .tap-flash{ display:none; } }
+  body.motion-soft .tap-flash{ display:none; } 
 
   /* Ouverture façon iPhone (voir IOS_ZOOM) : copie du bouton qui grandit,
      voile sombre sur l'écran qui recule, copie figée de l'écran qu'on quitte. */
@@ -1750,7 +1736,7 @@
     27%{ opacity:.05; }
     100%{ opacity:.05; }
   }
-  @media (prefers-reduced-motion: reduce){ .ladder-leds.dim .cv{ animation:none; opacity:.6; } }
+  body.motion-soft .ladder-leds.dim .cv{ animation:none; opacity:.6; } 
   .ladder-train{ position:absolute; top:0; opacity:0; will-change:transform; }
   .ladder-side.left .ladder-train{ left:0; }
   .ladder-side.right .ladder-train{ right:0; }
@@ -1838,7 +1824,7 @@
   #play-hint .hint-arrow.end{ margin-right:0; margin-left:7px; }
   #play-hint.danger .hint-arrow{ color:inherit; } /* mot rouge : flèches rouges comme le texte */
   @keyframes hintIn{ from{ opacity:0; transform:translateY(2px); } to{ opacity:1; transform:none; } }
-  @media (prefers-reduced-motion:reduce){ #play-hint .hint-in{ animation:none; } }
+  body.motion-soft #play-hint .hint-in{ animation:none; } 
 
   .toggle-row{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
   /* Cases du menu : liseré chromé façon boîtiers du décor de l'émission
@@ -1913,7 +1899,7 @@
     0%, 100%{ box-shadow: 0 3px 8px rgba(0,0,0,0.45), 0 0 0 0 rgba(255,255,255,0.0); }
     50%{ box-shadow: 0 3px 8px rgba(0,0,0,0.45), 0 0 14px 3px rgba(255,255,255,0.55); }
   }
-  @media (prefers-reduced-motion:reduce){ #btn-pause.paused{ animation:none; box-shadow:0 0 10px 2px rgba(255,255,255,0.45); } }
+  body.motion-soft #btn-pause.paused{ animation:none; box-shadow:0 0 10px 2px rgba(255,255,255,0.45); } 
 
   #btn-schedule{
     display:none; position:fixed; bottom:calc(14px + env(safe-area-inset-bottom)); right:54px; z-index:3;
@@ -1996,7 +1982,7 @@
   .regie-preview.right .rp-no, .regie-preview.left .rp-pass{ left:69px; }
   .rp-who{ font-size:18px; line-height:1; opacity:0; transition: opacity .25s ease; }
   .regie-preview.left .rp-who.left, .regie-preview.right .rp-who.right{ opacity:1; }
-  @media (prefers-reduced-motion:reduce){ .rp-btn, .rp-who{ transition:none; } }
+  body.motion-soft .rp-btn, body.motion-soft .rp-who{ transition:none; } 
   /* Sons : une ligne chacun (nom, volume, écoute) ; un toucher sur le nom
      ouvre l'import (📁) et le retour au son d'origine (↺). */
   .custom-sound-row.compact{ gap:0; padding:6px 0; }
@@ -2266,10 +2252,8 @@
   .tuto-badge i{ width:7px; height:7px; border-radius:50%; background:#8a8f99; transition:background .35s ease, box-shadow .35s ease; }
   .tuto-badge.live{ color:#fff; border-color:rgba(255,59,48,.75); box-shadow:0 0 14px rgba(255,59,48,.45); }
   .tuto-badge.live i{ background:#ff3b30; box-shadow:0 0 8px #ff3b30; animation:tcCur 1s ease-in-out infinite; }
-  @media (prefers-reduced-motion: reduce){
-    #tuto *, #tuto *::after, .tuto-badge *{ animation:none !important; transition:none !important; }
-    #tuto .tc-b{ opacity:1; }
-  }
+  body.motion-soft #tuto *, body.motion-soft #tuto *::after, body.motion-soft .tuto-badge *{ animation:none !important; transition:none !important; }
+  body.motion-soft #tuto .tc-b{ opacity:1; }
 </style>
 </head>
 <body class="booting">
@@ -2416,6 +2400,18 @@
         </div>
         <div id="custom-sound-list"></div>
         <p class="footer-note pset-note pset-note-full">Touche le nom d'un son pour le remplacer par un fichier de ton téléphone.</p>
+      </div>
+
+      <div class="card pset-card">
+        <div class="pset-title">Affichage</div>
+        <div class="set-row pset-row">
+          <span class="set-label">Effets</span>
+          <div class="toggle-row" id="motion-toggle">
+            <div class="toggle-btn" data-val="off">Complètes</div>
+            <div class="toggle-btn" data-val="on">Douces</div>
+          </div>
+        </div>
+        <p class="footer-note pset-note">Douces : les animations deviennent de simples fondus, sans zoom ni effets de lumière.</p>
       </div>
 
       <div class="card pset-card">
@@ -5557,7 +5553,7 @@ function mdpMain(){
   // ---------- PRÉFÉRENCES UI ----------
   // Petites préférences d'affichage persistées, séparées des réglages sons.
   const UIPREFS = (function(){
-    const DEFAULTS = { hideWordOnPause: true, showForbiddenInPlay: true, showFinaleHelp: true, arbitreMode: false, interditLeft: false, forbiddenShownV2: true };
+    const DEFAULTS = { hideWordOnPause: true, showForbiddenInPlay: true, showFinaleHelp: true, arbitreMode: false, interditLeft: false, forbiddenShownV2: true, softMotion: false };
     const prefs = Object.assign({}, DEFAULTS);
     try {
       const saved = JSON.parse(localStorage.getItem('mdp_ui_prefs') || 'null');
@@ -5585,9 +5581,20 @@ function mdpMain(){
       setArbitreMode(v){ prefs.arbitreMode = v; save(); },
       getInterditLeft(){ return prefs.interditLeft; },
       setInterditLeft(v){ prefs.interditLeft = v; save(); },
-      reset(){ Object.assign(prefs, DEFAULTS); save(); },
+      getSoftMotion(){ return prefs.softMotion; },
+      setSoftMotion(v){ prefs.softMotion = v; save(); applyMotion(); },
+      reset(){ Object.assign(prefs, DEFAULTS); save(); applyMotion(); },
     };
   })();
+
+  // Animations (Paramètres > Affichage, 2026-10-26) : Complètes par défaut,
+  // Douces au choix : les écrans s'enchaînent en fondu, sans zoom, sans
+  // vol ni effets de lumière. Indépendant du réglage « Réduire les
+  // animations » du téléphone (Fabien : la version coupée faisait saccadé).
+  // body.motion-soft porte le choix pour le CSS ; softMotion() pour le code.
+  function softMotion(){ return document.body.classList.contains('motion-soft'); }
+  function applyMotion(){ document.body.classList.toggle('motion-soft', !!UIPREFS.getSoftMotion()); }
+  applyMotion();
 
   // Affiche ou cache le rappel compact des interdits sur l'écran de jeu,
   // selon le réglage "Aide" > "Afficher les interdits pendant la manche".
@@ -5866,7 +5873,7 @@ function mdpMain(){
     let timer = null;
     function scramble(){
       clearInterval(timer);
-      if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){ dotsEl.innerHTML = TITLE_LED_GEOM.lit; return; }
+      if(softMotion()){ dotsEl.innerHTML = TITLE_LED_GEOM.lit; return; }
       const t0 = performance.now(), fixAt = j => 300 + j * 120, end = fixAt(SEG.length - 1) + 80;
       const tick = () => {
         const t = performance.now() - t0;
@@ -6174,6 +6181,7 @@ function mdpMain(){
       styles,
       // Style à jouer pour ce passage (au tour suivant si plusieurs sont cochés).
       pick(id){
+        if(softMotion()) return 'fade'; // Animations douces : fondu partout
         const s = styles(id);
         const i = (turn[id] || 0) % s.length;
         turn[id] = i + 1;
@@ -6289,7 +6297,9 @@ function mdpMain(){
     // Écrans qu'un bouton de la partie (ou la fin d'une manche) peut ouvrir.
     const STEP_TO = ['handoff', 'finalist', 'final', 'buzzIntro', 'buzzPlay', 'soloTieChoice', 'play', 'summary', 'trainingSummary', 'decision'];
     const overlaySrc = new Map();
-    const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    // Animations douces : on garde les passages, mais TRANS.pick les joue
+    // tous en fondu (plus de coupure sèche d'un écran à l'autre).
+    const reduced = () => false;
     // Rectangle du bouton s'il est à l'écran (sinon pas d'animation).
     function shown(el){
       if(!el || !el.isConnected) return null;
@@ -7018,6 +7028,7 @@ function mdpMain(){
     if(MUSIC.current() === 'menu') MUSIC.refreshSlot(musicSlotFor('menu'));
   });
   wireSoundToggle('pause-hide-toggle', () => UIPREFS.getHideWordOnPause(), v => UIPREFS.setHideWordOnPause(v));
+  wireSoundToggle('motion-toggle', () => UIPREFS.getSoftMotion(), v => UIPREFS.setSoftMotion(v));
   wireSoundToggle('forbidden-reminder-toggle', () => UIPREFS.getShowForbiddenInPlay(), v => {
     UIPREFS.setShowForbiddenInPlay(v);
     updateForbiddenReminderVisibility();
@@ -7069,6 +7080,7 @@ function mdpMain(){
       renderMuteBtn();
       document.getElementById('game-volume-slider').value = Math.round(snd.gameVol * 100);
       syncToggle('pause-hide-toggle', UIPREFS.getHideWordOnPause());
+      syncToggle('motion-toggle', UIPREFS.getSoftMotion());
       syncToggle('forbidden-reminder-toggle', UIPREFS.getShowForbiddenInPlay());
       syncToggle('finale-help-toggle', UIPREFS.getShowFinaleHelp());
       updateForbiddenReminderVisibility();
@@ -7086,7 +7098,7 @@ function mdpMain(){
   // (fin d'animation, nouveau toucher, ou geste annulé : défilement d'une liste).
   (function(){
     const CLICKABLE = 'button, [role="button"], .toggle-btn, .chip, .word-pill, .settings-card';
-    const reduceMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const reduceMotion = () => softMotion();
     let current = null;
     function clearFlash(){
       if(!current) return;
@@ -7269,7 +7281,7 @@ function mdpMain(){
   function armForbiddenLights(){
     const inner = document.querySelector('#screen-setup .forbidden-inner');
     if(!inner || !('IntersectionObserver' in window)) return;
-    if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if(softMotion()) return;
     inner.classList.remove('lit');
     inner.classList.add('armed');
     if(!inner._fbObs){
@@ -9259,6 +9271,25 @@ function mdpMain(){
   function cancelWordBirth(pill){
     if(pill && pill._birthCancel){ pill._birthCancel(); }
   }
+  // Animations douces : le cadre apparaît en fondu (et se referme en fondu,
+  // puis reste éteint jusqu'à la manche suivante, comme la vraie fermeture).
+  function softWordBirth(pill, reverse){
+    const a = pill.animate(reverse ? [{ opacity:1 }, { opacity:0 }] : [{ opacity:0 }, { opacity:1 }],
+      { duration: reverse ? 260 : 380, easing:'ease', fill: reverse ? 'forwards' : 'none' });
+    let done = false, resolveDone;
+    const finished = new Promise(r => { resolveDone = r; });
+    const restore = () => { a.cancel(); pill._birthCancel = null; };
+    const complete = () => {
+      if(done) return;
+      done = true;
+      if(reverse) pill._birthCancel = restore; else restore();
+      resolveDone();
+    };
+    pill._birthCancel = () => { done = true; restore(); resolveDone(); };
+    a.finished.then(complete, () => {});
+    setTimeout(complete, 900);
+    return finished;
+  }
   // reverse : la même animation jouée à l'envers, pour refermer le cadre en
   // fin de manche (le mot est déjà parti avec les chevrons) : noir, blanc
   // plein, l'éclat se résorbe en étoile, le cadre se rétrécit en anneau blanc,
@@ -9269,7 +9300,7 @@ function mdpMain(){
   // bouton JOUER du chargement passe son libellé).
   function playWordBirth({ pill, dots, chevrons, finale, reverse, word: wordEl }){
     cancelWordBirth(pill);
-    if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return Promise.resolve();
+    if(softMotion()) return softWordBirth(pill, reverse);
     const cs = getComputedStyle(pill);
     const RING = parseFloat(cs.borderTopWidth) || 4, RAD = parseFloat(cs.borderTopLeftRadius) || 18;
     const W = pill.offsetWidth, H = pill.offsetHeight;
@@ -11005,7 +11036,7 @@ function mdpMain(){
     ];
     const RING = 50, ARC = 0.5, SOFT = 0.12, TURN_MS = 1000, BLINK_MS = 420;
     const FADE_MS = 600, HIDE_AFTER_MS = 6000, FOLD_MS = 550;
-    const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const reduced = () => softMotion();
     const svgHtml = (() => {
       const R = 41.5, w = Math.min(2.6, (2 * Math.PI * R / RING) * 0.52), h = 6.2;
       let off = '', on = '';
@@ -11402,7 +11433,7 @@ function mdpMain(){
     const boot = document.getElementById('boot');
     const bar = document.getElementById('boot-bar'), btn = document.getElementById('boot-play');
     const lbl = btn.querySelector('.boot-lbl');
-    const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced = softMotion();
     renderTiles('boot-title');
 
     // Contenu montré (en fondu) dès que l'iPhone a donné la hauteur de
@@ -11471,7 +11502,6 @@ function mdpMain(){
       await wait(130);
       leds.forEach(l => l.classList.remove('flash'));
       await wait(220);
-      if(reduced){ bar.style.visibility = 'hidden'; btn.classList.add('shown'); return; }
       bar.animate([{ opacity:1 }, { opacity:0 }], { duration:220, fill:'forwards' });
       await wait(200);
       btn.classList.add('shown');
@@ -11502,7 +11532,8 @@ function mdpMain(){
       // Le sol de LED n'est plus mis en pause pendant le vol du titre : il
       // tourne déjà depuis l'apparition de JOUER, donc la scène est en
       // mouvement quand le titre s'y pose.
-      screens.setup.classList.add('ios-noenter'); // pas de fondu d'écran en plus du vol du titre
+      // Animations douces : pas de vol du titre, le menu arrive en fondu.
+      if(!reduced) screens.setup.classList.add('ios-noenter'); // pas de fondu d'écran en plus du vol du titre
       document.body.classList.remove('booting');
       boot.hidden = true;
       MENU_SCENE.scramble();
