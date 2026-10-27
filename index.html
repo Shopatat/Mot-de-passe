@@ -98,7 +98,7 @@
     position:relative;
     height:100vh; height:100dvh;
     display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
-    padding: calc(20px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
+    padding: calc(20px + env(safe-area-inset-top) + var(--sous-flou)) 16px calc(32px + env(safe-area-inset-bottom));
     overflow-x:hidden; overflow-y:auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior:contain;
@@ -145,12 +145,19 @@
      documente aucun réglage pour le couper, alors on sort de la bande ce qui s'y
      voyait — ici les pastilles du haut, seules choses assez contrastées pour que le
      flou saute aux yeux. Le reste du haut est d'un fond uni : le dégradé n'y paraît pas.
-     La zone sûre déclare parfois zéro dans l'appli installée, d'où le plancher plutôt
-     qu'un décalage fixe : la pastille ne descend que si elle était dans la bande.
-     Zéro dans un onglet, qui n'a pas le problème. */
+     Première tentative : poser la pastille à env(safe-area-inset-top) + 1px, avec un
+     plancher à 44px. Insuffisant — le dégradé descend plus bas que la zone sûre, et le
+     haut de la pastille restait atténué. Ce qui marche (vérifié dans L'atelier du rien)
+     est un décalage EN PLUS de la zone sûre, d'environ 28px : le contenu commence alors
+     sous le dégradé, qui ne tombe plus que sur du fond.
+     Mais décaler la pastille seule la posait sur le logo : c'est donc l'écran entier qui
+     descend, logo compris, pour que la composition reste la même. Comme ça coûte 28px de
+     hauteur, on ne le paie que quand il y a quelque chose à protéger : le mode test, seul
+     moment où une pastille assez contrastée se trouve dans la bande. Hors mode test et
+     dans un onglet, rien ne bouge d'un pixel. */
   :root{ --sous-flou: 0px; }
   @media (display-mode:standalone){
-    :root{ --sous-flou: 44px; }
+    body.test-word-mode{ --sous-flou: 28px; }
   }
 
   /* Bandeau "MODE TEST" : conteneur pleine largeur à position entière (left:0,
@@ -159,7 +166,7 @@
      iOS rend alors le texte de ce calque flou. Placé juste SOUS la zone sûre
      (encoche / Dynamic Island), sinon il passe derrière et se retrouve rogné. */
   #test-mode-banner{
-    position:fixed; top:max(calc(env(safe-area-inset-top) + 1px), var(--sous-flou)); left:0; right:0; z-index:9999;
+    position:fixed; top:calc(env(safe-area-inset-top) + 1px + var(--sous-flou)); left:0; right:0; z-index:9999;
     text-align:center; pointer-events:none;
     -webkit-font-smoothing:antialiased;
   }
@@ -214,8 +221,8 @@
      les halos sur 60 px, les cartes du menu sont un peu transparentes. */
   #screen-setup{ --card: rgba(10,9,8,.68); }
   .menu-hero{
-    position:relative; width:calc(100% + 32px); margin:calc(-20px - env(safe-area-inset-top)) -16px 0;
-    height:calc(245px + env(safe-area-inset-top));
+    position:relative; width:calc(100% + 32px); margin:calc(-20px - env(safe-area-inset-top) - var(--sous-flou)) -16px 0;
+    height:calc(245px + env(safe-area-inset-top) + var(--sous-flou));
   }
   /* Scène remontée de 70 px (curseur « Scène » de l'atelier) : le point de fuite, le
      sol et le titre montent ensemble. Fondu court : le bas de la scène
@@ -264,7 +271,7 @@
   #boot{
     position:fixed; inset:0; z-index:5000;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding: calc(20px + env(safe-area-inset-top)) 16px calc(142px + env(safe-area-inset-bottom));
+    padding: calc(20px + env(safe-area-inset-top) + var(--sous-flou)) 16px calc(142px + env(safe-area-inset-bottom));
   }
   #boot[hidden]{ display:none; }
   /* Menu dessiné pendant le chargement, mais à peine visible (0,1 %) : caché
@@ -1233,11 +1240,11 @@
   #screen-play .word-pill::after{
     content:""; position:absolute; z-index:-1;
     /* qualifs : anneau 4 + marge 2 + piste 29 + chrono 43 + écarts 2 x 14 + haut de l'écran 20 ; côtés 16 + 58 (place des chevrons) ; consigne 31 */
-    top:calc(-126px - env(safe-area-inset-top, 0px)); left:-78px; right:-78px; bottom:-52px;
+    top:calc(-126px - env(safe-area-inset-top, 0px) - var(--sous-flou)); left:-78px; right:-78px; bottom:-52px;
   }
   #screen-play.finale-style .word-pill::after{
     /* finale : anneau 3 (même hauteur au-dessus) ; chevrons ~58 ; consigne 46 */
-    top:calc(-125px - env(safe-area-inset-top, 0px)); left:-77px; right:-77px; bottom:-70px;
+    top:calc(-125px - env(safe-area-inset-top, 0px) - var(--sous-flou)); left:-77px; right:-77px; bottom:-70px;
   }
   #screen-play .chevrons{ pointer-events:none; }
   /* Mode test seulement : un pointillé discret montre où s'arrête la zone. */
@@ -1937,7 +1944,7 @@
   }
   .page-overlay .settings-sticky-header{
     top:0; margin:0 -16px 14px; border-radius:0;
-    padding: calc(16px + env(safe-area-inset-top)) 16px 12px;
+    padding: calc(16px + env(safe-area-inset-top) + var(--sous-flou)) 16px 12px;
     background: var(--bg); font-size:16px;
   }
   body.page-open #app{ overflow:hidden; }
@@ -2256,9 +2263,9 @@
   #tuto .tc-rules span{ color:#b9b3a7; font-weight:600; font-size:13px; }
   /* Bandeau « Répétition » puis « En direct », en haut au centre (même place que
      le bandeau du mode test : sous la zone sûre, conteneur pleine largeur). */
-  .tuto-badgebar{ position:fixed; top:max(calc(env(safe-area-inset-top) + 2px), var(--sous-flou)); left:0; right:0; z-index:41; text-align:center; pointer-events:none; -webkit-font-smoothing:antialiased; }
+  .tuto-badgebar{ position:fixed; top:calc(env(safe-area-inset-top) + 2px + var(--sous-flou)); left:0; right:0; z-index:41; text-align:center; pointer-events:none; -webkit-font-smoothing:antialiased; }
   .tuto-badgebar[hidden]{ display:none; }
-  body.test-word-mode .tuto-badgebar{ top:max(calc(env(safe-area-inset-top) + 19px), calc(var(--sous-flou) + 17px)); } /* sous le bandeau MODE TEST */
+  body.test-word-mode .tuto-badgebar{ top:calc(env(safe-area-inset-top) + 19px + var(--sous-flou)); } /* sous le bandeau MODE TEST */
   .tuto-badge{
     display:inline-flex; align-items:center; gap:6px; padding:2px 11px 2px 9px; border-radius:999px;
     background:rgba(10,9,8,.84); border:1px solid rgba(255,255,255,.2); color:#e8e2d6;
