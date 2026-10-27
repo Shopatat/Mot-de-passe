@@ -139,13 +139,27 @@
   .screen.active{ display:flex; flex-direction:column; align-items:stretch; gap:14px; }
   @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
 
+  /* Le flou d'iOS 26 en haut de l'écran.
+     Une appli posée sur l'écran d'accueil reçoit l'effet « liquid glass » du système :
+     un dégradé flou sur les ~40 premiers points sous le haut de l'écran. Apple ne
+     documente aucun réglage pour le couper, alors on sort de la bande ce qui s'y
+     voyait — ici les pastilles du haut, seules choses assez contrastées pour que le
+     flou saute aux yeux. Le reste du haut est d'un fond uni : le dégradé n'y paraît pas.
+     La zone sûre déclare parfois zéro dans l'appli installée, d'où le plancher plutôt
+     qu'un décalage fixe : la pastille ne descend que si elle était dans la bande.
+     Zéro dans un onglet, qui n'a pas le problème. */
+  :root{ --sous-flou: 0px; }
+  @media (display-mode:standalone){
+    :root{ --sous-flou: 44px; }
+  }
+
   /* Bandeau "MODE TEST" : conteneur pleine largeur à position entière (left:0,
      right:0) qui centre la pastille à l'intérieur. Centrer directement l'élément
      fixe (translateX(-50%) ou margin auto) le pose sur un demi-pixel, et Safari
      iOS rend alors le texte de ce calque flou. Placé juste SOUS la zone sûre
      (encoche / Dynamic Island), sinon il passe derrière et se retrouve rogné. */
   #test-mode-banner{
-    position:fixed; top:calc(env(safe-area-inset-top) + 1px); left:0; right:0; z-index:9999;
+    position:fixed; top:max(calc(env(safe-area-inset-top) + 1px), var(--sous-flou)); left:0; right:0; z-index:9999;
     text-align:center; pointer-events:none;
     -webkit-font-smoothing:antialiased;
   }
@@ -2242,9 +2256,9 @@
   #tuto .tc-rules span{ color:#b9b3a7; font-weight:600; font-size:13px; }
   /* Bandeau « Répétition » puis « En direct », en haut au centre (même place que
      le bandeau du mode test : sous la zone sûre, conteneur pleine largeur). */
-  .tuto-badgebar{ position:fixed; top:calc(env(safe-area-inset-top) + 2px); left:0; right:0; z-index:41; text-align:center; pointer-events:none; -webkit-font-smoothing:antialiased; }
+  .tuto-badgebar{ position:fixed; top:max(calc(env(safe-area-inset-top) + 2px), var(--sous-flou)); left:0; right:0; z-index:41; text-align:center; pointer-events:none; -webkit-font-smoothing:antialiased; }
   .tuto-badgebar[hidden]{ display:none; }
-  body.test-word-mode .tuto-badgebar{ top:calc(env(safe-area-inset-top) + 19px); } /* sous le bandeau MODE TEST */
+  body.test-word-mode .tuto-badgebar{ top:max(calc(env(safe-area-inset-top) + 19px), calc(var(--sous-flou) + 17px)); } /* sous le bandeau MODE TEST */
   .tuto-badge{
     display:inline-flex; align-items:center; gap:6px; padding:2px 11px 2px 9px; border-radius:999px;
     background:rgba(10,9,8,.84); border:1px solid rgba(255,255,255,.2); color:#e8e2d6;
